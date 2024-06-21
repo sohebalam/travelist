@@ -72,6 +72,8 @@ class _HomePageState extends State<HomePage> {
         );
       }).toList();
     });
+
+    _updateCameraPosition();
   }
 
   Future<List<Map<String, dynamic>>> _fetchPOIs(
@@ -143,6 +145,43 @@ Name, Latitude, Longitude.
     }
     print('Parsed POIs: $pois');
     return pois;
+  }
+
+  void _updateCameraPosition() {
+    if (_markers.isEmpty || _mapController == null) return;
+
+    LatLngBounds bounds = _calculateBounds(_markers);
+
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 50),
+    );
+  }
+
+  LatLngBounds _calculateBounds(List<Marker> markers) {
+    double southWestLat = markers.first.position.latitude;
+    double southWestLng = markers.first.position.longitude;
+    double northEastLat = markers.first.position.latitude;
+    double northEastLng = markers.first.position.longitude;
+
+    for (var marker in markers) {
+      if (marker.position.latitude < southWestLat) {
+        southWestLat = marker.position.latitude;
+      }
+      if (marker.position.longitude < southWestLng) {
+        southWestLng = marker.position.longitude;
+      }
+      if (marker.position.latitude > northEastLat) {
+        northEastLat = marker.position.latitude;
+      }
+      if (marker.position.longitude > northEastLng) {
+        northEastLng = marker.position.longitude;
+      }
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(southWestLat, southWestLng),
+      northeast: LatLng(northEastLat, northEastLng),
+    );
   }
 
   Future<Position> _determinePosition() async {
