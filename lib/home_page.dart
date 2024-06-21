@@ -1,32 +1,93 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:geolocator/geolocator.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // Add this line to import the dotenv package
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-class MyHomePage extends StatefulWidget {
+class HomePage extends StatefulWidget {
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  _HomePageState createState() => _HomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _tagsController = TextEditingController();
-  List<Map<String, String>> _poiList = [];
-  bool _useCurrentLocation = false;
+class _HomePageState extends State<HomePage> {
+  TextEditingController locationController = TextEditingController();
+  TextEditingController interestsController = TextEditingController();
+  bool useCurrentLocation = false;
+  List<Marker> _markers = [];
+  GoogleMapController? _mapController;
 
-  Future<void> _generatePOIs(String location, List<String> tags) async {
-    String tagsString = tags.join(", ");
-    String prompt =
-        "Give me a list of tourist attractions in $location that include $tagsString.";
-    String apiKey =
-        dotenv.env['OPENAI_API_KEY']!; // Use the environment variable
+  @override
+  void initState() {
+    super.initState();
+    dotenv.load();
+  }
 
+  void _generatePOIs() async {
+    Position? position;
+
+    if (useCurrentLocation) {
+      try {
+        position = await _determinePosition();
+        if (_mapController != null) {
+          _mapController!.animateCamera(CameraUpdate.newLatLng(
+            LatLng(position.latitude, position.longitude),
+          ));
+        }
+      } catch (e) {
+        print('Error determining position: $e');
+        return;
+      }
+    } else {
+      String location = locationController.text;
+      List<String> latLng = location.split(',');
+      if (latLng.length == 2) {
+        double latitude = double.tryParse(latLng[0].trim()) ?? 0.0;
+        double longitude = double.tryParse(latLng[1].trim()) ?? 0.0;
+        if (_mapController != null) {
+          _mapController!.animateCamera(CameraUpdate.newLatLng(
+            LatLng(latitude, longitude),
+          ));
+        }
+      }
+    }
+
+    String location = useCurrentLocation
+        ? '${position?.latitude}, ${position?.longitude}'
+        : locationController.text;
+    String interests = interestsController.text;
+
+    print('Generating POIs for location: $location with interests: $interests');
+
+    List<Map<String, dynamic>> pois = await _fetchPOIs(location, interests);
+
+    print('POIs fetched: ${pois.length}');
+
+    setState(() {
+      _markers = pois.map((poi) {
+        return Marker(
+          markerId: MarkerId(poi['id']),
+          position: LatLng(poi['latitude'], poi['longitude']),
+          infoWindow: InfoWindow(title: poi['name']),
+        );
+      }).toList();
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchPOIs(
+      String location, String interests) async {
+    String apiKey = dotenv.env['OPENAI_API_KEY']!;
     var url = Uri.parse('https://api.openai.com/v1/chat/completions');
     var headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $apiKey',
     };
+
+    var prompt = '''
+Generate a list of points of interest for location: $location with interests: $interests. 
+For each point of interest, provide the name, latitude, and longitude in the following format:
+Name, Latitude, Longitude.
+''';
 
     var body = jsonEncode({
       'model': 'gpt-3.5-turbo',
@@ -38,149 +99,126 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     try {
-      var response = await http.post(url, headers: headers, body: body);
+      final response = await http.post(url, headers: headers, body: body);
+
+      print('Response Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
       if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
-        String fullResponse = data['choices'][0]['message']['content'];
-
-        // Parsing the response based on the specified format
-        List<Map<String, String>> poiList =
-            fullResponse.split('\n').map((line) {
-          List<String> parts = line.split(' - ');
-          if (parts.length > 1) {
-            return {'title': parts[0].trim(), 'description': parts[1].trim()};
-          } else {
-            return {'title': parts[0].trim(), 'description': ''};
-          }
-        }).toList();
-
-        setState(() {
-          _poiList = poiList;
-        });
+        Map<String, dynamic> data = json.decode(response.body);
+        print('Data received: ${data}');
+        List<Map<String, dynamic>> pois =
+            _parsePOIs(data['choices'][0]['message']['content']);
+        return pois;
       } else {
-        setState(() {
-          _poiList = [
-            {'title': 'Failed to generate POIs', 'description': ''}
-          ];
-        });
+        print('Failed to load POIs: ${response.body}');
+        throw Exception('Failed to load POIs');
       }
     } catch (e) {
-      setState(() {
-        _poiList = [
-          {'title': 'Error: $e', 'description': ''}
-        ];
-      });
+      print('Error: $e');
+      throw Exception('Failed to load POIs');
     }
   }
 
-  Future<void> _determinePosition() async {
+  List<Map<String, dynamic>> _parsePOIs(String responseText) {
+    List<Map<String, dynamic>> pois = [];
+    List<String> lines = responseText.split('\n');
+    int id = 1;
+
+    for (String line in lines) {
+      if (line.trim().isNotEmpty) {
+        List<String> parts = line.split(',');
+        if (parts.length == 3) {
+          double latitude = double.tryParse(parts[1].trim()) ?? 0.0;
+          double longitude = double.tryParse(parts[2].trim()) ?? 0.0;
+          pois.add({
+            'id': id.toString(),
+            'name': parts[0].trim(),
+            'latitude': latitude,
+            'longitude': longitude,
+          });
+          id++;
+        }
+      }
+    }
+    print('Parsed POIs: $pois');
+    return pois;
+  }
+
+  Future<Position> _determinePosition() async {
     bool serviceEnabled;
     LocationPermission permission;
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      setState(() {
-        _poiList = [
-          {'title': 'Location services are disabled.', 'description': ''}
-        ];
-      });
-      return;
+      return Future.error('Location services are disabled.');
     }
 
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        setState(() {
-          _poiList = [
-            {'title': 'Location permissions are denied', 'description': ''}
-          ];
-        });
-        return;
+        return Future.error('Location permissions are denied');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      setState(() {
-        _poiList = [
-          {
-            'title':
-                'Location permissions are permanently denied, we cannot request permissions.',
-            'description': ''
-          }
-        ];
-      });
-      return;
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
     }
 
-    Position position = await Geolocator.getCurrentPosition();
-    String location = '${position.latitude},${position.longitude}';
-    List<String> tags =
-        _tagsController.text.split(',').map((tag) => tag.trim()).toList();
-    await _generatePOIs(location, tags);
+    return await Geolocator.getCurrentPosition();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('POI Test'),
+        title: Text('Travel Recommendation App'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            CheckboxListTile(
-              title: Text('Use current location'),
-              value: _useCurrentLocation,
-              onChanged: (bool? value) {
+      body: Column(
+        children: [
+          Row(
+            children: [
+              Checkbox(
+                value: useCurrentLocation,
+                onChanged: (value) {
+                  setState(() {
+                    useCurrentLocation = value!;
+                  });
+                },
+              ),
+              Text('Use current location')
+            ],
+          ),
+          if (!useCurrentLocation)
+            TextField(
+              controller: locationController,
+              decoration: InputDecoration(labelText: 'Enter location'),
+            ),
+          TextField(
+            controller: interestsController,
+            decoration: InputDecoration(labelText: 'Enter interests'),
+          ),
+          ElevatedButton(
+            onPressed: _generatePOIs,
+            child: Text('Generate POIs'),
+          ),
+          Expanded(
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: LatLng(51.509865, 0), // Default location
+                zoom: 13,
+              ),
+              markers: Set.from(_markers),
+              onMapCreated: (controller) {
                 setState(() {
-                  _useCurrentLocation = value ?? false;
+                  _mapController = controller;
                 });
               },
             ),
-            if (!_useCurrentLocation)
-              TextField(
-                controller: _locationController,
-                decoration: InputDecoration(labelText: 'Enter a location'),
-              ),
-            TextField(
-              controller: _tagsController,
-              decoration: InputDecoration(
-                  labelText: 'Enter interests (comma separated)'),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                if (_useCurrentLocation) {
-                  _determinePosition();
-                } else {
-                  List<String> tags = _tagsController.text
-                      .split(',')
-                      .map((tag) => tag.trim())
-                      .toList();
-                  _generatePOIs(_locationController.text, tags);
-                }
-              },
-              child: Text('Generate POIs'),
-            ),
-            SizedBox(height: 20),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _poiList.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(_poiList[index]['title']!),
-                    subtitle: Text(_poiList[index]['description']!),
-                    onTap: () {
-                      print('Clicked: ${_poiList[index]['title']}');
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
