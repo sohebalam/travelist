@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "937478522414",
+    "project_id": "travelist-cf131",
+    "storage_bucket": "travelist-cf131.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:937478522414:android:26feb1becfe67d703501bf",
+        "android_client_info": {
+          "package_name": "com.example.travelist"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWmJAk_Le6LKIO3eU9JRkxcB-WOf73WHQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

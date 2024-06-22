@@ -39,6 +39,8 @@ dependencies:
   geocoding: ^3.0.0
   flutter_dotenv: ^5.1.0
   google_maps_flutter: ^2.7.0
+  firebase_core: ^3.1.0
+  cloud_firestore: ^5.0.1
 
 dev_dependencies:
   flutter_test:

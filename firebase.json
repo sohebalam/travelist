@@ -1,18 +1,1 @@
-{
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ],
-      "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint"
-      ]
-    }
-  ]
-}
+{"functions":[{"source":"functions","codebase":"default","ignore":["node_modules",".git","firebase-debug.log","firebase-debug.*.log","*.local"],"predeploy":["npm --prefix \"$RESOURCE_DIR\" run lint"]}],"flutter":{"platforms":{"android":{"default":{"projectId":"travelist-589cc","appId":"1:634216227694:android:cd5824c5739a638112577f","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"travelist-589cc","configurations":{"android":"1:634216227694:android:cd5824c5739a638112577f","ios":"1:634216227694:ios:ca070c10c177f59a12577f","macos":"1:634216227694:ios:ca070c10c177f59a12577f","web":"1:634216227694:web:74073069d6ac5a2c12577f","windows":"1:634216227694:web:719435fa8ae917c212577f"}}}}}}
