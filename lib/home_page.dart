@@ -15,6 +15,7 @@ class _HomePageState extends State<HomePage> {
   TextEditingController interestsController = TextEditingController();
   bool useCurrentLocation = false;
   List<Marker> _markers = [];
+  List<Map<String, dynamic>> _poiList = [];
   GoogleMapController? _mapController;
 
   @override
@@ -71,6 +72,8 @@ class _HomePageState extends State<HomePage> {
           infoWindow: InfoWindow(title: poi['name']),
         );
       }).toList();
+
+      _poiList = pois;
     });
 
     _updateCameraPosition();
@@ -261,27 +264,32 @@ Name, Latitude, Longitude.
               ),
             ],
           ),
-          DraggableScrollableSheet(
-            initialChildSize: 0.1,
-            minChildSize: 0.1,
-            maxChildSize: 0.8,
-            builder: (BuildContext context, ScrollController scrollController) {
-              return Container(
-                color: Colors.white,
-                child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: _markers.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    return ListTile(
-                      title: Text(_markers[index].infoWindow.title ?? ''),
-                      subtitle: Text(
-                          'Lat: ${_markers[index].position.latitude}, Lng: ${_markers[index].position.longitude}'),
+          _poiList.isNotEmpty
+              ? DraggableScrollableSheet(
+                  initialChildSize: 0.1,
+                  minChildSize: 0.1,
+                  maxChildSize: 0.8,
+                  builder: (BuildContext context,
+                      ScrollController scrollController) {
+                    return Container(
+                      color: Colors.white,
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: _poiList.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          return ListTile(
+                            title: Text(_poiList[index]['name']),
+                            // subtitle: Text(_poiList[index]['description']),
+                            onTap: () {
+                              print('Clicked: ${_poiList[index]['name']}');
+                            },
+                          );
+                        },
+                      ),
                     );
                   },
-                ),
-              );
-            },
-          ),
+                )
+              : Container(),
         ],
       ),
     );
