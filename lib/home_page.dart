@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -217,6 +218,15 @@ Name - Latitude, Longitude - Description.
     return await Geolocator.getCurrentPosition();
   }
 
+  Future<void> _addPOIToFirestore(Map<String, dynamic> poi) async {
+    try {
+      await FirebaseFirestore.instance.collection('poiList').add(poi);
+      print('POI added to Firestore');
+    } catch (e) {
+      print('Failed to add POI: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -287,6 +297,7 @@ Name - Latitude, Longitude - Description.
                             subtitle: Text(_poiList[index]['description']),
                             onTap: () {
                               print('Clicked: ${_poiList[index]['name']}');
+                              _addPOIToFirestore(_poiList[index]);
                             },
                           );
                         },
