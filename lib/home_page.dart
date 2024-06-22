@@ -69,7 +69,10 @@ class _HomePageState extends State<HomePage> {
         return Marker(
           markerId: MarkerId(poi['id']),
           position: LatLng(poi['latitude'], poi['longitude']),
-          infoWindow: InfoWindow(title: poi['name']),
+          infoWindow: InfoWindow(
+            title: poi['name'],
+            snippet: poi['description'],
+          ),
         );
       }).toList();
 
@@ -90,8 +93,8 @@ class _HomePageState extends State<HomePage> {
 
     var prompt = '''
 Generate a list of points of interest for location: $location with interests: $interests. 
-For each point of interest, provide the name, latitude, and longitude in the following format:
-Name, Latitude, Longitude.
+For each point of interest, provide the name, latitude, longitude, and a short description in the following format:
+Name - Latitude, Longitude - Description.
 ''';
 
     var body = jsonEncode({
@@ -132,15 +135,17 @@ Name, Latitude, Longitude.
 
     for (String line in lines) {
       if (line.trim().isNotEmpty) {
-        List<String> parts = line.split(',');
+        List<String> parts = line.split(' - ');
         if (parts.length == 3) {
-          double latitude = double.tryParse(parts[1].trim()) ?? 0.0;
-          double longitude = double.tryParse(parts[2].trim()) ?? 0.0;
+          List<String> latLng = parts[1].split(',');
+          double latitude = double.tryParse(latLng[0].trim()) ?? 0.0;
+          double longitude = double.tryParse(latLng[1].trim()) ?? 0.0;
           pois.add({
             'id': id.toString(),
             'name': parts[0].trim(),
             'latitude': latitude,
             'longitude': longitude,
+            'description': parts[2].trim(),
           });
           id++;
         }
@@ -279,7 +284,7 @@ Name, Latitude, Longitude.
                         itemBuilder: (BuildContext context, int index) {
                           return ListTile(
                             title: Text(_poiList[index]['name']),
-                            // subtitle: Text(_poiList[index]['description']),
+                            subtitle: Text(_poiList[index]['description']),
                             onTap: () {
                               print('Clicked: ${_poiList[index]['name']}');
                             },
