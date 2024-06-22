@@ -215,47 +215,72 @@ Name, Latitude, Longitude.
       appBar: AppBar(
         title: Text('Travel Recommendation App'),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Row(
+          Column(
             children: [
-              Checkbox(
-                value: useCurrentLocation,
-                onChanged: (value) {
-                  setState(() {
-                    useCurrentLocation = value!;
-                  });
-                },
+              Row(
+                children: [
+                  Checkbox(
+                    value: useCurrentLocation,
+                    onChanged: (value) {
+                      setState(() {
+                        useCurrentLocation = value!;
+                      });
+                    },
+                  ),
+                  Text('Use current location')
+                ],
               ),
-              Text('Use current location')
+              if (!useCurrentLocation)
+                TextField(
+                  controller: locationController,
+                  decoration: InputDecoration(labelText: 'Enter location'),
+                ),
+              TextField(
+                controller: interestsController,
+                decoration: InputDecoration(labelText: 'Enter interests'),
+              ),
+              ElevatedButton(
+                onPressed: _generatePOIs,
+                child: Text('Generate POIs'),
+              ),
+              Expanded(
+                child: GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: LatLng(51.509865, 0), // Default location
+                    zoom: 13,
+                  ),
+                  markers: Set.from(_markers),
+                  onMapCreated: (controller) {
+                    setState(() {
+                      _mapController = controller;
+                    });
+                  },
+                ),
+              ),
             ],
           ),
-          if (!useCurrentLocation)
-            TextField(
-              controller: locationController,
-              decoration: InputDecoration(labelText: 'Enter location'),
-            ),
-          TextField(
-            controller: interestsController,
-            decoration: InputDecoration(labelText: 'Enter interests'),
-          ),
-          ElevatedButton(
-            onPressed: _generatePOIs,
-            child: Text('Generate POIs'),
-          ),
-          Expanded(
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: LatLng(51.509865, 0), // Default location
-                zoom: 13,
-              ),
-              markers: Set.from(_markers),
-              onMapCreated: (controller) {
-                setState(() {
-                  _mapController = controller;
-                });
-              },
-            ),
+          DraggableScrollableSheet(
+            initialChildSize: 0.1,
+            minChildSize: 0.1,
+            maxChildSize: 0.8,
+            builder: (BuildContext context, ScrollController scrollController) {
+              return Container(
+                color: Colors.white,
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: _markers.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return ListTile(
+                      title: Text(_markers[index].infoWindow.title ?? ''),
+                      subtitle: Text(
+                          'Lat: ${_markers[index].position.latitude}, Lng: ${_markers[index].position.longitude}'),
+                    );
+                  },
+                ),
+              );
+            },
           ),
         ],
       ),
