@@ -20,6 +20,7 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> _poiList = [];
   GoogleMapController? _mapController;
   String? _selectedListId;
+  String? _selectedListName;
   bool _showNewListFields = false;
 
   final CollectionReference _listsCollection =
@@ -229,78 +230,86 @@ Name - Latitude, Longitude - Description.
     showDialog(
       context: context,
       builder: (context) {
-        return StreamBuilder<QuerySnapshot>(
-          stream: _listsCollection.snapshots(),
-          builder: (context, snapshot) {
-            bool hasLists = snapshot.hasData && snapshot.data!.docs.isNotEmpty;
-            return AlertDialog(
-              title: Text('Add POI to List'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (hasLists) ...[
-                    SwitchListTile(
-                      title: Text('Create new list'),
-                      value: _showNewListFields,
-                      onChanged: (value) {
-                        setState(() {
-                          _showNewListFields = value;
-                        });
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return StreamBuilder<QuerySnapshot>(
+              stream: _listsCollection.snapshots(),
+              builder: (context, snapshot) {
+                bool hasLists =
+                    snapshot.hasData && snapshot.data!.docs.isNotEmpty;
+                return AlertDialog(
+                  title: Text('Add POI to List'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hasLists) ...[
+                        SwitchListTile(
+                          title: Text('Create new list'),
+                          value: _showNewListFields,
+                          onChanged: (value) {
+                            setState(() {
+                              _showNewListFields = value;
+                            });
+                          },
+                        ),
+                      ],
+                      if (!hasLists || _showNewListFields) ...[
+                        TextField(
+                          controller: newListController,
+                          decoration: InputDecoration(
+                            labelText: 'Enter new list name',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            _createList(newListController.text);
+                            newListController.clear();
+                          },
+                          child: Text('Create New List'),
+                        ),
+                      ],
+                      if (hasLists && !_showNewListFields)
+                        DropdownButton<String>(
+                          hint: Text('Select List'),
+                          value: _selectedListId,
+                          items: snapshot.data!.docs.map((list) {
+                            var listData = list.data() as Map<String, dynamic>;
+                            return DropdownMenuItem<String>(
+                              value: list.id,
+                              child: Text(listData.containsKey('list')
+                                  ? listData['list']
+                                  : 'Unnamed List'),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedListId = value!;
+                              _selectedListName = (snapshot.data!.docs
+                                  .firstWhere((element) => element.id == value)
+                                  .data() as Map<String, dynamic>)['list'];
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
                       },
-                    ),
-                  ],
-                  if (!hasLists || _showNewListFields) ...[
-                    TextField(
-                      controller: newListController,
-                      decoration: InputDecoration(
-                        labelText: 'Enter new list name',
-                        border: OutlineInputBorder(),
-                      ),
+                      child: Text('Cancel'),
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        _createList(newListController.text);
-                        newListController.clear();
+                        _savePOIToList(poi);
+                        Navigator.of(context).pop();
                       },
-                      child: Text('Create New List'),
+                      child: Text('Add to List'),
                     ),
                   ],
-                  if (hasLists && !_showNewListFields)
-                    DropdownButton<String>(
-                      hint: Text('Select List'),
-                      value: _selectedListId,
-                      items: snapshot.data!.docs.map((list) {
-                        var listData = list.data() as Map<String, dynamic>;
-                        return DropdownMenuItem<String>(
-                          value: list.id,
-                          child: Text(listData.containsKey('list')
-                              ? listData['list']
-                              : 'Unnamed List'),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedListId = value!;
-                        });
-                      },
-                    ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    _savePOIToList(poi);
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('Add to List'),
-                ),
-              ],
+                );
+              },
             );
           },
         );
@@ -330,6 +339,7 @@ Name - Latitude, Longitude - Description.
       _listsCollection.add({'list': listName}).then((docRef) {
         setState(() {
           _selectedListId = docRef.id;
+          _selectedListName = listName;
           _showNewListFields = false;
         });
       });
