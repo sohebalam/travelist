@@ -78,6 +78,7 @@ class _HomePageState extends State<HomePage> {
           infoWindow: InfoWindow(
             title: poi['name'],
             snippet: poi['description'],
+            onTap: () => _showAddToListDialog(poi),
           ),
         );
       }).toList();
@@ -223,6 +224,59 @@ Name - Latitude, Longitude - Description.
     return await Geolocator.getCurrentPosition();
   }
 
+  void _showAddToListDialog(Map<String, dynamic> poi) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Add POI to List'),
+          content: StreamBuilder<QuerySnapshot>(
+            stream: _listsCollection.snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return Center(child: CircularProgressIndicator());
+              }
+              final lists = snapshot.data!.docs;
+              return DropdownButton<String>(
+                hint: Text('Select List'),
+                value: _selectedListId,
+                items: lists.map((list) {
+                  var listData = list.data() as Map<String, dynamic>;
+                  return DropdownMenuItem<String>(
+                    value: list.id,
+                    child: Text(listData.containsKey('list')
+                        ? listData['list']
+                        : 'Unnamed List'),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedListId = value!;
+                  });
+                },
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _savePOIToList(poi);
+                Navigator.of(context).pop();
+              },
+              child: Text('Add to List'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _savePOIToList(Map<String, dynamic> poi) {
     if (_selectedListId != null) {
       _listsCollection.doc(_selectedListId).collection('pois').add({
@@ -334,8 +388,8 @@ Name - Latitude, Longitude - Description.
                             title: Text(_poiList[index]['name']),
                             subtitle: Text(_poiList[index]['description']),
                             onTap: () {
-                              _savePOIToList(_poiList[index]);
-                              print('Saved: ${_poiList[index]['name']}');
+                              _showAddToListDialog(_poiList[index]);
+                              print('Tapped: ${_poiList[index]['name']}');
                             },
                           );
                         },
@@ -344,34 +398,6 @@ Name - Latitude, Longitude - Description.
                   },
                 )
               : Container(),
-          Align(
-            alignment: Alignment.topRight,
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _listsCollection.snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return Center(child: CircularProgressIndicator());
-                }
-                final lists = snapshot.data!.docs;
-                return DropdownButton<String>(
-                  hint: Text('Select List'),
-                  value: _selectedListId,
-                  items: lists.map((list) {
-                    var listData = list.data() as Map<String, dynamic>;
-                    return DropdownMenuItem<String>(
-                      value: list.id,
-                      child: Text(listData.containsKey('list')
-                          ? listData['list']
-                          : 'Unnamed List'),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    _selectList(value!);
-                  },
-                );
-              },
-            ),
-          ),
         ],
       ),
     );
