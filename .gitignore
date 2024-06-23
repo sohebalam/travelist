@@ -10,7 +10,7 @@
 .svn/
 .env
 migrate_working_dir/
-AndroidManifest
+AndroidManifest.xml
 
 # IntelliJ related
 *.iml

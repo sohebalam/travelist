@@ -14,7 +14,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   TextEditingController locationController = TextEditingController();
   TextEditingController interestsController = TextEditingController();
-  TextEditingController listController = TextEditingController();
+  TextEditingController newListController = TextEditingController();
   bool useCurrentLocation = false;
   List<Marker> _markers = [];
   List<Map<String, dynamic>> _poiList = [];
@@ -230,32 +230,51 @@ Name - Latitude, Longitude - Description.
       builder: (context) {
         return AlertDialog(
           title: Text('Add POI to List'),
-          content: StreamBuilder<QuerySnapshot>(
-            stream: _listsCollection.snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return Center(child: CircularProgressIndicator());
-              }
-              final lists = snapshot.data!.docs;
-              return DropdownButton<String>(
-                hint: Text('Select List'),
-                value: _selectedListId,
-                items: lists.map((list) {
-                  var listData = list.data() as Map<String, dynamic>;
-                  return DropdownMenuItem<String>(
-                    value: list.id,
-                    child: Text(listData.containsKey('list')
-                        ? listData['list']
-                        : 'Unnamed List'),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedListId = value!;
-                  });
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: newListController,
+                decoration: InputDecoration(
+                  labelText: 'Enter new list name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  _createList(newListController.text);
+                  newListController.clear();
                 },
-              );
-            },
+                child: Text('Create New List'),
+              ),
+              StreamBuilder<QuerySnapshot>(
+                stream: _listsCollection.snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                  final lists = snapshot.data!.docs;
+                  return DropdownButton<String>(
+                    hint: Text('Select List'),
+                    value: _selectedListId,
+                    items: lists.map((list) {
+                      var listData = list.data() as Map<String, dynamic>;
+                      return DropdownMenuItem<String>(
+                        value: list.id,
+                        child: Text(listData.containsKey('list')
+                            ? listData['list']
+                            : 'Unnamed List'),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedListId = value!;
+                      });
+                    },
+                  );
+                },
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -339,21 +358,6 @@ Name - Latitude, Longitude - Description.
               ElevatedButton(
                 onPressed: _generatePOIs,
                 child: Text('Generate POIs'),
-              ),
-              SizedBox(height: 16),
-              TextField(
-                controller: listController,
-                decoration: InputDecoration(
-                  labelText: 'Enter new list name',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  _createList(listController.text);
-                  listController.clear();
-                },
-                child: Text('Create New List'),
               ),
               Expanded(
                 child: GoogleMap(
