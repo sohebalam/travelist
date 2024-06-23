@@ -1,82 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class NamePostPage extends StatefulWidget {
+class listPostPage extends StatefulWidget {
   @override
-  _NamePostPageState createState() => _NamePostPageState();
+  _listPostPageState createState() => _listPostPageState();
 }
 
-class _NamePostPageState extends State<NamePostPage> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _detailController = TextEditingController();
-  final CollectionReference _namesCollection =
-      FirebaseFirestore.instance.collection('names');
-  String? _selectedNameId;
+class _listPostPageState extends State<listPostPage> {
+  final TextEditingController _listController = TextEditingController();
+  final TextEditingController _poiController = TextEditingController();
+  final CollectionReference _listsCollection =
+      FirebaseFirestore.instance.collection('lists');
+  String? _selectedlistId;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Name Post App'),
+        title: Text('list Post App'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             TextField(
-              controller: _nameController,
+              controller: _listController,
               decoration: InputDecoration(
-                labelText: 'Enter your name',
+                labelText: 'Enter your list',
                 border: OutlineInputBorder(),
               ),
             ),
             SizedBox(height: 16.0),
             ElevatedButton(
-              onPressed: _postName,
-              child: Text('Post Name'),
+              onPressed: _postlist,
+              child: Text('Post list'),
             ),
             SizedBox(height: 16.0),
             TextField(
-              controller: _detailController,
+              controller: _poiController,
               decoration: InputDecoration(
-                labelText: 'Enter detail for selected name',
+                labelText: 'Enter poi for selected list',
                 border: OutlineInputBorder(),
               ),
             ),
             SizedBox(height: 16.0),
             ElevatedButton(
-              onPressed: _postDetail,
-              child: Text('Post Detail'),
+              onPressed: _postpoi,
+              child: Text('Post poi'),
             ),
             SizedBox(height: 16.0),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: _namesCollection.snapshots(),
+                stream: _listsCollection.snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return Center(child: CircularProgressIndicator());
                   }
-                  final names = snapshot.data!.docs;
+                  final lists = snapshot.data!.docs;
                   return ListView.builder(
-                    itemCount: names.length,
+                    itemCount: lists.length,
                     itemBuilder: (context, index) {
                       return ListTile(
-                        title: Text(names[index]['name']),
-                        onTap: () => _selectName(names[index].id),
+                        title: Text(lists[index]['list']),
+                        onTap: () => _selectlist(lists[index].id),
                         subtitle: StreamBuilder<QuerySnapshot>(
-                          stream: _namesCollection
-                              .doc(names[index].id)
-                              .collection('details')
+                          stream: _listsCollection
+                              .doc(lists[index].id)
+                              .collection('pois')
                               .snapshots(),
-                          builder: (context, detailsSnapshot) {
-                            if (!detailsSnapshot.hasData) {
+                          builder: (context, poisSnapshot) {
+                            if (!poisSnapshot.hasData) {
                               return SizedBox();
                             }
-                            final details = detailsSnapshot.data!.docs;
+                            final pois = poisSnapshot.data!.docs;
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: details.map((detail) {
-                                return Text(' - ${detail['detail']}');
+                              children: pois.map((poi) {
+                                return Text(' - ${poi['poi']}');
                               }).toList(),
                             );
                           },
@@ -93,26 +93,26 @@ class _NamePostPageState extends State<NamePostPage> {
     );
   }
 
-  void _postName() {
-    if (_nameController.text.isNotEmpty) {
-      _namesCollection.add({'name': _nameController.text});
-      _nameController.clear();
+  void _postlist() {
+    if (_listController.text.isNotEmpty) {
+      _listsCollection.add({'list': _listController.text});
+      _listController.clear();
     }
   }
 
-  void _postDetail() {
-    if (_selectedNameId != null && _detailController.text.isNotEmpty) {
-      _namesCollection
-          .doc(_selectedNameId)
-          .collection('details')
-          .add({'detail': _detailController.text});
-      _detailController.clear();
+  void _postpoi() {
+    if (_selectedlistId != null && _poiController.text.isNotEmpty) {
+      _listsCollection
+          .doc(_selectedlistId)
+          .collection('pois')
+          .add({'poi': _poiController.text});
+      _poiController.clear();
     }
   }
 
-  void _selectName(String nameId) {
+  void _selectlist(String listId) {
     setState(() {
-      _selectedNameId = nameId;
+      _selectedlistId = listId;
     });
   }
 }
