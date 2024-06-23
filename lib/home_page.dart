@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -5,6 +6,26 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await dotenv.load(fileName: ".env"); // Ensure you load the .env file
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: HomePage(),
+    );
+  }
+}
 
 class HomePage extends StatefulWidget {
   @override
@@ -22,7 +43,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    dotenv.load();
+    print('Firebase initialized successfully');
   }
 
   void _generatePOIs() async {
@@ -218,13 +239,117 @@ Name - Latitude, Longitude - Description.
     return await Geolocator.getCurrentPosition();
   }
 
-  Future<void> _addPOIToFirestore(Map<String, dynamic> poi) async {
+  Future<void> _addPOIToList(Map<String, dynamic> poi, String listName) async {
     try {
-      await FirebaseFirestore.instance.collection('poiList').add(poi);
-      print('POI added to Firestore');
+      await FirebaseFirestore.instance
+          .collection('poiLists')
+          .doc(listName)
+          .collection('pois')
+          .add(poi);
+      print('POI added to list: $listName');
     } catch (e) {
       print('Failed to add POI: $e');
     }
+  }
+
+  Future<String?> _showListSelectionDialog(BuildContext context) async {
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        TextEditingController listNameController = TextEditingController();
+        String? selectedList;
+
+        return AlertDialog(
+          title: Text('Choose List'),
+          content: FutureBuilder<List<String>>(
+            future: _fetchExistingLists(),
+            builder:
+                (BuildContext context, AsyncSnapshot<List<String>> snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return CircularProgressIndicator();
+              } else if (snapshot.hasError) {
+                return Text('Error: ${snapshot.error}');
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('No existing lists found. Please create a new list.'),
+                    TextField(
+                      controller: listNameController,
+                      decoration: InputDecoration(
+                        labelText: 'Enter new list name',
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                print('Existing lists: ${snapshot.data}'); // Debug print
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButton<String>(
+                      hint: Text('Select existing list'),
+                      value: selectedList,
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedList = newValue;
+                        });
+                      },
+                      items: snapshot.data!.map((String listName) {
+                        return DropdownMenuItem<String>(
+                          value: listName,
+                          child: Text(listName),
+                        );
+                      }).toList(),
+                    ),
+                    TextField(
+                      controller: listNameController,
+                      decoration: InputDecoration(
+                        labelText: 'Or enter new list name',
+                      ),
+                    ),
+                  ],
+                );
+              }
+            },
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Create'),
+              onPressed: () {
+                if (listNameController.text.isNotEmpty) {
+                  Navigator.of(context).pop(listNameController.text);
+                } else if (selectedList != null) {
+                  Navigator.of(context).pop(selectedList);
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<List<String>> _fetchExistingLists() async {
+    List<String> lists = [];
+    try {
+      QuerySnapshot querySnapshot =
+          await FirebaseFirestore.instance.collection('poiLists').get();
+      for (var doc in querySnapshot.docs) {
+        print('List found: ${doc.id}'); // Debug print
+        lists.add(doc.id); // Assuming the document ID is the list name
+      }
+      print('Total lists found: ${lists.length}');
+    } catch (e) {
+      print('Error fetching lists: $e');
+    }
+    return lists;
   }
 
   @override
@@ -295,9 +420,13 @@ Name - Latitude, Longitude - Description.
                           return ListTile(
                             title: Text(_poiList[index]['name']),
                             subtitle: Text(_poiList[index]['description']),
-                            onTap: () {
+                            onTap: () async {
                               print('Clicked: ${_poiList[index]['name']}');
-                              _addPOIToFirestore(_poiList[index]);
+                              String? listName =
+                                  await _showListSelectionDialog(context);
+                              if (listName != null) {
+                                _addPOIToList(_poiList[index], listName);
+                              }
                             },
                           );
                         },
