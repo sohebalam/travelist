@@ -304,6 +304,8 @@ Name - Latitude, Longitude - Description.
                       onPressed: () {
                         _savePOIToList(poi);
                         Navigator.of(context).pop();
+                        _showSnackBar(context,
+                            '${poi['name']} added to $_selectedListName');
                       },
                       child: Text('Add to List'),
                     ),
@@ -326,6 +328,15 @@ Name - Latitude, Longitude - Description.
         'description': poi['description']
       });
     }
+  }
+
+  void _showSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: Duration(seconds: 3),
+      ),
+    );
   }
 
   void _selectList(String listId) {
