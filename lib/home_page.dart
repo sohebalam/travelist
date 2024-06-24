@@ -32,7 +32,15 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    dotenv.load();
+    _loadEnv();
+  }
+
+  Future<void> _loadEnv() async {
+    await dotenv.load();
+    if (dotenv.env['GOOGLE_PLACES_API_KEY'] == null ||
+        dotenv.env['OPENAI_API_KEY'] == null) {
+      print('Missing API keys in .env file');
+    }
   }
 
   void _generatePOIs() async {
@@ -108,11 +116,15 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    String apiKey = dotenv.env['OPENAI_API_KEY']!;
+    String? openAiApiKey = dotenv.env['OPENAI_API_KEY'];
+    if (openAiApiKey == null) {
+      throw Exception('OpenAI API key is missing');
+    }
+
     var url = Uri.parse('https://api.openai.com/v1/chat/completions');
     var headers = {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer $apiKey',
+      'Authorization': 'Bearer $openAiApiKey',
     };
 
     var prompt = '''
@@ -141,7 +153,20 @@ Name - Latitude, Longitude - Description.
         print('Data received: ${data}');
         List<Map<String, dynamic>> pois =
             _parsePOIs(data['choices'][0]['message']['content']);
-        return pois;
+
+        // Validate each POI
+        List<Map<String, dynamic>> validPois = [];
+        for (var poi in pois) {
+          bool isValidPoi = await _validatePoi(
+              poi['name'], poi['latitude'], poi['longitude']);
+          print('POI validation result for ${poi['name']}: $isValidPoi');
+          if (isValidPoi) {
+            validPois.add(poi);
+          }
+        }
+
+        print('Valid POIs: ${validPois.length}');
+        return validPois;
       } else {
         print('Failed to load POIs: ${response.body}');
         throw Exception('Failed to load POIs');
@@ -153,12 +178,18 @@ Name - Latitude, Longitude - Description.
   }
 
   Future<bool> _validateLocation(String location) async {
-    String apiKey = dotenv.env['GOOGLE_PLACES_API_KEY']!;
+    String? googlePlacesApiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
+    if (googlePlacesApiKey == null) {
+      throw Exception('Google Places API key is missing');
+    }
+
     var url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=$location&inputtype=textquery&key=$apiKey');
+        'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=$location&inputtype=textquery&key=$googlePlacesApiKey');
 
     try {
       final response = await http.get(url);
+
+      print('Google Places response: ${response.body}');
 
       if (response.statusCode == 200) {
         Map<String, dynamic> data = json.decode(response.body);
@@ -173,12 +204,44 @@ Name - Latitude, Longitude - Description.
     }
   }
 
+  Future<bool> _validatePoi(
+      String name, double latitude, double longitude) async {
+    String? googlePlacesApiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
+    if (googlePlacesApiKey == null) {
+      throw Exception('Google Places API key is missing');
+    }
+
+    var url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$latitude,$longitude&radius=50&keyword=$name&key=$googlePlacesApiKey');
+
+    try {
+      final response = await http.get(url);
+
+      print('Google Places POI response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        if (data['results'] != null && data['results'].isNotEmpty) {
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('Error validating POI: $e');
+      return false;
+    }
+  }
+
   Future<String> _refineLocation(String location, String interests) async {
-    String apiKey = dotenv.env['OPENAI_API_KEY']!;
+    String? openAiApiKey = dotenv.env['OPENAI_API_KEY'];
+    if (openAiApiKey == null) {
+      throw Exception('OpenAI API key is missing');
+    }
+
     var url = Uri.parse('https://api.openai.com/v1/chat/completions');
     var headers = {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer $apiKey',
+      'Authorization': 'Bearer $openAiApiKey',
     };
 
     var prompt = '''
@@ -196,6 +259,8 @@ The location "$location" could not be validated. Suggest an alternative or corre
 
     try {
       final response = await http.post(url, headers: headers, body: body);
+
+      print('OpenAI refine response: ${response.body}');
 
       if (response.statusCode == 200) {
         Map<String, dynamic> data = json.decode(response.body);
