@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:travelist/lists.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -353,7 +354,10 @@ Name - Latitude, Longitude - Description.
       _selectedIndex = index;
     });
     if (index == 1) {
-      print('Lists page selected');
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ListsPage()),
+      );
     }
   }
 
