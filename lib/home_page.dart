@@ -26,6 +26,8 @@ class _HomePageState extends State<HomePage> {
   final CollectionReference _listsCollection =
       FirebaseFirestore.instance.collection('lists');
 
+  int _selectedIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -304,8 +306,6 @@ Name - Latitude, Longitude - Description.
                       onPressed: () {
                         _savePOIToList(poi);
                         Navigator.of(context).pop();
-                        _showSnackBar(context,
-                            '${poi['name']} added to $_selectedListName');
                       },
                       child: Text('Add to List'),
                     ),
@@ -330,15 +330,6 @@ Name - Latitude, Longitude - Description.
     }
   }
 
-  void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: Duration(seconds: 3),
-      ),
-    );
-  }
-
   void _selectList(String listId) {
     setState(() {
       _selectedListId = listId;
@@ -354,6 +345,15 @@ Name - Latitude, Longitude - Description.
           _showNewListFields = false;
         });
       });
+    }
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    if (index == 1) {
+      print('Lists page selected');
     }
   }
 
@@ -437,6 +437,21 @@ Name - Latitude, Longitude - Description.
                 )
               : Container(),
         ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list),
+            label: 'Lists',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.blue,
+        onTap: _onItemTapped,
       ),
     );
   }
