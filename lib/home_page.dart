@@ -96,6 +96,18 @@ class _HomePageState extends State<HomePage> {
 
   Future<List<Map<String, dynamic>>> _fetchPOIs(
       String location, String interests) async {
+    bool isValidLocation = await _validateLocation(location);
+
+    if (!isValidLocation) {
+      print('Invalid location: $location. Requesting refinement from OpenAI.');
+      // If the location is not valid, make another call to OpenAI to refine the search
+      location = await _refineLocation(location, interests);
+      isValidLocation = await _validateLocation(location);
+      if (!isValidLocation) {
+        throw Exception('Invalid location provided and refinement failed.');
+      }
+    }
+
     String apiKey = dotenv.env['OPENAI_API_KEY']!;
     var url = Uri.parse('https://api.openai.com/v1/chat/completions');
     var headers = {
@@ -137,6 +149,64 @@ Name - Latitude, Longitude - Description.
     } catch (e) {
       print('Error: $e');
       throw Exception('Failed to load POIs');
+    }
+  }
+
+  Future<bool> _validateLocation(String location) async {
+    String apiKey = dotenv.env['GOOGLE_PLACES_API_KEY']!;
+    var url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=$location&inputtype=textquery&key=$apiKey');
+
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        if (data['candidates'] != null && data['candidates'].isNotEmpty) {
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('Error validating location: $e');
+      return false;
+    }
+  }
+
+  Future<String> _refineLocation(String location, String interests) async {
+    String apiKey = dotenv.env['OPENAI_API_KEY']!;
+    var url = Uri.parse('https://api.openai.com/v1/chat/completions');
+    var headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $apiKey',
+    };
+
+    var prompt = '''
+The location "$location" could not be validated. Suggest an alternative or correct it based on the following interests: $interests.
+''';
+
+    var body = jsonEncode({
+      'model': 'gpt-3.5-turbo',
+      'messages': [
+        {'role': 'system', 'content': prompt},
+      ],
+      'max_tokens': 50,
+      'temperature': 0.7,
+    });
+
+    try {
+      final response = await http.post(url, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        return data['choices'][0]['message']['content'].trim();
+      } else {
+        print('Failed to refine location: ${response.body}');
+        throw Exception('Failed to refine location');
+      }
+    } catch (e) {
+      print('Error: $e');
+      throw Exception('Failed to refine location');
     }
   }
 
