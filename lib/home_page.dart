@@ -212,7 +212,7 @@ Name - Latitude, Longitude - Description.
     }
 
     var url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$latitude,$longitude&radius=50&keyword=$name&key=$googlePlacesApiKey');
+        'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$latitude,$longitude&radius=500&keyword=$name&key=$googlePlacesApiKey');
 
     try {
       final response = await http.get(url);
@@ -253,7 +253,7 @@ The location "$location" could not be validated. Suggest an alternative or corre
       'messages': [
         {'role': 'system', 'content': prompt},
       ],
-      'max_tokens': 50,
+      'max_tokens': 250,
       'temperature': 0.7,
     });
 
