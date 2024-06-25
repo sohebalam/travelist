@@ -165,6 +165,11 @@ Name - Latitude, Longitude - Description.
           }
         }
 
+        if (validPois.isEmpty) {
+          // Fallback to Google Places API if no valid POIs are found
+          validPois = await _fetchGooglePlacesPOIs(location, interests);
+        }
+
         print('Valid POIs: ${validPois.length}');
         return validPois;
       } else {
@@ -174,6 +179,54 @@ Name - Latitude, Longitude - Description.
     } catch (e) {
       print('Error: $e');
       throw Exception('Failed to load POIs');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchGooglePlacesPOIs(
+      String location, String interests) async {
+    String? googlePlacesApiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
+    if (googlePlacesApiKey == null) {
+      throw Exception('Google Places API key is missing');
+    }
+
+    List<String> latLng = location.split(',');
+    if (latLng.length != 2) {
+      throw Exception('Invalid location format');
+    }
+
+    double latitude = double.tryParse(latLng[0].trim()) ?? 0.0;
+    double longitude = double.tryParse(latLng[1].trim()) ?? 0.0;
+
+    var url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$latitude,$longitude&radius=1000&keyword=$interests&key=$googlePlacesApiKey');
+
+    try {
+      final response = await http.get(url);
+
+      print('Google Places POI response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        List<Map<String, dynamic>> pois = [];
+        if (data['results'] != null) {
+          for (var result in data['results']) {
+            pois.add({
+              'id': result['place_id'],
+              'name': result['name'],
+              'latitude': result['geometry']['location']['lat'],
+              'longitude': result['geometry']['location']['lng'],
+              'description': result['vicinity'] ?? 'No description available',
+            });
+          }
+        }
+        return pois;
+      } else {
+        print('Failed to fetch Google Places POIs: ${response.body}');
+        throw Exception('Failed to fetch Google Places POIs');
+      }
+    } catch (e) {
+      print('Error: $e');
+      throw Exception('Failed to fetch Google Places POIs');
     }
   }
 
