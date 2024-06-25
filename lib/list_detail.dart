@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // Make sure to load your Google Maps API key from .env file
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
+import 'package:location/location.dart' as loc;
+import 'package:url_launcher/url_launcher.dart';
 
 class ListDetailsPage extends StatefulWidget {
   final String listId;
@@ -21,18 +24,32 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   List<Marker> _markers = [];
   List<LatLng> _polylinePoints = [];
   List<LatLng> _routePoints = [];
-  Set<Polyline> _polylines = {}; // Define _polylines here
+  Set<Polyline> _polylines = {};
   PolylinePoints polylinePoints = PolylinePoints();
   String? _googleMapsApiKey;
   bool _isLoading = false;
   String? _error;
   LatLng? _currentLocation;
+  final Completer<GoogleMapController?> _controller = Completer();
+  loc.Location location = loc.Location();
+  loc.LocationData? _currentPosition;
+  StreamSubscription<loc.LocationData>? locationSubscription;
+
+  bool _isNavigationView = false;
+  LatLng? _navigationDestination;
 
   @override
   void initState() {
     super.initState();
     _googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'];
     _fetchPlaces();
+    _getCurrentLocation();
+  }
+
+  @override
+  void dispose() {
+    locationSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchPlaces() async {
@@ -159,11 +176,11 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   }
 
   Future<void> _navigateToSelectedLocation(LatLng selectedLocation) async {
-    if (_currentLocation == null) return;
+    if (_currentPosition == null) return;
 
     final apiKey = _googleMapsApiKey;
     final origin =
-        '${_currentLocation!.latitude},${_currentLocation!.longitude}';
+        '${_currentPosition!.latitude},${_currentPosition!.longitude}';
     final destination =
         '${selectedLocation.latitude},${selectedLocation.longitude}';
     final url =
@@ -185,6 +202,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
       setState(() {
         _polylines.add(polyline);
+        _navigationDestination = selectedLocation;
+        _isNavigationView = true;
         _mapController?.animateCamera(
           CameraUpdate.newLatLngBounds(
             _calculateBounds(decodedPoints),
@@ -224,23 +243,92 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     return points;
   }
 
+  Future<void> _getCurrentLocation() async {
+    bool _serviceEnabled;
+    loc.PermissionStatus _permissionGranted;
+    final GoogleMapController? controller = await _controller.future;
+
+    _serviceEnabled = await location.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await location.requestService();
+      if (!_serviceEnabled) {
+        return;
+      }
+    }
+
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted == loc.PermissionStatus.denied) {
+      _permissionGranted = await location.requestPermission();
+      if (_permissionGranted != loc.PermissionStatus.granted) {
+        return;
+      }
+    }
+
+    if (_permissionGranted == loc.PermissionStatus.granted) {
+      _currentPosition = await location.getLocation();
+      setState(() {
+        _currentLocation =
+            LatLng(_currentPosition!.latitude!, _currentPosition!.longitude!);
+      });
+
+      locationSubscription =
+          location.onLocationChanged.listen((loc.LocationData currentLocation) {
+        controller?.animateCamera(CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target:
+                LatLng(currentLocation.latitude!, currentLocation.longitude!),
+            zoom: 16,
+          ),
+        ));
+
+        if (mounted) {
+          setState(() {
+            _currentLocation =
+                LatLng(currentLocation.latitude!, currentLocation.longitude!);
+          });
+        }
+      });
+    }
+  }
+
+  void _toggleNavigationView() {
+    setState(() {
+      _isNavigationView = !_isNavigationView;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.listName),
+        actions: [
+          if (_isNavigationView)
+            IconButton(
+              icon: Icon(Icons.map),
+              onPressed: _toggleNavigationView,
+              tooltip: 'Switch to map view',
+            )
+          else
+            IconButton(
+              icon: Icon(Icons.navigation),
+              onPressed: _toggleNavigationView,
+              tooltip: 'Switch to navigation view',
+            ),
+        ],
       ),
       body: Stack(
         children: [
           GoogleMap(
             initialCameraPosition: CameraPosition(
-              target: LatLng(51.509865, -0.118092), // Default location
+              target: LatLng(51.509865, -0.118092),
               zoom: 13,
             ),
             markers: Set.from(_markers),
-            polylines: _polylines, // Use _polylines here
+            polylines: _polylines,
             onMapCreated: (controller) {
               _mapController = controller;
+              _controller.complete(controller);
               if (_polylinePoints.isNotEmpty) {
                 _mapController?.animateCamera(
                   CameraUpdate.newLatLngBounds(
@@ -251,59 +339,66 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
               }
             },
             myLocationEnabled: true,
-            onCameraMove: (position) {
-              _currentLocation = position.target;
-            },
           ),
           if (_isLoading)
             Center(child: CircularProgressIndicator())
           else if (_error != null)
             Center(child: Text('Error: $_error')),
-          DraggableScrollableSheet(
-            initialChildSize: 0.1,
-            minChildSize: 0.1,
-            maxChildSize: 0.8,
-            builder: (BuildContext context, ScrollController scrollController) {
-              return Container(
-                color: Colors.white,
-                child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: _markers.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    return ListTile(
-                      title:
-                          Text(_markers[index].infoWindow.title ?? 'No name'),
-                      subtitle: Text(
-                          'Lat: ${_markers[index].position.latitude}, Lng: ${_markers[index].position.longitude}'),
-                      onTap: () {
-                        // Navigate to the selected marker
-                        _navigateToSelectedLocation(_markers[index].position);
-                      },
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-          Positioned(
-            bottom: 20,
-            right: 20,
-            child: Column(
-              children: [
-                FloatingActionButton(
-                  onPressed: _addPOIFromGooglePlaces,
-                  child: Icon(Icons.add_location_alt),
-                  tooltip: 'Add POI from Google Places',
-                ),
-                SizedBox(height: 10),
-                FloatingActionButton(
-                  onPressed: _recommendPOIsUsingOpenAI,
-                  child: Icon(Icons.lightbulb),
-                  tooltip: 'Recommend POIs using OpenAI',
-                ),
-              ],
+          if (!_isNavigationView)
+            DraggableScrollableSheet(
+              initialChildSize: 0.1,
+              minChildSize: 0.1,
+              maxChildSize: 0.8,
+              builder:
+                  (BuildContext context, ScrollController scrollController) {
+                return Container(
+                  color: Colors.white,
+                  child: ListView.builder(
+                    controller: scrollController,
+                    itemCount: _markers.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      return ListTile(
+                        title:
+                            Text(_markers[index].infoWindow.title ?? 'No name'),
+                        subtitle: Text(
+                            'Lat: ${_markers[index].position.latitude}, Lng: ${_markers[index].position.longitude}'),
+                        onTap: () {
+                          _navigateToSelectedLocation(_markers[index].position);
+                        },
+                      );
+                    },
+                  ),
+                );
+              },
             ),
-          ),
+          if (_isNavigationView && _navigationDestination != null)
+            Positioned(
+              bottom: 10,
+              right: 10,
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration:
+                    BoxDecoration(shape: BoxShape.circle, color: Colors.blue),
+                child: Center(
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.navigation_outlined,
+                      color: Colors.white,
+                    ),
+                    onPressed: () async {
+                      final url =
+                          'google.navigation:q=${_navigationDestination!.latitude},${_navigationDestination!.longitude}&key=$_googleMapsApiKey';
+                      if (await canLaunch(url)) {
+                        await launch(url);
+                      } else {
+                        throw 'Could not launch $url';
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
