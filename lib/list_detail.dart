@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'package:location/location.dart' as loc;
+import 'package:location/location.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ListDetailsPage extends StatefulWidget {
@@ -37,6 +38,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
   bool _isNavigationView = false;
   LatLng? _navigationDestination;
+  bool _userHasInteractedWithMap = false;
 
   @override
   void initState() {
@@ -87,7 +89,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         _isLoading = false;
       });
 
-      if (polylinePoints.isNotEmpty) {
+      if (polylinePoints.isNotEmpty && !_userHasInteractedWithMap) {
         _getRoutePolyline();
         _mapController?.animateCamera(
           CameraUpdate.newLatLngBounds(
@@ -273,13 +275,15 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
       locationSubscription =
           location.onLocationChanged.listen((loc.LocationData currentLocation) {
-        controller?.animateCamera(CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target:
-                LatLng(currentLocation.latitude!, currentLocation.longitude!),
-            zoom: 16,
-          ),
-        ));
+        if (!_userHasInteractedWithMap) {
+          controller?.animateCamera(CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target:
+                  LatLng(currentLocation.latitude!, currentLocation.longitude!),
+              zoom: 16,
+            ),
+          ));
+        }
 
         if (mounted) {
           setState(() {
@@ -329,7 +333,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
             onMapCreated: (controller) {
               _mapController = controller;
               _controller.complete(controller);
-              if (_polylinePoints.isNotEmpty) {
+              if (_polylinePoints.isNotEmpty && !_userHasInteractedWithMap) {
                 _mapController?.animateCamera(
                   CameraUpdate.newLatLngBounds(
                     _calculateBounds(_polylinePoints),
@@ -339,6 +343,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
               }
             },
             myLocationEnabled: true,
+            onCameraMove: (CameraPosition position) {
+              _userHasInteractedWithMap = true;
+            },
           ),
           if (_isLoading)
             Center(child: CircularProgressIndicator())
