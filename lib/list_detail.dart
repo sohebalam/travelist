@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:location/location.dart' as loc;
 import 'package:location/location.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:math' show cos, sqrt, asin;
 
 class ListDetailsPage extends StatefulWidget {
   final String listId;
@@ -89,14 +90,17 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         _isLoading = false;
       });
 
-      if (polylinePoints.isNotEmpty && !_userHasInteractedWithMap) {
+      if (polylinePoints.isNotEmpty) {
         _getRoutePolyline();
-        _mapController?.animateCamera(
-          CameraUpdate.newLatLngBounds(
-            _calculateBounds(polylinePoints),
-            50,
-          ),
-        );
+        _setNearestDestination();
+        if (!_userHasInteractedWithMap) {
+          _mapController?.animateCamera(
+            CameraUpdate.newLatLngBounds(
+              _calculateBounds(polylinePoints),
+              50,
+            ),
+          );
+        }
       }
     } catch (e) {
       setState(() {
@@ -301,6 +305,37 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     });
   }
 
+  void _setNearestDestination() {
+    if (_currentLocation == null || _polylinePoints.isEmpty) return;
+
+    double minDistance = double.infinity;
+    LatLng? nearestPoint;
+
+    for (LatLng point in _polylinePoints) {
+      double distance = _calculateDistance(_currentLocation!, point);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestPoint = point;
+      }
+    }
+
+    if (nearestPoint != null) {
+      _navigateToSelectedLocation(nearestPoint);
+    }
+  }
+
+  double _calculateDistance(LatLng start, LatLng end) {
+    const double p = 0.017453292519943295; // Pi/180
+    final double a = 0.5 -
+        cos((end.latitude - start.latitude) * p) / 2 +
+        cos(start.latitude * p) *
+            cos(end.latitude * p) *
+            (1 - cos((end.longitude - start.longitude) * p)) /
+            2;
+
+    return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -351,6 +386,50 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
             Center(child: CircularProgressIndicator())
           else if (_error != null)
             Center(child: Text('Error: $_error')),
+          Positioned(
+            top: 10,
+            right: 10,
+            child: FloatingActionButton(
+              onPressed: () async {
+                if (_navigationDestination == null) {
+                  _setNearestDestination();
+                }
+                final url =
+                    'google.navigation:q=${_navigationDestination!.latitude},${_navigationDestination!.longitude}&key=$_googleMapsApiKey';
+                final uri = Uri.parse(url);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri);
+                } else {
+                  throw 'Could not launch $url';
+                }
+              },
+              child: Icon(Icons.navigation_outlined),
+              tooltip: 'Navigate to the nearest location',
+            ),
+          ),
+          Positioned(
+            top: 80,
+            right: 10,
+            child: Column(
+              children: [
+                FloatingActionButton(
+                  onPressed: () {
+                    _mapController?.animateCamera(CameraUpdate.zoomIn());
+                  },
+                  child: Icon(Icons.zoom_in),
+                  tooltip: 'Zoom in',
+                ),
+                SizedBox(height: 10),
+                FloatingActionButton(
+                  onPressed: () {
+                    _mapController?.animateCamera(CameraUpdate.zoomOut());
+                  },
+                  child: Icon(Icons.zoom_out),
+                  tooltip: 'Zoom out',
+                ),
+              ],
+            ),
+          ),
           if (!_isNavigationView)
             DraggableScrollableSheet(
               initialChildSize: 0.1,
@@ -377,34 +456,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                   ),
                 );
               },
-            ),
-          if (_isNavigationView && _navigationDestination != null)
-            Positioned(
-              bottom: 10,
-              right: 10,
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration:
-                    BoxDecoration(shape: BoxShape.circle, color: Colors.blue),
-                child: Center(
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.navigation_outlined,
-                      color: Colors.white,
-                    ),
-                    onPressed: () async {
-                      final url =
-                          'google.navigation:q=${_navigationDestination!.latitude},${_navigationDestination!.longitude}&key=$_googleMapsApiKey';
-                      if (await canLaunch(url)) {
-                        await launch(url);
-                      } else {
-                        throw 'Could not launch $url';
-                      }
-                    },
-                  ),
-                ),
-              ),
             ),
         ],
       ),
