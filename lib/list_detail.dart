@@ -21,42 +21,49 @@ class ListDetailsPage extends StatefulWidget {
 }
 
 class _ListDetailsPageState extends State<ListDetailsPage> {
-  GoogleMapController? _mapController;
-  List<Marker> _markers = [];
-  List<LatLng> _polylinePoints = [];
-  List<LatLng> _routePoints = [];
-  Set<Polyline> _polylines = {};
-  PolylinePoints polylinePoints = PolylinePoints();
-  String? _googleMapsApiKey;
-  bool _isLoading = false;
-  String? _error;
-  LatLng? _currentLocation;
-  final Completer<GoogleMapController?> _controller = Completer();
-  Location location = Location();
-  LocationData? _currentPosition;
-  StreamSubscription<LocationData>? locationSubscription;
+  GoogleMapController? _mapController; // Controller for Google Map
+  List<Marker> _markers = []; // List of markers on the map
+  List<LatLng> _polylinePoints = []; // List of points for the polyline
+  List<LatLng> _routePoints = []; // Points for the route polyline
+  Set<Polyline> _polylines = {}; // Set of polylines to be drawn on the map
+  PolylinePoints polylinePoints = PolylinePoints(); // For decoding polylines
+  String? _googleMapsApiKey; // Google Maps API Key
+  bool _isLoading = false; // Loading state
+  String? _error; // Error message
+  LatLng? _currentLocation; // Current location of the user
+  final Completer<GoogleMapController?> _controller =
+      Completer(); // Completer for map controller
+  Location location = Location(); // Location instance for getting location data
+  LocationData? _currentPosition; // Current position of the user
+  StreamSubscription<LocationData>?
+      locationSubscription; // Subscription for location changes
 
-  bool _isNavigationView = false;
-  LatLng? _navigationDestination;
-  bool _userHasInteractedWithMap = false;
-  List<gmd.DirectionLegStep> _navigationSteps = [];
-  int _currentStepIndex = 0;
+  bool _isNavigationView = false; // Flag for navigation view
+  LatLng? _navigationDestination; // Destination for navigation
+  bool _userHasInteractedWithMap =
+      false; // Flag for user interaction with the map
+  List<gmd.DirectionLegStep> _navigationSteps = []; // Steps for navigation
+  int _currentStepIndex = 0; // Current step index in navigation
 
   @override
   void initState() {
     super.initState();
-    _googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'];
-    gmd.GoogleMapsDirections.init(googleAPIKey: _googleMapsApiKey!);
-    _fetchPlaces();
-    _getCurrentLocation();
+    _googleMapsApiKey = dotenv
+        .env['GOOGLE_MAPS_API_KEY']; // Get API key from environment variables
+    gmd.GoogleMapsDirections.init(
+        googleAPIKey:
+            _googleMapsApiKey!); // Initialize Google Maps Directions API
+    _fetchPlaces(); // Fetch places from Firestore
+    _getCurrentLocation(); // Get current location of the user
   }
 
   @override
   void dispose() {
-    locationSubscription?.cancel();
+    locationSubscription?.cancel(); // Cancel location subscription on dispose
     super.dispose();
   }
 
+  // Fetch places from Firestore
   Future<void> _fetchPlaces() async {
     setState(() {
       _isLoading = true;
@@ -73,6 +80,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       List<Marker> markers = [];
       List<LatLng> polylinePoints = [];
 
+      // Add markers and polyline points
       for (var place in placesSnapshot.docs) {
         var placeData = place.data();
         var position = LatLng(placeData['latitude'], placeData['longitude']);
@@ -93,8 +101,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       });
 
       if (polylinePoints.isNotEmpty) {
-        _getRoutePolyline();
-        _setNearestDestination();
+        _getRoutePolyline(); // Get polyline for the route
+        _setNearestDestination(); // Set nearest destination for navigation
         if (!_userHasInteractedWithMap) {
           _mapController?.animateCamera(
             CameraUpdate.newLatLngBounds(
@@ -112,6 +120,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
+  // Get polyline for the route
   Future<void> _getRoutePolyline() async {
     if (_polylinePoints.length < 2) return;
 
@@ -150,6 +159,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     });
   }
 
+  // Calculate bounds for the map
   LatLngBounds _calculateBounds(List<LatLng> points) {
     double southWestLat = points.first.latitude;
     double southWestLng = points.first.longitude;
@@ -185,6 +195,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     // Implement your logic to get POI recommendations from OpenAI
   }
 
+  // Navigate to the selected location
   Future<void> _navigateToSelectedLocation(LatLng selectedLocation) async {
     if (_currentPosition == null) return;
 
@@ -238,6 +249,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
+  // Update navigation based on current location
   void _updateNavigation(LocationData currentLocation) {
     setState(() {
       _currentLocation =
@@ -275,6 +287,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
+  // Calculate distance between two points
   double _calculateDistance(LatLng start, LatLng end) {
     const double p = 0.017453292519943295; // Pi/180
     final double a = 0.5 -
@@ -287,6 +300,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
   }
 
+  // Get current location of the user
   Future<void> _getCurrentLocation() async {
     bool _serviceEnabled;
     PermissionStatus _permissionGranted;
@@ -337,12 +351,14 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
+  // Toggle between map view and navigation view
   void _toggleNavigationView() {
     setState(() {
       _isNavigationView = !_isNavigationView;
     });
   }
 
+  // Set nearest destination for navigation
   void _setNearestDestination() {
     if (_currentLocation == null || _polylinePoints.isEmpty) return;
 
