@@ -456,6 +456,33 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
               ],
             ),
           ),
+          if (!_isNavigationView)
+            DraggableScrollableSheet(
+              initialChildSize: 0.1,
+              minChildSize: 0.1,
+              maxChildSize: 0.8,
+              builder:
+                  (BuildContext context, ScrollController scrollController) {
+                return Container(
+                  color: Colors.white,
+                  child: ListView.builder(
+                    controller: scrollController,
+                    itemCount: _markers.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      return ListTile(
+                        title:
+                            Text(_markers[index].infoWindow.title ?? 'No name'),
+                        subtitle: Text(
+                            'Lat: ${_markers[index].position.latitude}, Lng: ${_markers[index].position.longitude}'),
+                        onTap: () {
+                          _navigateToSelectedLocation(_markers[index].position);
+                        },
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );
