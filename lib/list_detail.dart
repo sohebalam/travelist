@@ -3,12 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
-import 'package:location/location.dart' as loc;
-import 'package:url_launcher/url_launcher.dart';
+import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
+import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
+import 'package:url_launcher/url_launcher.dart';
 
 class ListDetailsPage extends StatefulWidget {
   final String listId;
@@ -32,18 +32,21 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   String? _error;
   LatLng? _currentLocation;
   final Completer<GoogleMapController?> _controller = Completer();
-  loc.Location location = loc.Location();
-  loc.LocationData? _currentPosition;
-  StreamSubscription<loc.LocationData>? locationSubscription;
+  Location location = Location();
+  LocationData? _currentPosition;
+  StreamSubscription<LocationData>? locationSubscription;
 
   bool _isNavigationView = false;
   LatLng? _navigationDestination;
   bool _userHasInteractedWithMap = false;
+  List<gmd.DirectionLegStep> _navigationSteps = [];
+  int _currentStepIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'];
+    gmd.GoogleMapsDirections.init(googleAPIKey: _googleMapsApiKey!);
     _fetchPlaces();
     _getCurrentLocation();
   }
@@ -113,24 +116,26 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     if (_polylinePoints.length < 2) return;
 
     for (int i = 0; i < _polylinePoints.length - 1; i++) {
-      PointLatLng start = PointLatLng(
-          _polylinePoints[i].latitude, _polylinePoints[i].longitude);
-      PointLatLng end = PointLatLng(
-          _polylinePoints[i + 1].latitude, _polylinePoints[i + 1].longitude);
+      LatLng start = _polylinePoints[i];
+      LatLng end = _polylinePoints[i + 1];
 
-      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-        _googleMapsApiKey!,
-        start,
-        end,
+      gmd.Directions directions = await gmd.getDirections(
+        start.latitude,
+        start.longitude,
+        end.latitude,
+        end.longitude,
+        language: "en",
       );
 
-      if (result.points.isNotEmpty) {
-        result.points.forEach((PointLatLng point) {
-          _routePoints.add(LatLng(point.latitude, point.longitude));
-        });
-      } else {
-        print(result.errorMessage);
-      }
+      gmd.DirectionRoute route = directions.shortestRoute;
+      List<LatLng> points = PolylinePoints()
+          .decodePolyline(route.overviewPolyline.points)
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+
+      setState(() {
+        _routePoints.addAll(points);
+      });
     }
 
     setState(() {
@@ -188,69 +193,103 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         '${_currentPosition!.latitude},${_currentPosition!.longitude}';
     final destination =
         '${selectedLocation.latitude},${selectedLocation.longitude}';
-    final url =
-        'https://maps.googleapis.com/maps/api/directions/json?origin=$origin&destination=$destination&key=$apiKey';
+    final directions = await gmd.getDirections(
+      _currentLocation!.latitude,
+      _currentLocation!.longitude,
+      selectedLocation.latitude,
+      selectedLocation.longitude,
+      googleAPIKey: apiKey,
+    );
 
-    final response = await http.get(Uri.parse(url));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final points = data['routes'][0]['overview_polyline']['points'];
-      final decodedPoints = _decodePolyline(points);
-
-      final polyline = Polyline(
-        polylineId: PolylineId('navigation_route'),
-        color: Colors.green,
-        width: 5,
-        points: decodedPoints,
-      );
+    if (directions.routes.isNotEmpty) {
+      final route = directions.shortestRoute;
+      final steps = route.shortestLeg.steps;
+      List<LatLng> points = PolylinePoints()
+          .decodePolyline(route.overviewPolyline.points)
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
 
       setState(() {
-        _polylines.add(polyline);
+        _polylines.add(
+          Polyline(
+            polylineId: PolylineId('navigation_route'),
+            color: Colors.green,
+            width: 5,
+            points: points,
+          ),
+        );
         _navigationDestination = selectedLocation;
         _isNavigationView = true;
+        _navigationSteps = steps;
         _mapController?.animateCamera(
           CameraUpdate.newLatLngBounds(
-            _calculateBounds(decodedPoints),
+            _calculateBounds(points),
             50,
           ),
         );
+      });
+
+      locationSubscription =
+          location.onLocationChanged.listen((LocationData currentLocation) {
+        _updateNavigation(currentLocation);
       });
     } else {
       throw Exception('Failed to fetch directions');
     }
   }
 
-  List<LatLng> _decodePolyline(String encoded) {
-    List<LatLng> points = [];
-    int index = 0;
-    int len = encoded.length;
-    int lat = 0, lng = 0;
+  void _updateNavigation(LocationData currentLocation) {
+    setState(() {
+      _currentLocation =
+          LatLng(currentLocation.latitude!, currentLocation.longitude!);
+    });
 
-    while (index < len) {
-      int b, shift = 0, result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      lat += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
-      shift = 0;
-      result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      lng += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
-      points.add(LatLng(lat / 1e5, lng / 1e5));
+    if (_navigationSteps.isNotEmpty) {
+      gmd.DirectionLegStep currentStep = _navigationSteps[_currentStepIndex];
+      double distanceToNextStep = _calculateDistance(
+        _currentLocation!,
+        LatLng(
+          currentStep.endLocation.lat,
+          currentStep.endLocation.lng,
+        ),
+      );
+
+      if (distanceToNextStep < 20) {
+        if (_currentStepIndex < _navigationSteps.length - 1) {
+          setState(() {
+            _currentStepIndex++;
+          });
+        } else {
+          locationSubscription?.cancel();
+        }
+      }
     }
-    return points;
+
+    _mapController?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: _currentLocation!,
+          zoom: 16,
+        ),
+      ),
+    );
+  }
+
+  double _calculateDistance(LatLng start, LatLng end) {
+    const double p = 0.017453292519943295; // Pi/180
+    final double a = 0.5 -
+        cos((end.latitude - start.latitude) * p) / 2 +
+        cos(start.latitude * p) *
+            cos(end.latitude * p) *
+            (1 - cos((end.longitude - start.longitude) * p)) /
+            2;
+
+    return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
   }
 
   Future<void> _getCurrentLocation() async {
     bool _serviceEnabled;
-    loc.PermissionStatus _permissionGranted;
+    PermissionStatus _permissionGranted;
     final GoogleMapController? controller = await _controller.future;
 
     _serviceEnabled = await location.serviceEnabled();
@@ -262,14 +301,14 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
 
     _permissionGranted = await location.hasPermission();
-    if (_permissionGranted == loc.PermissionStatus.denied) {
+    if (_permissionGranted == PermissionStatus.denied) {
       _permissionGranted = await location.requestPermission();
-      if (_permissionGranted != loc.PermissionStatus.granted) {
+      if (_permissionGranted != PermissionStatus.granted) {
         return;
       }
     }
 
-    if (_permissionGranted == loc.PermissionStatus.granted) {
+    if (_permissionGranted == PermissionStatus.granted) {
       _currentPosition = await location.getLocation();
       setState(() {
         _currentLocation =
@@ -277,7 +316,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       });
 
       locationSubscription =
-          location.onLocationChanged.listen((loc.LocationData currentLocation) {
+          location.onLocationChanged.listen((LocationData currentLocation) {
         if (!_userHasInteractedWithMap) {
           controller?.animateCamera(CameraUpdate.newCameraPosition(
             CameraPosition(
@@ -321,18 +360,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     if (nearestPoint != null) {
       _navigateToSelectedLocation(nearestPoint);
     }
-  }
-
-  double _calculateDistance(LatLng start, LatLng end) {
-    const double p = 0.017453292519943295; // Pi/180
-    final double a = 0.5 -
-        cos((end.latitude - start.latitude) * p) / 2 +
-        cos(start.latitude * p) *
-            cos(end.latitude * p) *
-            (1 - cos((end.longitude - start.longitude) * p)) /
-            2;
-
-    return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
   }
 
   @override
@@ -429,33 +456,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
               ],
             ),
           ),
-          if (!_isNavigationView)
-            DraggableScrollableSheet(
-              initialChildSize: 0.1,
-              minChildSize: 0.1,
-              maxChildSize: 0.8,
-              builder:
-                  (BuildContext context, ScrollController scrollController) {
-                return Container(
-                  color: Colors.white,
-                  child: ListView.builder(
-                    controller: scrollController,
-                    itemCount: _markers.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return ListTile(
-                        title:
-                            Text(_markers[index].infoWindow.title ?? 'No name'),
-                        subtitle: Text(
-                            'Lat: ${_markers[index].position.latitude}, Lng: ${_markers[index].position.longitude}'),
-                        onTap: () {
-                          _navigateToSelectedLocation(_markers[index].position);
-                        },
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
         ],
       ),
     );
