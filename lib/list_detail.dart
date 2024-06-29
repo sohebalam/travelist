@@ -561,16 +561,18 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
             minChildSize: 0.1,
             maxChildSize: 0.8,
             builder: (BuildContext context, ScrollController scrollController) {
-              return Container(
-                color: Colors.white,
-                padding: EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Route Points:'),
-                    Expanded(
-                      child: ListView.builder(
+              return SingleChildScrollView(
+                controller: scrollController,
+                child: Container(
+                  color: Colors.white,
+                  padding: EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Route Points:'),
+                      ListView.builder(
                         controller: scrollController,
+                        shrinkWrap: true,
                         itemCount: _polylinePoints.length,
                         itemBuilder: (BuildContext context, int index) {
                           return ListTile(
@@ -583,59 +585,71 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                           );
                         },
                       ),
-                    ),
-                    Slider(
-                      value: _currentSliderValue,
-                      min: 0,
-                      max: (_polylinePoints.length - 1).toDouble(),
-                      divisions: _polylinePoints.length - 1,
-                      label: (_currentSliderValue + 1).round().toString(),
-                      onChanged: (double value) {
-                        setState(() {
-                          _currentSliderValue = value;
-                          _calculateAndDisplayDistanceDuration(value.toInt());
-                        });
-                      },
-                    ),
-                    Text('Distance: $_distanceText'),
-                    Text('Duration: $_durationText'),
-                    SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ChoiceChip(
-                          label: Text('Driving'),
-                          selected: _transportMode == 'driving',
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _transportMode = 'driving';
-                              _getRoutePolyline();
-                            });
-                          },
-                        ),
-                        ChoiceChip(
-                          label: Text('Walking'),
-                          selected: _transportMode == 'walking',
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _transportMode = 'walking';
-                              _getRoutePolyline();
-                            });
-                          },
-                        ),
-                        ChoiceChip(
-                          label: Text('Cycling'),
-                          selected: _transportMode == 'bicycling',
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _transportMode = 'bicycling';
-                              _getRoutePolyline();
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Slider(
+                              value: _currentSliderValue,
+                              min: 0,
+                              max: (_polylinePoints.length - 1).toDouble(),
+                              divisions: _polylinePoints.length - 1,
+                              label:
+                                  (_currentSliderValue + 1).round().toString(),
+                              onChanged: (double value) {
+                                setState(() {
+                                  _currentSliderValue = value;
+                                  _calculateAndDisplayDistanceDuration(
+                                      value.toInt());
+                                });
+                              },
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(Icons.directions_car),
+                            onPressed: () {
+                              setState(() {
+                                _transportMode = 'driving';
+                                _getRoutePolyline();
+                              });
+                            },
+                            color: _transportMode == 'driving'
+                                ? Colors.blue
+                                : Colors.grey,
+                            iconSize: 20,
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.directions_walk),
+                            onPressed: () {
+                              setState(() {
+                                _transportMode = 'walking';
+                                _getRoutePolyline();
+                              });
+                            },
+                            color: _transportMode == 'walking'
+                                ? Colors.blue
+                                : Colors.grey,
+                            iconSize: 20,
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.directions_bike),
+                            onPressed: () {
+                              setState(() {
+                                _transportMode = 'bicycling';
+                                _getRoutePolyline();
+                              });
+                            },
+                            color: _transportMode == 'bicycling'
+                                ? Colors.blue
+                                : Colors.grey,
+                            iconSize: 20,
+                          ),
+                        ],
+                      ),
+                      Text('Distance: $_distanceText'),
+                      Text('Duration: $_durationText'),
+                    ],
+                  ),
                 ),
               );
             },
