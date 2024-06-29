@@ -567,7 +567,39 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Transport Mode:'),
+                    Text('Route Points:'),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: _polylinePoints.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          return ListTile(
+                            title: Text('Point ${index + 1}'),
+                            subtitle: Text(
+                                'Lat: ${_polylinePoints[index].latitude}, Lng: ${_polylinePoints[index].longitude}'),
+                            onTap: () {
+                              _calculateAndDisplayDistanceDuration(index);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    Slider(
+                      value: _currentSliderValue,
+                      min: 0,
+                      max: (_polylinePoints.length - 1).toDouble(),
+                      divisions: _polylinePoints.length - 1,
+                      label: (_currentSliderValue + 1).round().toString(),
+                      onChanged: (double value) {
+                        setState(() {
+                          _currentSliderValue = value;
+                          _calculateAndDisplayDistanceDuration(value.toInt());
+                        });
+                      },
+                    ),
+                    Text('Distance: $_distanceText'),
+                    Text('Duration: $_durationText'),
+                    SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -603,39 +635,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 10),
-                    Text('Route Points:'),
-                    Expanded(
-                      child: ListView.builder(
-                        controller: scrollController,
-                        itemCount: _polylinePoints.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          return ListTile(
-                            title: Text('Point ${index + 1}'),
-                            subtitle: Text(
-                                'Lat: ${_polylinePoints[index].latitude}, Lng: ${_polylinePoints[index].longitude}'),
-                            onTap: () {
-                              _calculateAndDisplayDistanceDuration(index);
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    Slider(
-                      value: _currentSliderValue,
-                      min: 0,
-                      max: (_polylinePoints.length - 1).toDouble(),
-                      divisions: _polylinePoints.length - 1,
-                      label: (_currentSliderValue + 1).round().toString(),
-                      onChanged: (double value) {
-                        setState(() {
-                          _currentSliderValue = value;
-                          _calculateAndDisplayDistanceDuration(value.toInt());
-                        });
-                      },
-                    ),
-                    Text('Distance: $_distanceText'),
-                    Text('Duration: $_durationText'),
                   ],
                 ),
               );
