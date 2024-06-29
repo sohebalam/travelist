@@ -576,7 +576,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                         itemCount: _polylinePoints.length,
                         itemBuilder: (BuildContext context, int index) {
                           return ListTile(
-                            title: Text('Point ${index + 1}'),
+                            title: Text(
+                                _markers[index].infoWindow.title ?? 'No name'),
                             subtitle: Text(
                                 'Lat: ${_polylinePoints[index].latitude}, Lng: ${_polylinePoints[index].longitude}'),
                             onTap: () {
