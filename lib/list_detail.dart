@@ -604,50 +604,63 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                               },
                             ),
                           ),
-                          SizedBox(width: 8),
-                          IconButton(
-                            icon: Icon(Icons.directions_car),
-                            onPressed: () {
-                              setState(() {
-                                _transportMode = 'driving';
-                                _getRoutePolyline();
-                              });
-                            },
-                            color: _transportMode == 'driving'
-                                ? Colors.blue
-                                : Colors.grey,
-                            iconSize: 20,
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Distance: $_distanceText'),
+                              Text('Duration: $_durationText'),
+                            ],
                           ),
-                          IconButton(
-                            icon: Icon(Icons.directions_walk),
-                            onPressed: () {
-                              setState(() {
-                                _transportMode = 'walking';
-                                _getRoutePolyline();
-                              });
-                            },
-                            color: _transportMode == 'walking'
-                                ? Colors.blue
-                                : Colors.grey,
-                            iconSize: 20,
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.directions_bike),
-                            onPressed: () {
-                              setState(() {
-                                _transportMode = 'bicycling';
-                                _getRoutePolyline();
-                              });
-                            },
-                            color: _transportMode == 'bicycling'
-                                ? Colors.blue
-                                : Colors.grey,
-                            iconSize: 20,
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.directions_car),
+                                onPressed: () {
+                                  setState(() {
+                                    _transportMode = 'driving';
+                                    _getRoutePolyline();
+                                  });
+                                },
+                                color: _transportMode == 'driving'
+                                    ? Colors.blue
+                                    : Colors.grey,
+                                iconSize: 20,
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.directions_walk),
+                                onPressed: () {
+                                  setState(() {
+                                    _transportMode = 'walking';
+                                    _getRoutePolyline();
+                                  });
+                                },
+                                color: _transportMode == 'walking'
+                                    ? Colors.blue
+                                    : Colors.grey,
+                                iconSize: 20,
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.directions_bike),
+                                onPressed: () {
+                                  setState(() {
+                                    _transportMode = 'bicycling';
+                                    _getRoutePolyline();
+                                  });
+                                },
+                                color: _transportMode == 'bicycling'
+                                    ? Colors.blue
+                                    : Colors.grey,
+                                iconSize: 20,
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                      Text('Distance: $_distanceText'),
-                      Text('Duration: $_durationText'),
                     ],
                   ),
                 ),
