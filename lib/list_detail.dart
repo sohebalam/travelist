@@ -22,6 +22,7 @@ class ListDetailsPage extends StatefulWidget {
 class _ListDetailsPageState extends State<ListDetailsPage> {
   GoogleMapController? _mapController;
   List<Marker> _markers = [];
+  List<Map<String, dynamic>> _poiData = [];
   List<LatLng> _polylinePoints = [];
   List<LatLng> _routePoints = [];
   Set<Polyline> _polylines = {};
@@ -74,37 +75,55 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           .get();
 
       List<Marker> markers = [];
-      List<LatLng> polylinePoints = [];
+      List<Map<String, dynamic>> poiData = [];
 
       for (var place in placesSnapshot.docs) {
         var placeData = place.data();
         var position = LatLng(placeData['latitude'], placeData['longitude']);
+        poiData.add({
+          'id': place.id,
+          'name': placeData['name'],
+          'latitude': placeData['latitude'],
+          'longitude': placeData['longitude'],
+          'address': placeData['address'] ?? 'No address',
+          'distance': _currentLocation != null
+              ? _calculateDistance(_currentLocation!, position)
+              : double.infinity,
+        });
+      }
+
+      poiData.sort((a, b) => a['distance'].compareTo(b['distance']));
+
+      for (var poi in poiData) {
+        var position = LatLng(poi['latitude'], poi['longitude']);
         markers.add(
           Marker(
-            markerId: MarkerId(place.id),
+            markerId: MarkerId(poi['id']),
             position: position,
             infoWindow: InfoWindow(
-              title: placeData['name'],
-              snippet: placeData['address'] ?? 'No address',
+              title: poi['name'],
+              snippet: poi['address'],
             ),
           ),
         );
-        polylinePoints.add(position);
       }
 
       setState(() {
         _markers = markers;
-        _polylinePoints = polylinePoints;
+        _poiData = poiData;
+        _polylinePoints = poiData
+            .map((poi) => LatLng(poi['latitude'], poi['longitude']))
+            .toList();
         _isLoading = false;
       });
 
-      if (polylinePoints.isNotEmpty) {
+      if (_polylinePoints.isNotEmpty) {
         _getRoutePolyline();
         _setNearestDestination();
         if (!_userHasInteractedWithMap) {
           _mapController?.animateCamera(
             CameraUpdate.newLatLngBounds(
-              _calculateBounds(polylinePoints),
+              _calculateBounds(_polylinePoints),
               50,
             ),
           );
@@ -576,13 +595,13 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                       ListView.builder(
                         controller: scrollController,
                         shrinkWrap: true,
-                        itemCount: _markers.length,
+                        itemCount: _poiData.length,
                         itemBuilder: (BuildContext context, int index) {
                           return ListTile(
                             title: Text(
-                                _markers[index].infoWindow.title ?? 'No name'),
-                            subtitle: Text(_markers[index].infoWindow.snippet ??
-                                'No address'),
+                              '${index + 1}. ${_poiData[index]['name']}',
+                            ),
+                            subtitle: Text(_poiData[index]['address']),
                             onTap: () {
                               _calculateAndDisplayDistanceDuration(index);
                             },

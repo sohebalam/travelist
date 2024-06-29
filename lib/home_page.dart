@@ -233,7 +233,7 @@ Name - Latitude, Longitude - Address - Description.
   String _extractCityAndPostcode(String formattedAddress) {
     // Split the address by commas and remove the country
     List<String> parts = formattedAddress.split(',');
-    if (parts.length >= 2) {
+    if (parts.length >= 3) {
       return '${parts[parts.length - 3].trim()}, ${parts[parts.length - 2].trim()}';
     }
     return formattedAddress;
@@ -349,12 +349,14 @@ The location "$location" could not be validated. Suggest an alternative or corre
           List<String> latLng = parts[1].split(',');
           double latitude = double.tryParse(latLng[0].trim()) ?? 0.0;
           double longitude = double.tryParse(latLng[1].trim()) ?? 0.0;
+          String cityAndPostcode = _extractCityAndPostcode(parts[2].trim());
+          String cleanedName = _removePrefixNumber(parts[0].trim());
           pois.add({
             'id': id.toString(),
-            'name': parts[0].trim(),
+            'name': cleanedName,
             'latitude': latitude,
             'longitude': longitude,
-            'address': parts[2].trim(),
+            'address': cityAndPostcode,
             'description': parts[3].trim(),
           });
           id++;
@@ -363,6 +365,11 @@ The location "$location" could not be validated. Suggest an alternative or corre
     }
     print('Parsed POIs: $pois');
     return pois;
+  }
+
+  String _removePrefixNumber(String name) {
+    final regex = RegExp(r'^\d+\.\s*');
+    return name.replaceAll(regex, '');
   }
 
   void _updateCameraPosition() {
@@ -521,7 +528,7 @@ The location "$location" could not be validated. Suggest an alternative or corre
   void _savePOIToList(Map<String, dynamic> poi) {
     if (_selectedListId != null) {
       _listsCollection.doc(_selectedListId).collection('pois').add({
-        'name': poi['name'],
+        'name': _removePrefixNumber(poi['name']),
         'latitude': poi['latitude'],
         'longitude': poi['longitude'],
         'description': poi['description'],
