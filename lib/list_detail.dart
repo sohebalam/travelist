@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'dart:convert';
 import 'dart:async';
 import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
@@ -44,6 +43,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   double _currentSliderValue = 0;
   String _distanceText = '';
   String _durationText = '';
+  String _transportMode = 'driving';
 
   @override
   void initState() {
@@ -118,6 +118,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   Future<void> _getRoutePolyline() async {
     if (_polylinePoints.length < 2) return;
 
+    _routePoints.clear();
+    _polylines.clear();
+
     for (int i = 0; i < _polylinePoints.length - 1; i++) {
       LatLng start = _polylinePoints[i];
       LatLng end = _polylinePoints[i + 1];
@@ -128,6 +131,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         end.latitude,
         end.longitude,
         language: "en",
+        googleAPIKey: _googleMapsApiKey!,
       );
 
       gmd.DirectionRoute route = directions.shortestRoute;
@@ -151,6 +155,17 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         ),
       );
     });
+
+    if (_routePoints.isNotEmpty) {
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          _calculateBounds(_routePoints),
+          50,
+        ),
+      );
+    }
+
+    _calculateAndDisplayDistanceDuration(_currentSliderValue.toInt());
   }
 
   LatLngBounds _calculateBounds(List<LatLng> points) {
@@ -379,18 +394,72 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       googleAPIKey: _googleMapsApiKey!,
     );
 
-    gmd.DurationValue durationValue = await gmd.duration(
+    gmd.DurationValue durationValue = await _getDuration(
       start.latitude,
       start.longitude,
       end.latitude,
       end.longitude,
-      googleAPIKey: _googleMapsApiKey!,
     );
 
     setState(() {
       _distanceText = distanceValue.text;
       _durationText = durationValue.text;
     });
+  }
+
+  Future<gmd.DurationValue> _getDuration(
+      double startLat, double startLng, double endLat, double endLng) async {
+    gmd.Directions directions = await gmd.getDirections(
+      startLat,
+      startLng,
+      endLat,
+      endLng,
+      language: "en",
+      googleAPIKey: _googleMapsApiKey!,
+    );
+
+    gmd.DirectionRoute route = directions.shortestRoute;
+    gmd.DurationValue drivingDuration = route.legs.first.duration;
+
+    switch (_transportMode) {
+      case 'walking':
+        return _durationWalking(drivingDuration);
+      case 'bicycling':
+        return _durationBicycling(drivingDuration);
+      case 'driving':
+      default:
+        return drivingDuration;
+    }
+  }
+
+  Future<gmd.DurationValue> _durationWalking(
+      gmd.DurationValue drivingDuration) async {
+    // Simulate walking duration (typically 1/5th the speed of driving)
+    int walkingDurationSeconds = (drivingDuration.seconds * 5).toInt();
+    return gmd.DurationValue(
+      text: _formatDuration(walkingDurationSeconds),
+      seconds: walkingDurationSeconds,
+    );
+  }
+
+  Future<gmd.DurationValue> _durationBicycling(
+      gmd.DurationValue drivingDuration) async {
+    // Simulate bicycling duration (typically 1/2 the speed of driving)
+    int bicyclingDurationSeconds = (drivingDuration.seconds * 2).toInt();
+    return gmd.DurationValue(
+      text: _formatDuration(bicyclingDurationSeconds),
+      seconds: bicyclingDurationSeconds,
+    );
+  }
+
+  String _formatDuration(int totalSeconds) {
+    int hours = totalSeconds ~/ 3600;
+    int minutes = (totalSeconds % 3600) ~/ 60;
+    if (hours > 0) {
+      return '$hours hrs $minutes mins';
+    } else {
+      return '$minutes mins';
+    }
   }
 
   @override
@@ -487,56 +556,90 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
               ],
             ),
           ),
-          if (!_isNavigationView)
-            DraggableScrollableSheet(
-              initialChildSize: 0.1,
-              minChildSize: 0.1,
-              maxChildSize: 0.8,
-              builder:
-                  (BuildContext context, ScrollController scrollController) {
-                return Container(
-                  color: Colors.white,
-                  child: ListView.builder(
-                    controller: scrollController,
-                    itemCount: _markers.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return ListTile(
-                        title:
-                            Text(_markers[index].infoWindow.title ?? 'No name'),
-                        subtitle: Text(
-                            'Lat: ${_markers[index].position.latitude}, Lng: ${_markers[index].position.longitude}'),
-                        onTap: () {
-                          _navigateToSelectedLocation(_markers[index].position);
+          DraggableScrollableSheet(
+            initialChildSize: 0.3,
+            minChildSize: 0.1,
+            maxChildSize: 0.8,
+            builder: (BuildContext context, ScrollController scrollController) {
+              return Container(
+                color: Colors.white,
+                padding: EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Transport Mode:'),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ChoiceChip(
+                          label: Text('Driving'),
+                          selected: _transportMode == 'driving',
+                          onSelected: (bool selected) {
+                            setState(() {
+                              _transportMode = 'driving';
+                              _getRoutePolyline();
+                            });
+                          },
+                        ),
+                        ChoiceChip(
+                          label: Text('Walking'),
+                          selected: _transportMode == 'walking',
+                          onSelected: (bool selected) {
+                            setState(() {
+                              _transportMode = 'walking';
+                              _getRoutePolyline();
+                            });
+                          },
+                        ),
+                        ChoiceChip(
+                          label: Text('Cycling'),
+                          selected: _transportMode == 'bicycling',
+                          onSelected: (bool selected) {
+                            setState(() {
+                              _transportMode = 'bicycling';
+                              _getRoutePolyline();
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    Text('Route Points:'),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: _polylinePoints.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          return ListTile(
+                            title: Text('Point ${index + 1}'),
+                            subtitle: Text(
+                                'Lat: ${_polylinePoints[index].latitude}, Lng: ${_polylinePoints[index].longitude}'),
+                            onTap: () {
+                              _calculateAndDisplayDistanceDuration(index);
+                            },
+                          );
                         },
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-          Positioned(
-            bottom: 50,
-            left: 10,
-            right: 10,
-            child: Column(
-              children: [
-                Slider(
-                  value: _currentSliderValue,
-                  min: 0,
-                  max: (_polylinePoints.length - 1).toDouble(),
-                  divisions: _polylinePoints.length - 1,
-                  label: _currentSliderValue.round().toString(),
-                  onChanged: (double value) {
-                    setState(() {
-                      _currentSliderValue = value;
-                      _calculateAndDisplayDistanceDuration(value.toInt());
-                    });
-                  },
+                      ),
+                    ),
+                    Slider(
+                      value: _currentSliderValue,
+                      min: 0,
+                      max: (_polylinePoints.length - 1).toDouble(),
+                      divisions: _polylinePoints.length - 1,
+                      label: (_currentSliderValue + 1).round().toString(),
+                      onChanged: (double value) {
+                        setState(() {
+                          _currentSliderValue = value;
+                          _calculateAndDisplayDistanceDuration(value.toInt());
+                        });
+                      },
+                    ),
+                    Text('Distance: $_distanceText'),
+                    Text('Duration: $_durationText'),
+                  ],
                 ),
-                Text('Distance: $_distanceText'),
-                Text('Duration: $_durationText'),
-              ],
-            ),
+              );
+            },
           ),
         ],
       ),
