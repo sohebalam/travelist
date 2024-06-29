@@ -70,6 +70,57 @@ class _ListsPageState extends State<ListsPage> {
           );
         },
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddListDialog(context),
+        child: Icon(Icons.add),
+        tooltip: 'Add New List',
+      ),
+    );
+  }
+
+  void _showAddListDialog(BuildContext context) {
+    final _formKey = GlobalKey<FormState>();
+    final _listNameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Add New List'),
+          content: Form(
+            key: _formKey,
+            child: TextFormField(
+              controller: _listNameController,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a list name';
+                }
+                return null;
+              },
+              decoration: InputDecoration(hintText: 'List Name'),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _listsCollection.add({
+                    'list': _listNameController.text,
+                  });
+                  Navigator.of(context).pop();
+                }
+              },
+              child: Text('Add'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

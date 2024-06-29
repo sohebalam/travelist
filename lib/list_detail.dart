@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'dart:convert';
 import 'dart:async';
 import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
@@ -21,49 +20,46 @@ class ListDetailsPage extends StatefulWidget {
 }
 
 class _ListDetailsPageState extends State<ListDetailsPage> {
-  GoogleMapController? _mapController; // Controller for Google Map
-  List<Marker> _markers = []; // List of markers on the map
-  List<LatLng> _polylinePoints = []; // List of points for the polyline
-  List<LatLng> _routePoints = []; // Points for the route polyline
-  Set<Polyline> _polylines = {}; // Set of polylines to be drawn on the map
-  PolylinePoints polylinePoints = PolylinePoints(); // For decoding polylines
-  String? _googleMapsApiKey; // Google Maps API Key
-  bool _isLoading = false; // Loading state
-  String? _error; // Error message
-  LatLng? _currentLocation; // Current location of the user
-  final Completer<GoogleMapController?> _controller =
-      Completer(); // Completer for map controller
-  Location location = Location(); // Location instance for getting location data
-  LocationData? _currentPosition; // Current position of the user
-  StreamSubscription<LocationData>?
-      locationSubscription; // Subscription for location changes
+  GoogleMapController? _mapController;
+  List<Marker> _markers = [];
+  List<LatLng> _polylinePoints = [];
+  List<LatLng> _routePoints = [];
+  Set<Polyline> _polylines = {};
+  PolylinePoints polylinePoints = PolylinePoints();
+  String? _googleMapsApiKey;
+  bool _isLoading = false;
+  String? _error;
+  LatLng? _currentLocation;
+  final Completer<GoogleMapController?> _controller = Completer();
+  Location location = Location();
+  LocationData? _currentPosition;
+  StreamSubscription<LocationData>? locationSubscription;
 
-  bool _isNavigationView = false; // Flag for navigation view
-  LatLng? _navigationDestination; // Destination for navigation
-  bool _userHasInteractedWithMap =
-      false; // Flag for user interaction with the map
-  List<gmd.DirectionLegStep> _navigationSteps = []; // Steps for navigation
-  int _currentStepIndex = 0; // Current step index in navigation
+  bool _isNavigationView = false;
+  LatLng? _navigationDestination;
+  bool _userHasInteractedWithMap = false;
+  List<gmd.DirectionLegStep> _navigationSteps = [];
+  int _currentStepIndex = 0;
+  double _currentSliderValue = 0;
+  String _distanceText = '';
+  String _durationText = '';
+  String _transportMode = 'driving';
 
   @override
   void initState() {
     super.initState();
-    _googleMapsApiKey = dotenv
-        .env['GOOGLE_MAPS_API_KEY']; // Get API key from environment variables
-    gmd.GoogleMapsDirections.init(
-        googleAPIKey:
-            _googleMapsApiKey!); // Initialize Google Maps Directions API
-    _fetchPlaces(); // Fetch places from Firestore
-    _getCurrentLocation(); // Get current location of the user
+    _googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'];
+    gmd.GoogleMapsDirections.init(googleAPIKey: _googleMapsApiKey!);
+    _fetchPlaces();
+    _getCurrentLocation();
   }
 
   @override
   void dispose() {
-    locationSubscription?.cancel(); // Cancel location subscription on dispose
+    locationSubscription?.cancel();
     super.dispose();
   }
 
-  // Fetch places from Firestore
   Future<void> _fetchPlaces() async {
     setState(() {
       _isLoading = true;
@@ -80,7 +76,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       List<Marker> markers = [];
       List<LatLng> polylinePoints = [];
 
-      // Add markers and polyline points
       for (var place in placesSnapshot.docs) {
         var placeData = place.data();
         var position = LatLng(placeData['latitude'], placeData['longitude']);
@@ -101,8 +96,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       });
 
       if (polylinePoints.isNotEmpty) {
-        _getRoutePolyline(); // Get polyline for the route
-        _setNearestDestination(); // Set nearest destination for navigation
+        _getRoutePolyline();
+        _setNearestDestination();
         if (!_userHasInteractedWithMap) {
           _mapController?.animateCamera(
             CameraUpdate.newLatLngBounds(
@@ -120,7 +115,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
-  // Get polyline for the route
   Future<void> _getRoutePolyline() async {
     if (_polylinePoints.length < 2) return;
 
@@ -159,7 +153,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     });
   }
 
-  // Calculate bounds for the map
   LatLngBounds _calculateBounds(List<LatLng> points) {
     double southWestLat = points.first.latitude;
     double southWestLng = points.first.longitude;
@@ -195,7 +188,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     // Implement your logic to get POI recommendations from OpenAI
   }
 
-  // Navigate to the selected location
   Future<void> _navigateToSelectedLocation(LatLng selectedLocation) async {
     if (_currentPosition == null) return;
 
@@ -249,7 +241,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
-  // Update navigation based on current location
   void _updateNavigation(LocationData currentLocation) {
     setState(() {
       _currentLocation =
@@ -287,9 +278,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
-  // Calculate distance between two points
   double _calculateDistance(LatLng start, LatLng end) {
-    const double p = 0.017453292519943295; // Pi/180
+    const double p = 0.017453292519943295;
     final double a = 0.5 -
         cos((end.latitude - start.latitude) * p) / 2 +
         cos(start.latitude * p) *
@@ -297,10 +287,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
             (1 - cos((end.longitude - start.longitude) * p)) /
             2;
 
-    return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
+    return 12742 * asin(sqrt(a));
   }
 
-  // Get current location of the user
   Future<void> _getCurrentLocation() async {
     bool _serviceEnabled;
     PermissionStatus _permissionGranted;
@@ -351,14 +340,12 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
-  // Toggle between map view and navigation view
   void _toggleNavigationView() {
     setState(() {
       _isNavigationView = !_isNavigationView;
     });
   }
 
-  // Set nearest destination for navigation
   void _setNearestDestination() {
     if (_currentLocation == null || _polylinePoints.isEmpty) return;
 
@@ -376,6 +363,34 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     if (nearestPoint != null) {
       _navigateToSelectedLocation(nearestPoint);
     }
+  }
+
+  Future<void> _calculateAndDisplayDistanceDuration(int index) async {
+    if (index >= _polylinePoints.length - 1) return;
+
+    LatLng start = _polylinePoints[index];
+    LatLng end = _polylinePoints[index + 1];
+
+    gmd.DistanceValue distanceValue = await gmd.distance(
+      start.latitude,
+      start.longitude,
+      end.latitude,
+      end.longitude,
+      googleAPIKey: _googleMapsApiKey!,
+    );
+
+    gmd.DurationValue durationValue = await gmd.duration(
+      start.latitude,
+      start.longitude,
+      end.latitude,
+      end.longitude,
+      googleAPIKey: _googleMapsApiKey!,
+    );
+
+    setState(() {
+      _distanceText = distanceValue.text;
+      _durationText = durationValue.text;
+    });
   }
 
   @override
@@ -472,33 +487,91 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
               ],
             ),
           ),
-          if (!_isNavigationView)
-            DraggableScrollableSheet(
-              initialChildSize: 0.1,
-              minChildSize: 0.1,
-              maxChildSize: 0.8,
-              builder:
-                  (BuildContext context, ScrollController scrollController) {
-                return Container(
-                  color: Colors.white,
-                  child: ListView.builder(
-                    controller: scrollController,
-                    itemCount: _markers.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return ListTile(
-                        title:
-                            Text(_markers[index].infoWindow.title ?? 'No name'),
-                        subtitle: Text(
-                            'Lat: ${_markers[index].position.latitude}, Lng: ${_markers[index].position.longitude}'),
-                        onTap: () {
-                          _navigateToSelectedLocation(_markers[index].position);
+          DraggableScrollableSheet(
+            initialChildSize: 0.3,
+            minChildSize: 0.1,
+            maxChildSize: 0.8,
+            builder: (BuildContext context, ScrollController scrollController) {
+              return Container(
+                color: Colors.white,
+                padding: EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Transport Mode:'),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ChoiceChip(
+                          label: Text('Driving'),
+                          selected: _transportMode == 'driving',
+                          onSelected: (bool selected) {
+                            setState(() {
+                              _transportMode = 'driving';
+                              _getRoutePolyline();
+                            });
+                          },
+                        ),
+                        ChoiceChip(
+                          label: Text('Walking'),
+                          selected: _transportMode == 'walking',
+                          onSelected: (bool selected) {
+                            setState(() {
+                              _transportMode = 'walking';
+                              _getRoutePolyline();
+                            });
+                          },
+                        ),
+                        ChoiceChip(
+                          label: Text('Cycling'),
+                          selected: _transportMode == 'bicycling',
+                          onSelected: (bool selected) {
+                            setState(() {
+                              _transportMode = 'bicycling';
+                              _getRoutePolyline();
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    Text('Route Points:'),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: _polylinePoints.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          return ListTile(
+                            title: Text('Point ${index + 1}'),
+                            subtitle: Text(
+                                'Lat: ${_polylinePoints[index].latitude}, Lng: ${_polylinePoints[index].longitude}'),
+                            onTap: () {
+                              _calculateAndDisplayDistanceDuration(index);
+                            },
+                          );
                         },
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+                      ),
+                    ),
+                    Slider(
+                      value: _currentSliderValue,
+                      min: 0,
+                      max: (_polylinePoints.length - 1).toDouble(),
+                      divisions: _polylinePoints.length - 1,
+                      label: (_currentSliderValue + 1).round().toString(),
+                      onChanged: (double value) {
+                        setState(() {
+                          _currentSliderValue = value;
+                          _calculateAndDisplayDistanceDuration(value.toInt());
+                        });
+                      },
+                    ),
+                    Text('Distance: $_distanceText'),
+                    Text('Duration: $_durationText'),
+                  ],
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
