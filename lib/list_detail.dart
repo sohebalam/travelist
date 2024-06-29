@@ -83,7 +83,10 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           Marker(
             markerId: MarkerId(place.id),
             position: position,
-            infoWindow: InfoWindow(title: placeData['name']),
+            infoWindow: InfoWindow(
+              title: placeData['name'],
+              snippet: placeData['address'] ?? 'No address',
+            ),
           ),
         );
         polylinePoints.add(position);
@@ -573,13 +576,13 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                       ListView.builder(
                         controller: scrollController,
                         shrinkWrap: true,
-                        itemCount: _polylinePoints.length,
+                        itemCount: _markers.length,
                         itemBuilder: (BuildContext context, int index) {
                           return ListTile(
                             title: Text(
                                 _markers[index].infoWindow.title ?? 'No name'),
-                            subtitle: Text(
-                                'Lat: ${_polylinePoints[index].latitude}, Lng: ${_polylinePoints[index].longitude}'),
+                            subtitle: Text(_markers[index].infoWindow.snippet ??
+                                'No address'),
                             onTap: () {
                               _calculateAndDisplayDistanceDuration(index);
                             },
