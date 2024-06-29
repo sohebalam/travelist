@@ -3,8 +3,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:travelist/lists.dart';
-import 'package:travelist/location_service.dart'; // Import the location service
+import 'package:travelist/pages/lists.dart';
+import 'package:travelist/services/location_service.dart'; // Import the location service
 
 class HomePage extends StatefulWidget {
   @override

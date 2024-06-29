@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:travelist/list_detail.dart';
+import 'package:travelist/pages/list_detail.dart';
 
 class ListsPage extends StatefulWidget {
   @override

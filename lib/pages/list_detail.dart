@@ -489,20 +489,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.listName),
-        actions: [
-          if (_isNavigationView)
-            IconButton(
-              icon: Icon(Icons.map),
-              onPressed: _toggleNavigationView,
-              tooltip: 'Switch to map view',
-            )
-          else
-            IconButton(
-              icon: Icon(Icons.navigation),
-              onPressed: _toggleNavigationView,
-              tooltip: 'Switch to navigation view',
-            ),
-        ],
       ),
       body: Stack(
         children: [
