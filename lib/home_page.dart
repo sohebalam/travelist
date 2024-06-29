@@ -90,7 +90,7 @@ class _HomePageState extends State<HomePage> {
           position: LatLng(poi['latitude'], poi['longitude']),
           infoWindow: InfoWindow(
             title: poi['name'],
-            snippet: poi['description'],
+            snippet: '${poi['address']}\n${poi['description']}',
             onTap: () => _showAddToListDialog(poi),
           ),
         );
@@ -108,7 +108,6 @@ class _HomePageState extends State<HomePage> {
 
     if (!isValidLocation) {
       print('Invalid location: $location. Requesting refinement from OpenAI.');
-      // If the location is not valid, make another call to OpenAI to refine the search
       location = await _refineLocation(location, interests);
       isValidLocation = await _validateLocation(location);
       if (!isValidLocation) {
@@ -129,8 +128,8 @@ class _HomePageState extends State<HomePage> {
 
     var prompt = '''
 Generate a list of points of interest for location: $location with interests: $interests. 
-For each point of interest, provide the name, latitude, longitude, and a short description in the following format:
-Name - Latitude, Longitude - Description.
+For each point of interest, provide the name, latitude, longitude, address, and a short description in the following format:
+Name - Latitude, Longitude - Address - Description.
 ''';
 
     var body = jsonEncode({
@@ -138,7 +137,7 @@ Name - Latitude, Longitude - Description.
       'messages': [
         {'role': 'system', 'content': prompt},
       ],
-      'max_tokens': 150,
+      'max_tokens': 250,
       'temperature': 0.7,
     });
 
@@ -150,11 +149,9 @@ Name - Latitude, Longitude - Description.
 
       if (response.statusCode == 200) {
         Map<String, dynamic> data = json.decode(response.body);
-        print('Data received: ${data}');
         List<Map<String, dynamic>> pois =
             _parsePOIs(data['choices'][0]['message']['content']);
 
-        // Validate each POI
         List<Map<String, dynamic>> validPois = [];
         for (var poi in pois) {
           bool isValidPoi = await _validatePoi(
@@ -166,7 +163,6 @@ Name - Latitude, Longitude - Description.
         }
 
         if (validPois.isEmpty) {
-          // Fallback to Google Places API if no valid POIs are found
           validPois = await _fetchGooglePlacesPOIs(location, interests);
         }
 
@@ -210,12 +206,16 @@ Name - Latitude, Longitude - Description.
         List<Map<String, dynamic>> pois = [];
         if (data['results'] != null) {
           for (var result in data['results']) {
+            String formattedAddress =
+                result['formatted_address'] ?? 'Unknown location';
+            String cityAndPostcode = _extractCityAndPostcode(formattedAddress);
             pois.add({
               'id': result['place_id'],
               'name': result['name'],
               'latitude': result['geometry']['location']['lat'],
               'longitude': result['geometry']['location']['lng'],
               'description': result['vicinity'] ?? 'No description available',
+              'address': cityAndPostcode,
             });
           }
         }
@@ -228,6 +228,15 @@ Name - Latitude, Longitude - Description.
       print('Error: $e');
       throw Exception('Failed to fetch Google Places POIs');
     }
+  }
+
+  String _extractCityAndPostcode(String formattedAddress) {
+    // Split the address by commas and remove the country
+    List<String> parts = formattedAddress.split(',');
+    if (parts.length >= 2) {
+      return '${parts[parts.length - 3].trim()}, ${parts[parts.length - 2].trim()}';
+    }
+    return formattedAddress;
   }
 
   Future<bool> _validateLocation(String location) async {
@@ -336,7 +345,7 @@ The location "$location" could not be validated. Suggest an alternative or corre
     for (String line in lines) {
       if (line.trim().isNotEmpty) {
         List<String> parts = line.split(' - ');
-        if (parts.length == 3) {
+        if (parts.length == 4) {
           List<String> latLng = parts[1].split(',');
           double latitude = double.tryParse(latLng[0].trim()) ?? 0.0;
           double longitude = double.tryParse(latLng[1].trim()) ?? 0.0;
@@ -345,7 +354,8 @@ The location "$location" could not be validated. Suggest an alternative or corre
             'name': parts[0].trim(),
             'latitude': latitude,
             'longitude': longitude,
-            'description': parts[2].trim(),
+            'address': parts[2].trim(),
+            'description': parts[3].trim(),
           });
           id++;
         }
@@ -514,7 +524,8 @@ The location "$location" could not be validated. Suggest an alternative or corre
         'name': poi['name'],
         'latitude': poi['latitude'],
         'longitude': poi['longitude'],
-        'description': poi['description']
+        'description': poi['description'],
+        'address': poi['address'],
       });
     }
   }
@@ -616,7 +627,8 @@ The location "$location" could not be validated. Suggest an alternative or corre
                         itemBuilder: (BuildContext context, int index) {
                           return ListTile(
                             title: Text(_poiList[index]['name']),
-                            subtitle: Text(_poiList[index]['description']),
+                            subtitle: Text(
+                                '${_poiList[index]['address']}\n${_poiList[index]['description']}'),
                             onTap: () {
                               _showAddToListDialog(_poiList[index]);
                               print('Tapped: ${_poiList[index]['name']}');
