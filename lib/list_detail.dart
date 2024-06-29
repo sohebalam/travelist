@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:convert';
 import 'dart:async';
 import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
@@ -43,7 +44,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   double _currentSliderValue = 0;
   String _distanceText = '';
   String _durationText = '';
-  String _transportMode = 'driving';
 
   @override
   void initState() {
@@ -487,90 +487,56 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
               ],
             ),
           ),
-          DraggableScrollableSheet(
-            initialChildSize: 0.3,
-            minChildSize: 0.1,
-            maxChildSize: 0.8,
-            builder: (BuildContext context, ScrollController scrollController) {
-              return Container(
-                color: Colors.white,
-                padding: EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Transport Mode:'),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ChoiceChip(
-                          label: Text('Driving'),
-                          selected: _transportMode == 'driving',
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _transportMode = 'driving';
-                              _getRoutePolyline();
-                            });
-                          },
-                        ),
-                        ChoiceChip(
-                          label: Text('Walking'),
-                          selected: _transportMode == 'walking',
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _transportMode = 'walking';
-                              _getRoutePolyline();
-                            });
-                          },
-                        ),
-                        ChoiceChip(
-                          label: Text('Cycling'),
-                          selected: _transportMode == 'bicycling',
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _transportMode = 'bicycling';
-                              _getRoutePolyline();
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 10),
-                    Text('Route Points:'),
-                    Expanded(
-                      child: ListView.builder(
-                        controller: scrollController,
-                        itemCount: _polylinePoints.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          return ListTile(
-                            title: Text('Point ${index + 1}'),
-                            subtitle: Text(
-                                'Lat: ${_polylinePoints[index].latitude}, Lng: ${_polylinePoints[index].longitude}'),
-                            onTap: () {
-                              _calculateAndDisplayDistanceDuration(index);
-                            },
-                          );
+          if (!_isNavigationView)
+            DraggableScrollableSheet(
+              initialChildSize: 0.1,
+              minChildSize: 0.1,
+              maxChildSize: 0.8,
+              builder:
+                  (BuildContext context, ScrollController scrollController) {
+                return Container(
+                  color: Colors.white,
+                  child: ListView.builder(
+                    controller: scrollController,
+                    itemCount: _markers.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      return ListTile(
+                        title:
+                            Text(_markers[index].infoWindow.title ?? 'No name'),
+                        subtitle: Text(
+                            'Lat: ${_markers[index].position.latitude}, Lng: ${_markers[index].position.longitude}'),
+                        onTap: () {
+                          _navigateToSelectedLocation(_markers[index].position);
                         },
-                      ),
-                    ),
-                    Slider(
-                      value: _currentSliderValue,
-                      min: 0,
-                      max: (_polylinePoints.length - 1).toDouble(),
-                      divisions: _polylinePoints.length - 1,
-                      label: (_currentSliderValue + 1).round().toString(),
-                      onChanged: (double value) {
-                        setState(() {
-                          _currentSliderValue = value;
-                          _calculateAndDisplayDistanceDuration(value.toInt());
-                        });
-                      },
-                    ),
-                    Text('Distance: $_distanceText'),
-                    Text('Duration: $_durationText'),
-                  ],
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          Positioned(
+            bottom: 50,
+            left: 10,
+            right: 10,
+            child: Column(
+              children: [
+                Slider(
+                  value: _currentSliderValue,
+                  min: 0,
+                  max: (_polylinePoints.length - 1).toDouble(),
+                  divisions: _polylinePoints.length - 1,
+                  label: _currentSliderValue.round().toString(),
+                  onChanged: (double value) {
+                    setState(() {
+                      _currentSliderValue = value;
+                      _calculateAndDisplayDistanceDuration(value.toInt());
+                    });
+                  },
                 ),
-              );
-            },
+                Text('Distance: $_distanceText'),
+                Text('Duration: $_durationText'),
+              ],
+            ),
           ),
         ],
       ),
