@@ -1,6 +1,21 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:math';
+
+// Haversine formula to calculate distance between two latitude/longitude points in miles
+double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  const R = 3958.8; // Radius of the Earth in miles
+  var dLat = (lat2 - lat1) * (pi / 180);
+  var dLon = (lon2 - lon1) * (pi / 180);
+  var a = sin(dLat / 2) * sin(dLat / 2) +
+      cos(lat1 * (pi / 180)) *
+          cos(lat2 * (pi / 180)) *
+          sin(dLon / 2) *
+          sin(dLon / 2);
+  var c = 2 * atan2(sqrt(a), sqrt(1 - a));
+  return R * c;
+}
 
 Future<List<Map<String, dynamic>>> fetchPOIs(
     String location, String interests) async {
@@ -15,6 +30,11 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
       throw Exception('Invalid location provided and refinement failed.');
     }
   }
+
+  // Get latitude and longitude of the original location
+  var originalLocationCoords = await getCoordinates(location);
+  double? originalLat = originalLocationCoords['lat'];
+  double? originalLon = originalLocationCoords['lon'];
 
   String? openAiApiKey = dotenv.env['OPENAI_API_KEY'];
   if (openAiApiKey == null) {
@@ -68,8 +88,11 @@ Name - Latitude, Longitude - Description.
         for (var poi in pois) {
           bool isValidPoi =
               await validatePoi(poi['name'], poi['latitude'], poi['longitude']);
-          print('POI validation result for ${poi['name']}: $isValidPoi');
-          if (isValidPoi) {
+          double distance = calculateDistance(
+              originalLat!, originalLon!, poi['latitude'], poi['longitude']);
+          print(
+              'POI validation result for ${poi['name']}: $isValidPoi, Distance: $distance miles');
+          if (isValidPoi && distance <= 15) {
             // Ensure uniqueness of POIs
             if (!validPois
                 .any((existingPoi) => existingPoi['name'] == poi['name'])) {
@@ -192,6 +215,34 @@ The location "$location" could not be validated. Suggest an alternative or corre
   } catch (e) {
     print('Error: $e');
     throw Exception('Failed to refine location');
+  }
+}
+
+Future<Map<String, double>> getCoordinates(String location) async {
+  String? googlePlacesApiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
+  if (googlePlacesApiKey == null) {
+    throw Exception('Google Places API key is missing');
+  }
+
+  var url = Uri.parse(
+      'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=$location&inputtype=textquery&fields=geometry&key=$googlePlacesApiKey');
+
+  try {
+    final response = await http.get(url);
+
+    print('Google Places coordinates response: ${response.body}');
+
+    if (response.statusCode == 200) {
+      Map<String, dynamic> data = json.decode(response.body);
+      if (data['candidates'] != null && data['candidates'].isNotEmpty) {
+        var geometry = data['candidates'][0]['geometry']['location'];
+        return {'lat': geometry['lat'], 'lon': geometry['lng']};
+      }
+    }
+    throw Exception('Failed to get coordinates for location');
+  } catch (e) {
+    print('Error getting coordinates: $e');
+    throw Exception('Error getting coordinates');
   }
 }
 
