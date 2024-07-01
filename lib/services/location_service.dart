@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:math';
 
-// Haversine formula to calculate distance between two latitude/longitude points in miles
 double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
   const R = 3958.8; // Radius of the Earth in miles
   var dLat = (lat2 - lat1) * (pi / 180);
@@ -23,7 +22,6 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
 
   if (!isValidLocation) {
     print('Invalid location: $location. Requesting refinement from OpenAI.');
-    // If the location is not valid, make another call to OpenAI to refine the search
     location = await refineLocation(location, interests);
     isValidLocation = await validateLocation(location);
     if (!isValidLocation) {
@@ -31,7 +29,6 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
     }
   }
 
-  // Get latitude and longitude of the original location
   var originalLocationCoords = await getCoordinates(location);
   double? originalLat = originalLocationCoords['lat'];
   double? originalLon = originalLocationCoords['lon'];
@@ -58,7 +55,7 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
     };
 
     var prompt = '''
-Generate a list of points of interest for location: $location with interests: $interests.$additionalPrompt
+Generate a list of points of interest for location: $location (within 15 miles) with interests: $interests.$additionalPrompt
 For each point of interest, provide the name, latitude, longitude, and a short description in the following format:
 Name - Latitude, Longitude - Description.
 ''';
@@ -84,7 +81,6 @@ Name - Latitude, Longitude - Description.
         List<Map<String, dynamic>> pois =
             parsePOIs(data['choices'][0]['message']['content']);
 
-        // Validate each POI
         for (var poi in pois) {
           bool isValidPoi =
               await validatePoi(poi['name'], poi['latitude'], poi['longitude']);
@@ -92,8 +88,7 @@ Name - Latitude, Longitude - Description.
               originalLat!, originalLon!, poi['latitude'], poi['longitude']);
           print(
               'POI validation result for ${poi['name']}: $isValidPoi, Distance: $distance miles');
-          if (isValidPoi && distance <= 15) {
-            // Ensure uniqueness of POIs
+          if (isValidPoi && distance <= 10) {
             if (!validPois
                 .any((existingPoi) => existingPoi['name'] == poi['name'])) {
               validPois.add(poi);
