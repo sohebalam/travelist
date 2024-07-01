@@ -22,6 +22,7 @@ class _HomePageState extends State<HomePage> {
   String? _selectedListId;
   String? _selectedListName;
   bool _showNewListFields = false;
+  bool _isLoading = false;
 
   final CollectionReference _listsCollection =
       FirebaseFirestore.instance.collection('lists');
@@ -43,6 +44,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _generatePOIs() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     Position? position;
 
     if (useCurrentLocation) {
@@ -55,6 +60,9 @@ class _HomePageState extends State<HomePage> {
         }
       } catch (e) {
         print('Error determining position: $e');
+        setState(() {
+          _isLoading = false;
+        });
         return;
       }
     } else {
@@ -101,6 +109,7 @@ class _HomePageState extends State<HomePage> {
       }).toList();
 
       _poiList = pois;
+      _isLoading = false;
     });
 
     _updateCameraPosition();
@@ -352,6 +361,10 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+          if (_isLoading)
+            Center(
+              child: CircularProgressIndicator(),
+            ),
           _poiList.isNotEmpty
               ? DraggableScrollableSheet(
                   initialChildSize: 0.1,
