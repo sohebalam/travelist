@@ -88,7 +88,7 @@ Name - Latitude, Longitude - Description.
               originalLat!, originalLon!, poi['latitude'], poi['longitude']);
           print(
               'POI validation result for ${poi['name']}: $isValidPoi, Distance: $distance miles');
-          if (isValidPoi && distance <= 10) {
+          if (isValidPoi && distance <= 15) {
             if (!validPois
                 .any((existingPoi) => existingPoi['name'] == poi['name'])) {
               validPois.add(poi);
