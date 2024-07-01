@@ -1,4 +1,3 @@
-// poi_service.dart
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -22,60 +21,80 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
     throw Exception('OpenAI API key is missing');
   }
 
-  var url = Uri.parse('https://api.openai.com/v1/chat/completions');
-  var headers = {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer $openAiApiKey',
-  };
+  List<Map<String, dynamic>> validPois = [];
+  int attempts = 0;
+  const int maxAttempts = 5;
 
-  var prompt = '''
-Generate a list of points of interest for location: $location with interests: $interests. 
+  while (validPois.length < 4 && attempts < maxAttempts) {
+    String additionalPrompt = '';
+    if (interests.toLowerCase().contains('food')) {
+      additionalPrompt = ' Include restaurants in the list.';
+    }
+
+    var url = Uri.parse('https://api.openai.com/v1/chat/completions');
+    var headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $openAiApiKey',
+    };
+
+    var prompt = '''
+Generate a list of points of interest for location: $location with interests: $interests.$additionalPrompt
 For each point of interest, provide the name, latitude, longitude, and a short description in the following format:
 Name - Latitude, Longitude - Description.
 ''';
 
-  var body = jsonEncode({
-    'model': 'gpt-3.5-turbo',
-    'messages': [
-      {'role': 'system', 'content': prompt},
-    ],
-    'max_tokens': 150,
-    'temperature': 0.7,
-  });
+    var body = jsonEncode({
+      'model': 'gpt-3.5-turbo',
+      'messages': [
+        {'role': 'system', 'content': prompt},
+      ],
+      'max_tokens': 150,
+      'temperature': 0.7,
+    });
 
-  try {
-    final response = await http.post(url, headers: headers, body: body);
+    try {
+      final response = await http.post(url, headers: headers, body: body);
 
-    print('Response Status Code: ${response.statusCode}');
-    print('Response Body: ${response.body}');
+      print('Response Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
 
-    if (response.statusCode == 200) {
-      Map<String, dynamic> data = json.decode(response.body);
-      print('Data received: ${data}');
-      List<Map<String, dynamic>> pois =
-          parsePOIs(data['choices'][0]['message']['content']);
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        print('Data received: ${data}');
+        List<Map<String, dynamic>> pois =
+            parsePOIs(data['choices'][0]['message']['content']);
 
-      // Validate each POI
-      List<Map<String, dynamic>> validPois = [];
-      for (var poi in pois) {
-        bool isValidPoi =
-            await validatePoi(poi['name'], poi['latitude'], poi['longitude']);
-        print('POI validation result for ${poi['name']}: $isValidPoi');
-        if (isValidPoi) {
-          validPois.add(poi);
+        // Validate each POI
+        for (var poi in pois) {
+          bool isValidPoi =
+              await validatePoi(poi['name'], poi['latitude'], poi['longitude']);
+          print('POI validation result for ${poi['name']}: $isValidPoi');
+          if (isValidPoi) {
+            // Ensure uniqueness of POIs
+            if (!validPois
+                .any((existingPoi) => existingPoi['name'] == poi['name'])) {
+              validPois.add(poi);
+              if (validPois.length >= 4) break;
+            }
+          }
         }
-      }
 
-      print('Valid POIs: ${validPois.length}');
-      return validPois;
-    } else {
-      print('Failed to load POIs: ${response.body}');
-      throw Exception('Failed to load POIs');
+        print('Valid POIs: ${validPois.length}');
+      } else {
+        print('Failed to load POIs: ${response.body}');
+      }
+    } catch (e) {
+      print('Error: $e');
     }
-  } catch (e) {
-    print('Error: $e');
-    throw Exception('Failed to load POIs');
+
+    attempts++;
   }
+
+  if (validPois.length < 4) {
+    throw Exception('Failed to load at least 4 valid POIs');
+  }
+
+  return validPois;
 }
 
 Future<bool> validateLocation(String location) async {
@@ -152,6 +171,7 @@ The location "$location" could not be validated. Suggest an alternative or corre
     'model': 'gpt-3.5-turbo',
     'messages': [
       {'role': 'system', 'content': prompt},
+      {'role': 'user', 'content': 'Refine the location to ensure valid POIs.'}
     ],
     'max_tokens': 250,
     'temperature': 0.7,
