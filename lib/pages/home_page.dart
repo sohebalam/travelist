@@ -4,7 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:travelist/pages/lists.dart';
-import 'package:travelist/services/location_service.dart'; // Import the location service
+import 'package:travelist/services/location_service.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -27,7 +27,6 @@ class _HomePageState extends State<HomePage> {
       FirebaseFirestore.instance.collection('lists');
 
   int _selectedIndex = 0;
-  LocationService locationService = LocationService(); // Initialize the service
 
   @override
   void initState() {
@@ -79,19 +78,23 @@ class _HomePageState extends State<HomePage> {
 
     print('Generating POIs for location: $location with interests: $interests');
 
-    List<Map<String, dynamic>> pois =
-        await locationService.fetchPOIs(location, interests);
+    List<Map<String, dynamic>> pois = [];
+    try {
+      pois = await fetchPOIs(location, interests); // Use the new function
+    } catch (e) {
+      print('Error fetching POIs: $e');
+    }
 
     print('POIs fetched: ${pois.length}');
 
     setState(() {
       _markers = pois.map((poi) {
         return Marker(
-          markerId: MarkerId(poi['id']),
+          markerId: MarkerId('${poi['latitude']},${poi['longitude']}'),
           position: LatLng(poi['latitude'], poi['longitude']),
           infoWindow: InfoWindow(
             title: poi['name'],
-            snippet: '${poi['address']}\n${poi['description']}',
+            snippet: poi['description'],
             onTap: () => _showAddToListDialog(poi),
           ),
         );
@@ -101,68 +104,6 @@ class _HomePageState extends State<HomePage> {
     });
 
     _updateCameraPosition();
-  }
-
-  void _updateCameraPosition() {
-    if (_markers.isEmpty || _mapController == null) return;
-
-    LatLngBounds bounds = _calculateBounds(_markers);
-
-    _mapController!.animateCamera(
-      CameraUpdate.newLatLngBounds(bounds, 50),
-    );
-  }
-
-  LatLngBounds _calculateBounds(List<Marker> markers) {
-    double southWestLat = markers.first.position.latitude;
-    double southWestLng = markers.first.position.longitude;
-    double northEastLat = markers.first.position.latitude;
-    double northEastLng = markers.first.position.longitude;
-
-    for (var marker in markers) {
-      if (marker.position.latitude < southWestLat) {
-        southWestLat = marker.position.latitude;
-      }
-      if (marker.position.longitude < southWestLng) {
-        southWestLng = marker.position.longitude;
-      }
-      if (marker.position.latitude > northEastLat) {
-        northEastLat = marker.position.latitude;
-      }
-      if (marker.position.longitude > northEastLng) {
-        northEastLng = marker.position.longitude;
-      }
-    }
-
-    return LatLngBounds(
-      southwest: LatLng(southWestLat, southWestLng),
-      northeast: LatLng(northEastLat, northEastLng),
-    );
-  }
-
-  Future<Position> _determinePosition() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return Future.error('Location services are disabled.');
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return Future.error('Location permissions are denied');
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      return Future.error(
-          'Location permissions are permanently denied, we cannot request permissions.');
-    }
-
-    return await Geolocator.getCurrentPosition();
   }
 
   void _showAddToListDialog(Map<String, dynamic> poi) {
@@ -262,8 +203,7 @@ class _HomePageState extends State<HomePage> {
         'name': poi['name'],
         'latitude': poi['latitude'],
         'longitude': poi['longitude'],
-        'description': poi['description'],
-        'address': poi['address'],
+        'description': poi['description']
       });
     }
   }
@@ -296,6 +236,68 @@ class _HomePageState extends State<HomePage> {
         MaterialPageRoute(builder: (context) => ListsPage()),
       );
     }
+  }
+
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    return await Geolocator.getCurrentPosition();
+  }
+
+  void _updateCameraPosition() {
+    if (_markers.isEmpty || _mapController == null) return;
+
+    LatLngBounds bounds = _calculateBounds(_markers);
+
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 50),
+    );
+  }
+
+  LatLngBounds _calculateBounds(List<Marker> markers) {
+    double southWestLat = markers.first.position.latitude;
+    double southWestLng = markers.first.position.longitude;
+    double northEastLat = markers.first.position.latitude;
+    double northEastLng = markers.first.position.longitude;
+
+    for (var marker in markers) {
+      if (marker.position.latitude < southWestLat) {
+        southWestLat = marker.position.latitude;
+      }
+      if (marker.position.longitude < southWestLng) {
+        southWestLng = marker.position.longitude;
+      }
+      if (marker.position.latitude > northEastLat) {
+        northEastLat = marker.position.latitude;
+      }
+      if (marker.position.longitude > northEastLng) {
+        northEastLng = marker.position.longitude;
+      }
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(southWestLat, southWestLng),
+      northeast: LatLng(northEastLat, northEastLng),
+    );
   }
 
   @override
@@ -365,8 +367,7 @@ class _HomePageState extends State<HomePage> {
                         itemBuilder: (BuildContext context, int index) {
                           return ListTile(
                             title: Text(_poiList[index]['name']),
-                            subtitle: Text(
-                                '${_poiList[index]['address']}\n${_poiList[index]['description']}'),
+                            subtitle: Text(_poiList[index]['description']),
                             onTap: () {
                               _showAddToListDialog(_poiList[index]);
                               print('Tapped: ${_poiList[index]['name']}');
