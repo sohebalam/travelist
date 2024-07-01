@@ -7,7 +7,7 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
   const R = 3958.8; // Radius of the Earth in miles
   var dLat = (lat2 - lat1) * (pi / 180);
   var dLon = (lon2 - lon1) * (pi / 180);
-  var a = sin(dLat / 2) * sin(dLat / 2) +
+  var a = sin(dLat / 2) * sin(dLon / 2) +
       cos(lat1 * (pi / 180)) *
           cos(lat2 * (pi / 180)) *
           sin(dLon / 2) *
@@ -41,8 +41,9 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
   List<Map<String, dynamic>> validPois = [];
   int attempts = 0;
   const int maxAttempts = 5;
+  int poiCount = 0;
 
-  while (validPois.length < 4 && attempts < maxAttempts) {
+  while (poiCount < 4 && attempts < maxAttempts) {
     String additionalPrompt = '';
     if (interests.toLowerCase().contains('food')) {
       additionalPrompt = ' Include restaurants in the list.';
@@ -92,7 +93,8 @@ Name - Latitude, Longitude - Description.
             if (!validPois
                 .any((existingPoi) => existingPoi['name'] == poi['name'])) {
               validPois.add(poi);
-              if (validPois.length >= 4) break;
+              poiCount++;
+              if (poiCount >= 4) break;
             }
           }
         }
