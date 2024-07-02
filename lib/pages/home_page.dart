@@ -63,6 +63,7 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _isLoading = false;
         });
+        _showErrorSnackBar('Error determining position');
         return;
       }
     } else {
@@ -91,6 +92,7 @@ class _HomePageState extends State<HomePage> {
       pois = await fetchPOIs(location, interests); // Use the new function
     } catch (e) {
       print('Error fetching POIs: $e');
+      _showErrorSnackBar('Locations not found, please try again');
     }
 
     print('POIs fetched: ${pois.length}');
@@ -307,6 +309,11 @@ class _HomePageState extends State<HomePage> {
       southwest: LatLng(southWestLat, southWestLng),
       northeast: LatLng(northEastLat, northEastLng),
     );
+  }
+
+  void _showErrorSnackBar(String message) {
+    final snackBar = SnackBar(content: Text(message));
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   @override
