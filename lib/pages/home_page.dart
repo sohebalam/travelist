@@ -319,87 +319,134 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Travel Recommendation App'),
-      ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Row(
-                children: [
-                  Checkbox(
-                    value: useCurrentLocation,
-                    onChanged: (value) {
+      // appBar: AppBar(
+      //   title: Text('Travel Recommendation App'),
+      // ),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            const SizedBox(height: 20),
+            Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 6,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          children: [
+                            if (!useCurrentLocation)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: TextField(
+                                  controller: locationController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Enter location',
+                                    floatingLabelBehavior:
+                                        FloatingLabelBehavior.auto,
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ),
+                            TextField(
+                              controller: interestsController,
+                              decoration: InputDecoration(
+                                labelText: 'Enter interests',
+                                floatingLabelBehavior:
+                                    FloatingLabelBehavior.auto,
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Switch(
+                                  value: useCurrentLocation,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      useCurrentLocation = value;
+                                    });
+                                  },
+                                ),
+                                Icon(
+                                  Icons.location_on,
+                                  color: useCurrentLocation
+                                      ? Colors.blue
+                                      : Colors.grey,
+                                ),
+                              ],
+                            ),
+                            ElevatedButton(
+                              onPressed: _generatePOIs,
+                              child: Icon(Icons.search),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(51.509865, -0.118092), // Default location
+                      zoom: 13,
+                    ),
+                    markers: Set.from(_markers),
+                    onMapCreated: (controller) {
                       setState(() {
-                        useCurrentLocation = value!;
+                        _mapController = controller;
                       });
                     },
                   ),
-                  Text('Use current location')
-                ],
-              ),
-              if (!useCurrentLocation)
-                TextField(
-                  controller: locationController,
-                  decoration: InputDecoration(labelText: 'Enter location'),
                 ),
-              TextField(
-                controller: interestsController,
-                decoration: InputDecoration(labelText: 'Enter interests'),
-              ),
-              ElevatedButton(
-                onPressed: _generatePOIs,
-                child: Text('Generate POIs'),
-              ),
-              Expanded(
-                child: GoogleMap(
-                  initialCameraPosition: CameraPosition(
-                    target: LatLng(51.509865, -0.118092), // Default location
-                    zoom: 13,
-                  ),
-                  markers: Set.from(_markers),
-                  onMapCreated: (controller) {
-                    setState(() {
-                      _mapController = controller;
-                    });
-                  },
-                ),
-              ),
-            ],
-          ),
-          if (_isLoading)
-            Center(
-              child: CircularProgressIndicator(),
+              ],
             ),
-          _poiList.isNotEmpty
-              ? DraggableScrollableSheet(
-                  initialChildSize: 0.1,
-                  minChildSize: 0.1,
-                  maxChildSize: 0.8,
-                  builder: (BuildContext context,
-                      ScrollController scrollController) {
-                    return Container(
-                      color: Colors.white,
-                      child: ListView.builder(
-                        controller: scrollController,
-                        itemCount: _poiList.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          return ListTile(
-                            title: Text(_poiList[index]['name']),
-                            subtitle: Text(_poiList[index]['description']),
-                            onTap: () {
-                              _showAddToListDialog(_poiList[index]);
-                              print('Tapped: ${_poiList[index]['name']}');
-                            },
-                          );
-                        },
-                      ),
-                    );
-                  },
-                )
-              : Container(),
-        ],
+            if (_isLoading)
+              Center(
+                child: CircularProgressIndicator(),
+              ),
+            _poiList.isNotEmpty
+                ? DraggableScrollableSheet(
+                    initialChildSize: 0.1,
+                    minChildSize: 0.1,
+                    maxChildSize: 0.8,
+                    builder: (BuildContext context,
+                        ScrollController scrollController) {
+                      return Container(
+                        color: Colors.white,
+                        child: ListView.builder(
+                          controller: scrollController,
+                          itemCount: _poiList.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            return ListTile(
+                              title: Text(_poiList[index]['name']),
+                              subtitle: Text(_poiList[index]['description']),
+                              onTap: () {
+                                _showAddToListDialog(_poiList[index]);
+                                print('Tapped: ${_poiList[index]['name']}');
+                              },
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  )
+                : Container(),
+          ],
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
