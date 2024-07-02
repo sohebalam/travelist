@@ -35,6 +35,8 @@ Future<Map<String, String>> reverseGeocode(double lat, double lon) async {
       if (data['results'] != null && data['results'].isNotEmpty) {
         String city = '';
         String borough = '';
+        String country = '';
+        String neighborhood = '';
 
         for (var result in data['results']) {
           var addressComponents = result['address_components'] as List;
@@ -43,6 +45,10 @@ Future<Map<String, String>> reverseGeocode(double lat, double lon) async {
               city = component['long_name'];
             } else if ((component['types'] as List).contains('sublocality')) {
               borough = component['long_name'];
+            } else if ((component['types'] as List).contains('country')) {
+              country = component['long_name'];
+            } else if ((component['types'] as List).contains('neighborhood')) {
+              neighborhood = component['long_name'];
             }
           }
         }
@@ -52,6 +58,8 @@ Future<Map<String, String>> reverseGeocode(double lat, double lon) async {
         return {
           'city': city,
           'borough': borough,
+          'country': country,
+          'neighborhood': neighborhood,
           'latLong': latLong,
         };
       }
@@ -85,7 +93,7 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
       await reverseGeocode(originalLat!, originalLon!);
 
   String locationDescription =
-      '${humanReadableLocation['city']}, ${humanReadableLocation['borough']}, ${humanReadableLocation['latLong']}';
+      '${humanReadableLocation['city']}, ${humanReadableLocation['borough']}, ${humanReadableLocation['neighborhood']}, ${humanReadableLocation['country']}, ${humanReadableLocation['latLong']}';
 
   String? openAiApiKey = dotenv.env['OPENAI_API_KEY'];
   if (openAiApiKey == null) {
@@ -137,8 +145,8 @@ Name - Latitude, Longitude - Description.
             parsePOIs(data['choices'][0]['message']['content']);
 
         for (var poi in pois) {
-          bool isValidPoi =
-              await validatePoi(poi['name'], poi['latitude'], poi['longitude']);
+          bool isValidPoi = await validatePoi(
+              poi['name'], poi['latitude'], poi['longitude'], location);
           double distance = calculateDistance(
               originalLat, originalLon, poi['latitude'], poi['longitude']);
           print(
@@ -164,8 +172,8 @@ Name - Latitude, Longitude - Description.
     attempts++;
   }
 
-  if (validPois.length < 4) {
-    throw Exception('Failed to load at least 4 valid POIs');
+  if (validPois.isEmpty) {
+    throw Exception('Locations not found, please try again');
   }
 
   return validPois;
@@ -198,7 +206,8 @@ Future<bool> validateLocation(String location) async {
   }
 }
 
-Future<bool> validatePoi(String name, double latitude, double longitude) async {
+Future<bool> validatePoi(
+    String name, double latitude, double longitude, String location) async {
   String? googlePlacesApiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
   if (googlePlacesApiKey == null) {
     throw Exception('Google Places API key is missing');
@@ -216,6 +225,22 @@ Future<bool> validatePoi(String name, double latitude, double longitude) async {
       Map<String, dynamic> data = json.decode(response.body);
       if (data['results'] != null && data['results'].isNotEmpty) {
         return true;
+      } else {
+        // Fallback check for name similarity
+        var urlTextSearch = Uri.parse(
+            'https://maps.googleapis.com/maps/api/place/textsearch/json?query=$name in $location&key=$googlePlacesApiKey');
+        final responseTextSearch = await http.get(urlTextSearch);
+
+        print('Google Places Text Search response: ${responseTextSearch.body}');
+
+        if (responseTextSearch.statusCode == 200) {
+          Map<String, dynamic> dataTextSearch =
+              json.decode(responseTextSearch.body);
+          if (dataTextSearch['results'] != null &&
+              dataTextSearch['results'].isNotEmpty) {
+            return true;
+          }
+        }
       }
     }
     return false;
