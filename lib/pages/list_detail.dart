@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:async';
 import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
+import 'package:redacted/redacted.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:redacted/redacted.dart'; // Updated import
+import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
+    as places;
+import 'dart:io' show Platform;
 
 class ListDetailsPage extends StatefulWidget {
   final String listId;
@@ -21,24 +24,24 @@ class ListDetailsPage extends StatefulWidget {
 }
 
 class _ListDetailsPageState extends State<ListDetailsPage> {
-  GoogleMapController? _mapController;
-  List<Marker> _markers = [];
+  gmaps.GoogleMapController? _mapController;
+  List<gmaps.Marker> _markers = [];
   List<Map<String, dynamic>> _poiData = [];
-  List<LatLng> _polylinePoints = [];
-  List<LatLng> _routePoints = [];
-  Set<Polyline> _polylines = {};
+  List<gmaps.LatLng> _polylinePoints = [];
+  List<gmaps.LatLng> _routePoints = [];
+  Set<gmaps.Polyline> _polylines = {};
   PolylinePoints polylinePoints = PolylinePoints();
   String? _googleMapsApiKey;
   bool _isLoading = false;
   String? _error;
-  LatLng? _currentLocation;
-  final Completer<GoogleMapController?> _controller = Completer();
+  gmaps.LatLng? _currentLocation;
+  final Completer<gmaps.GoogleMapController?> _controller = Completer();
   Location location = Location();
   LocationData? _currentPosition;
   StreamSubscription<LocationData>? locationSubscription;
 
   bool _isNavigationView = false;
-  LatLng? _navigationDestination;
+  gmaps.LatLng? _navigationDestination;
   bool _userHasInteractedWithMap = false;
   List<gmd.DirectionLegStep> _navigationSteps = [];
   int _currentStepIndex = 0;
@@ -47,11 +50,19 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   String _durationText = '';
   String _transportMode = 'driving';
 
+  bool _countriesEnabled = true;
+  bool _locationBiasEnabled = true;
+  bool _locationRestrictionEnabled = false;
+
+  late final places.FlutterGooglePlacesSdk _places;
+  places.LatLngBounds? _locationBias;
+
   @override
   void initState() {
     super.initState();
     _googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'];
     gmd.GoogleMapsDirections.init(googleAPIKey: _googleMapsApiKey!);
+    _places = places.FlutterGooglePlacesSdk(_googleMapsApiKey!);
     _fetchPlaces();
     _getCurrentLocation();
   }
@@ -60,6 +71,18 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   void dispose() {
     locationSubscription?.cancel();
     super.dispose();
+  }
+
+  gmaps.LatLng _calculateCentroid(List<gmaps.LatLng> points) {
+    double latSum = 0;
+    double lngSum = 0;
+
+    for (var point in points) {
+      latSum += point.latitude;
+      lngSum += point.longitude;
+    }
+
+    return gmaps.LatLng(latSum / points.length, lngSum / points.length);
   }
 
   Future<void> _fetchPlaces() async {
@@ -75,12 +98,15 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           .collection('pois')
           .get();
 
-      List<Marker> markers = [];
+      List<gmaps.Marker> markers = [];
       List<Map<String, dynamic>> poiData = [];
+      List<gmaps.LatLng> points = [];
 
       for (var place in placesSnapshot.docs) {
         var placeData = place.data();
-        var position = LatLng(placeData['latitude'], placeData['longitude']);
+        var position =
+            gmaps.LatLng(placeData['latitude'], placeData['longitude']);
+        points.add(position);
         poiData.add({
           'id': place.id,
           'name': placeData['name'],
@@ -96,12 +122,12 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       poiData.sort((a, b) => a['distance'].compareTo(b['distance']));
 
       for (var poi in poiData) {
-        var position = LatLng(poi['latitude'], poi['longitude']);
+        var position = gmaps.LatLng(poi['latitude'], poi['longitude']);
         markers.add(
-          Marker(
-            markerId: MarkerId(poi['id']),
+          gmaps.Marker(
+            markerId: gmaps.MarkerId(poi['id']),
             position: position,
-            infoWindow: InfoWindow(
+            infoWindow: gmaps.InfoWindow(
               title: poi['name'],
               snippet: poi['address'],
             ),
@@ -112,18 +138,37 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       setState(() {
         _markers = markers;
         _poiData = poiData;
-        _polylinePoints = poiData
-            .map((poi) => LatLng(poi['latitude'], poi['longitude']))
-            .toList();
+        _polylinePoints = points;
         _isLoading = false;
       });
+
+      if (points.isNotEmpty) {
+        final centralLocation = _calculateCentroid(points);
+        _locationBias = places.LatLngBounds(
+          southwest: places.LatLng(
+              lat: centralLocation.latitude - 0.01,
+              lng: centralLocation.longitude - 0.01),
+          northeast: places.LatLng(
+              lat: centralLocation.latitude + 0.01,
+              lng: centralLocation.longitude + 0.01),
+        );
+      } else if (_currentLocation != null) {
+        _locationBias = places.LatLngBounds(
+          southwest: places.LatLng(
+              lat: _currentLocation!.latitude - 0.01,
+              lng: _currentLocation!.longitude - 0.01),
+          northeast: places.LatLng(
+              lat: _currentLocation!.latitude + 0.01,
+              lng: _currentLocation!.longitude + 0.01),
+        );
+      }
 
       if (_polylinePoints.isNotEmpty) {
         _getRoutePolyline();
         _setNearestDestination();
         if (!_userHasInteractedWithMap) {
           _mapController?.animateCamera(
-            CameraUpdate.newLatLngBounds(
+            gmaps.CameraUpdate.newLatLngBounds(
               _calculateBounds(_polylinePoints),
               50,
             ),
@@ -145,8 +190,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     _polylines.clear();
 
     for (int i = 0; i < _polylinePoints.length - 1; i++) {
-      LatLng start = _polylinePoints[i];
-      LatLng end = _polylinePoints[i + 1];
+      gmaps.LatLng start = _polylinePoints[i];
+      gmaps.LatLng end = _polylinePoints[i + 1];
 
       gmd.Directions directions = await gmd.getDirections(
         start.latitude,
@@ -158,9 +203,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       );
 
       gmd.DirectionRoute route = directions.shortestRoute;
-      List<LatLng> points = PolylinePoints()
+      List<gmaps.LatLng> points = PolylinePoints()
           .decodePolyline(route.overviewPolyline.points)
-          .map((point) => LatLng(point.latitude, point.longitude))
+          .map((point) => gmaps.LatLng(point.latitude, point.longitude))
           .toList();
 
       setState(() {
@@ -170,8 +215,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
     setState(() {
       _polylines.add(
-        Polyline(
-          polylineId: PolylineId('route'),
+        gmaps.Polyline(
+          polylineId: gmaps.PolylineId('route'),
           color: Colors.blue,
           width: 5,
           points: _routePoints,
@@ -181,7 +226,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
     if (_routePoints.isNotEmpty) {
       _mapController?.animateCamera(
-        CameraUpdate.newLatLngBounds(
+        gmaps.CameraUpdate.newLatLngBounds(
           _calculateBounds(_routePoints),
           50,
         ),
@@ -191,7 +236,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     _calculateAndDisplayDistanceDuration(_currentSliderValue.toInt());
   }
 
-  LatLngBounds _calculateBounds(List<LatLng> points) {
+  gmaps.LatLngBounds _calculateBounds(List<gmaps.LatLng> points) {
     double southWestLat = points.first.latitude;
     double southWestLng = points.first.longitude;
     double northEastLat = points.first.latitude;
@@ -212,13 +257,14 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       }
     }
 
-    return LatLngBounds(
-      southwest: LatLng(southWestLat, southWestLng),
-      northeast: LatLng(northEastLat, northEastLng),
+    return gmaps.LatLngBounds(
+      southwest: gmaps.LatLng(southWestLat, southWestLng),
+      northeast: gmaps.LatLng(northEastLat, northEastLng),
     );
   }
 
-  Future<void> _navigateToSelectedLocation(LatLng selectedLocation) async {
+  Future<void> _navigateToSelectedLocation(
+      gmaps.LatLng selectedLocation) async {
     if (_currentPosition == null) return;
 
     final apiKey = _googleMapsApiKey;
@@ -237,15 +283,15 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     if (directions.routes.isNotEmpty) {
       final route = directions.shortestRoute;
       final steps = route.shortestLeg.steps;
-      List<LatLng> points = PolylinePoints()
+      List<gmaps.LatLng> points = PolylinePoints()
           .decodePolyline(route.overviewPolyline.points)
-          .map((point) => LatLng(point.latitude, point.longitude))
+          .map((point) => gmaps.LatLng(point.latitude, point.longitude))
           .toList();
 
       setState(() {
         _polylines.add(
-          Polyline(
-            polylineId: PolylineId('navigation_route'),
+          gmaps.Polyline(
+            polylineId: gmaps.PolylineId('navigation_route'),
             color: Colors.green,
             width: 5,
             points: points,
@@ -255,7 +301,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         _isNavigationView = true;
         _navigationSteps = steps;
         _mapController?.animateCamera(
-          CameraUpdate.newLatLngBounds(
+          gmaps.CameraUpdate.newLatLngBounds(
             _calculateBounds(points),
             50,
           ),
@@ -274,14 +320,14 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   void _updateNavigation(LocationData currentLocation) {
     setState(() {
       _currentLocation =
-          LatLng(currentLocation.latitude!, currentLocation.longitude!);
+          gmaps.LatLng(currentLocation.latitude!, currentLocation.longitude!);
     });
 
     if (_navigationSteps.isNotEmpty) {
       gmd.DirectionLegStep currentStep = _navigationSteps[_currentStepIndex];
       double distanceToNextStep = _calculateDistance(
         _currentLocation!,
-        LatLng(
+        gmaps.LatLng(
           currentStep.endLocation.lat,
           currentStep.endLocation.lng,
         ),
@@ -299,8 +345,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
 
     _mapController?.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(
+      gmaps.CameraUpdate.newCameraPosition(
+        gmaps.CameraPosition(
           target: _currentLocation!,
           zoom: 16,
         ),
@@ -308,7 +354,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
-  double _calculateDistance(LatLng start, LatLng end) {
+  double _calculateDistance(gmaps.LatLng start, gmaps.LatLng end) {
     const double p = 0.017453292519943295;
     final double a = 0.5 -
         cos((end.latitude - start.latitude) * p) / 2 +
@@ -323,7 +369,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   Future<void> _getCurrentLocation() async {
     bool _serviceEnabled;
     PermissionStatus _permissionGranted;
-    final GoogleMapController? controller = await _controller.future;
+    final gmaps.GoogleMapController? controller = await _controller.future;
 
     _serviceEnabled = await location.serviceEnabled();
     if (!_serviceEnabled) {
@@ -344,17 +390,17 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     if (_permissionGranted == PermissionStatus.granted) {
       _currentPosition = await location.getLocation();
       setState(() {
-        _currentLocation =
-            LatLng(_currentPosition!.latitude!, _currentPosition!.longitude!);
+        _currentLocation = gmaps.LatLng(
+            _currentPosition!.latitude!, _currentPosition!.longitude!);
       });
 
       locationSubscription =
           location.onLocationChanged.listen((LocationData currentLocation) {
         if (!_userHasInteractedWithMap) {
-          controller?.animateCamera(CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target:
-                  LatLng(currentLocation.latitude!, currentLocation.longitude!),
+          controller?.animateCamera(gmaps.CameraUpdate.newCameraPosition(
+            gmaps.CameraPosition(
+              target: gmaps.LatLng(
+                  currentLocation.latitude!, currentLocation.longitude!),
               zoom: 16,
             ),
           ));
@@ -362,8 +408,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
         if (mounted) {
           setState(() {
-            _currentLocation =
-                LatLng(currentLocation.latitude!, currentLocation.longitude!);
+            _currentLocation = gmaps.LatLng(
+                currentLocation.latitude!, currentLocation.longitude!);
           });
         }
       });
@@ -380,9 +426,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     if (_currentLocation == null || _polylinePoints.isEmpty) return;
 
     double minDistance = double.infinity;
-    LatLng? nearestPoint;
+    gmaps.LatLng? nearestPoint;
 
-    for (LatLng point in _polylinePoints) {
+    for (gmaps.LatLng point in _polylinePoints) {
       double distance = _calculateDistance(_currentLocation!, point);
       if (distance < minDistance) {
         minDistance = distance;
@@ -398,8 +444,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   Future<void> _calculateAndDisplayDistanceDuration(int index) async {
     if (index >= _polylinePoints.length - 1) return;
 
-    LatLng start = _polylinePoints[index];
-    LatLng end = _polylinePoints[index + 1];
+    gmaps.LatLng start = _polylinePoints[index];
+    gmaps.LatLng end = _polylinePoints[index + 1];
 
     gmd.DistanceValue distanceValue = await gmd.distance(
       start.latitude,
@@ -487,9 +533,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           ? _buildLoadingSkeleton(context)
           : Stack(
               children: [
-                GoogleMap(
-                  initialCameraPosition: CameraPosition(
-                    target: LatLng(51.509865, -0.118092),
+                gmaps.GoogleMap(
+                  initialCameraPosition: gmaps.CameraPosition(
+                    target: gmaps.LatLng(51.509865, -0.118092),
                     zoom: 13,
                   ),
                   markers: Set.from(_markers),
@@ -500,7 +546,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                     if (_polylinePoints.isNotEmpty &&
                         !_userHasInteractedWithMap) {
                       _mapController?.animateCamera(
-                        CameraUpdate.newLatLngBounds(
+                        gmaps.CameraUpdate.newLatLngBounds(
                           _calculateBounds(_polylinePoints),
                           50,
                         ),
@@ -508,7 +554,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                     }
                   },
                   myLocationEnabled: true,
-                  onCameraMove: (CameraPosition position) {
+                  onCameraMove: (gmaps.CameraPosition position) {
                     _userHasInteractedWithMap = true;
                   },
                 ),
@@ -535,13 +581,25 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                   ),
                 ),
                 Positioned(
+                  top: 10,
+                  left: 10,
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      _showSearch(context);
+                    },
+                    child: Icon(Icons.add),
+                    tooltip: 'Search for places',
+                  ),
+                ),
+                Positioned(
                   top: 80,
                   right: 10,
                   child: Column(
                     children: [
                       FloatingActionButton(
                         onPressed: () {
-                          _mapController?.animateCamera(CameraUpdate.zoomIn());
+                          _mapController
+                              ?.animateCamera(gmaps.CameraUpdate.zoomIn());
                         },
                         child: Icon(Icons.zoom_in),
                         tooltip: 'Zoom in',
@@ -549,7 +607,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                       SizedBox(height: 10),
                       FloatingActionButton(
                         onPressed: () {
-                          _mapController?.animateCamera(CameraUpdate.zoomOut());
+                          _mapController
+                              ?.animateCamera(gmaps.CameraUpdate.zoomOut());
                         },
                         child: Icon(Icons.zoom_out),
                         tooltip: 'Zoom out',
@@ -690,6 +749,123 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showSearch(BuildContext context) async {
+    final query = await showSearch<String>(
+      context: context,
+      delegate: PlaceSearchDelegate(_places, _locationBias),
+    );
+
+    if (query != null && query.isNotEmpty) {
+      try {
+        final result = await _places.findAutocompletePredictions(
+          query,
+          countries: _countriesEnabled ? ['uk'] : null,
+          locationBias: _locationBiasEnabled ? _locationBias : null,
+          locationRestriction:
+              _locationRestrictionEnabled ? _locationBias : null,
+        );
+
+        if (result.predictions.isNotEmpty) {
+          final placeId = result.predictions.first.placeId;
+          final placeDetails = await _places.fetchPlace(placeId, fields: [
+            places.PlaceField.Address,
+            places.PlaceField.AddressComponents,
+            places.PlaceField.Location,
+            places.PlaceField.Name,
+            places.PlaceField.OpeningHours,
+            places.PlaceField.PhotoMetadatas,
+            places.PlaceField.PlusCode,
+            places.PlaceField.PriceLevel,
+            places.PlaceField.Rating,
+            places.PlaceField.UserRatingsTotal,
+            places.PlaceField.UTCOffset,
+            places.PlaceField.Viewport,
+            places.PlaceField.WebsiteUri,
+          ]);
+
+          final place = placeDetails.place;
+          if (place != null && place.latLng != null) {
+            final location = place.latLng!;
+            setState(() {
+              _markers.add(
+                gmaps.Marker(
+                  markerId: gmaps.MarkerId(placeId),
+                  position: gmaps.LatLng(location.lat, location.lng),
+                  infoWindow: gmaps.InfoWindow(title: place.name ?? 'Unknown'),
+                ),
+              );
+              _mapController?.animateCamera(gmaps.CameraUpdate.newLatLngZoom(
+                gmaps.LatLng(location.lat, location.lng),
+                14.0,
+              ));
+            });
+          }
+        } else {
+          print("No predictions found.");
+        }
+      } catch (e) {
+        print("Error in place picker: $e");
+        setState(() {
+          _error = e.toString();
+        });
+      }
+    }
+  }
+}
+
+class PlaceSearchDelegate extends SearchDelegate<String> {
+  final places.FlutterGooglePlacesSdk _places;
+  final places.LatLngBounds? locationBias;
+
+  PlaceSearchDelegate(this._places, this.locationBias);
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [IconButton(icon: Icon(Icons.clear), onPressed: () => query = '')];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+        icon: Icon(Icons.arrow_back), onPressed: () => close(context, ''));
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return Container();
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return FutureBuilder<places.FindAutocompletePredictionsResponse>(
+      future: _places.findAutocompletePredictions(
+        query,
+        countries: ['uk'],
+        locationBias: locationBias,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done &&
+            snapshot.hasData) {
+          final predictions = snapshot.data!.predictions;
+
+          return ListView.builder(
+            itemCount: predictions.length,
+            itemBuilder: (context, index) {
+              final prediction = predictions[index];
+              return ListTile(
+                title: Text(prediction.primaryText),
+                subtitle: Text(prediction.secondaryText ?? ''),
+                onTap: () => close(context, prediction.fullText),
+              );
+            },
+          );
+        } else {
+          return Center(child: CircularProgressIndicator());
+        }
+      },
     );
   }
 }

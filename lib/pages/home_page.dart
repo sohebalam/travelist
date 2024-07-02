@@ -384,7 +384,7 @@ class _HomePageState extends State<HomePage> {
                                   },
                                 ),
                                 Icon(
-                                  Icons.location_on,
+                                  Icons.my_location,
                                   color: useCurrentLocation
                                       ? AppColors.secondaryColor
                                       : Colors.grey,
