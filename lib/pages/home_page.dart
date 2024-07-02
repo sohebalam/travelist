@@ -5,7 +5,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:travelist/pages/lists.dart';
 import 'package:travelist/services/location_service.dart';
+import 'package:travelist/services/place_service.dart';
 import 'package:travelist/services/styles.dart';
+import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
+    as places_sdk;
 
 class HomePage extends StatefulWidget {
   @override
@@ -24,11 +27,14 @@ class _HomePageState extends State<HomePage> {
   String? _selectedListName;
   bool _showNewListFields = false;
   bool _isLoading = false;
+  String? _error;
 
   final CollectionReference _listsCollection =
       FirebaseFirestore.instance.collection('lists');
 
   int _selectedIndex = 0;
+
+  PlacesService? _placesService;
 
   @override
   void initState() {
@@ -38,9 +44,80 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadEnv() async {
     await dotenv.load();
-    if (dotenv.env['GOOGLE_PLACES_API_KEY'] == null ||
-        dotenv.env['OPENAI_API_KEY'] == null) {
+    String? apiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
+    if (apiKey == null || apiKey.isEmpty) {
       print('Missing API keys in .env file');
+      return;
+    }
+    setState(() {
+      _placesService = PlacesService(apiKey, null);
+    });
+  }
+
+  Future<void> _findNearbyPlaces() async {
+    if (_mapController == null) {
+      _showErrorSnackBar('Map is not ready');
+      return;
+    }
+
+    if (_placesService == null) {
+      _showErrorSnackBar('Places service is not initialized');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      LatLngBounds bounds = await _mapController!.getVisibleRegion();
+      final response = await _placesService!.findAutocompletePredictions(
+        '', // Empty query for nearby places
+        null,
+      );
+
+      List<Map<String, dynamic>> pois = [];
+      for (var prediction in response.predictions) {
+        final placeDetails =
+            await _placesService!.fetchPlace(prediction.placeId, [
+          places_sdk.PlaceField.Location,
+          places_sdk.PlaceField.Name,
+        ]);
+
+        final place = placeDetails.place;
+        if (place != null && place.latLng != null) {
+          pois.add({
+            'name': place.name,
+            'latitude': place.latLng?.lat,
+            'longitude': place.latLng?.lng,
+            'description': prediction.secondaryText,
+          });
+        }
+      }
+
+      setState(() {
+        _poiList = pois;
+        _markers = pois.map((poi) {
+          return Marker(
+            markerId: MarkerId('${poi['latitude']},${poi['longitude']}'),
+            position: LatLng(poi['latitude'], poi['longitude']),
+            infoWindow: InfoWindow(
+              title: poi['name'],
+              snippet: poi['description'],
+              onTap: () => _showAddToListDialog(poi),
+            ),
+          );
+        }).toList();
+        _isLoading = false;
+      });
+
+      _updateCameraPosition();
+    } catch (e) {
+      print('Error fetching nearby places: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      _showErrorSnackBar('Error fetching nearby places');
     }
   }
 
@@ -54,7 +131,7 @@ class _HomePageState extends State<HomePage> {
     if (useCurrentLocation) {
       try {
         position = await _determinePosition();
-        if (_mapController != null) {
+        if (_mapController != null && position != null) {
           _mapController!.animateCamera(CameraUpdate.newLatLng(
             LatLng(position.latitude, position.longitude),
           ));
@@ -81,8 +158,8 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    String location = useCurrentLocation
-        ? '${position?.latitude}, ${position?.longitude}'
+    String location = useCurrentLocation && position != null
+        ? '${position.latitude}, ${position.longitude}'
         : locationController.text;
     String interests = interestsController.text;
 
@@ -317,16 +394,62 @@ class _HomePageState extends State<HomePage> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
+  void _showSearch(BuildContext context) async {
+    final query = await showSearch<String>(
+      context: context,
+      delegate: PlaceSearchDelegate(_placesService!),
+    );
+
+    if (query != null && query.isNotEmpty) {
+      try {
+        final result = await _placesService!.findAutocompletePredictions(
+          query,
+          null,
+        );
+
+        if (result.predictions.isNotEmpty) {
+          final placeId = result.predictions.first.placeId;
+          final placeDetails = await _placesService!.fetchPlace(placeId, [
+            places_sdk.PlaceField.Location,
+            places_sdk.PlaceField.Name,
+            places_sdk.PlaceField.Address,
+          ]);
+
+          final place = placeDetails.place;
+          if (place != null && place.latLng != null) {
+            final location = place.latLng!;
+            setState(() {
+              _markers.add(
+                Marker(
+                  markerId: MarkerId(placeId),
+                  position: LatLng(location.lat, location.lng),
+                  infoWindow: InfoWindow(title: place.name ?? 'Unknown'),
+                ),
+              );
+              _mapController?.animateCamera(CameraUpdate.newLatLngZoom(
+                LatLng(location.lat, location.lng),
+                14.0,
+              ));
+            });
+          }
+        } else {
+          print("No predictions found.");
+        }
+      } catch (e) {
+        print("Error in place picker: $e");
+        setState(() {
+          _error = e.toString();
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: Text('Travel Recommendation App'),
-      // ),
       body: SafeArea(
         child: Stack(
           children: [
-            const SizedBox(height: 20),
             Column(
               children: [
                 Row(
@@ -449,6 +572,41 @@ class _HomePageState extends State<HomePage> {
                     },
                   )
                 : Container(),
+            Positioned(
+              top: 140,
+              left: 10,
+              child: Container(
+                width: 150, // Adjust the width as needed
+                child: ElevatedButton(
+                  onPressed: () {
+                    _showSearch(context);
+                  },
+                  child: Row(
+                    mainAxisAlignment:
+                        MainAxisAlignment.center, // Center the content
+                    children: [
+                      Icon(
+                        Icons.add,
+                        color: AppColors.tertiryColor,
+                      ),
+                      SizedBox(width: 3),
+                      Text(
+                        'Nearby Places',
+                        style: TextStyle(
+                          color:
+                              AppColors.tertiryColor, // Change text color here
+                        ),
+                      ),
+                    ],
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    padding: EdgeInsets.symmetric(
+                        horizontal: .0, vertical: 4.0), // Reduce padding here
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -467,6 +625,58 @@ class _HomePageState extends State<HomePage> {
         selectedItemColor: AppColors.primaryColor,
         onTap: _onItemTapped,
       ),
+    );
+  }
+}
+
+class PlaceSearchDelegate extends SearchDelegate<String> {
+  final PlacesService _placesService;
+
+  PlaceSearchDelegate(this._placesService);
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [IconButton(icon: Icon(Icons.clear), onPressed: () => query = '')];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+        icon: Icon(Icons.arrow_back), onPressed: () => close(context, ''));
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return Container();
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return FutureBuilder<places_sdk.FindAutocompletePredictionsResponse>(
+      future: _placesService.findAutocompletePredictions(
+        query,
+        ['uk'],
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done &&
+            snapshot.hasData) {
+          final predictions = snapshot.data!.predictions;
+
+          return ListView.builder(
+            itemCount: predictions.length,
+            itemBuilder: (context, index) {
+              final prediction = predictions[index];
+              return ListTile(
+                title: Text(prediction.primaryText),
+                subtitle: Text(prediction.secondaryText ?? ''),
+                onTap: () => close(context, prediction.fullText),
+              );
+            },
+          );
+        } else {
+          return Center(child: CircularProgressIndicator());
+        }
+      },
     );
   }
 }
