@@ -16,6 +16,53 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
   return R * c;
 }
 
+Future<Map<String, String>> reverseGeocode(double lat, double lon) async {
+  String? googlePlacesApiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
+  if (googlePlacesApiKey == null) {
+    throw Exception('Google Places API key is missing');
+  }
+
+  var url = Uri.parse(
+      'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lon&key=$googlePlacesApiKey');
+
+  try {
+    final response = await http.get(url);
+
+    print('Google Places reverse geocode response: ${response.body}');
+
+    if (response.statusCode == 200) {
+      Map<String, dynamic> data = json.decode(response.body);
+      if (data['results'] != null && data['results'].isNotEmpty) {
+        String city = '';
+        String borough = '';
+
+        for (var result in data['results']) {
+          var addressComponents = result['address_components'] as List;
+          for (var component in addressComponents) {
+            if ((component['types'] as List).contains('locality')) {
+              city = component['long_name'];
+            } else if ((component['types'] as List).contains('sublocality')) {
+              borough = component['long_name'];
+            }
+          }
+        }
+
+        String latLong = '$lat,$lon';
+
+        return {
+          'city': city,
+          'borough': borough,
+          'latLong': latLong,
+        };
+      }
+    }
+    throw Exception('Failed to get human-readable address');
+  } catch (e) {
+    print('Error in reverse geocoding: $e');
+    throw Exception('Error in reverse geocoding');
+  }
+}
+
 Future<List<Map<String, dynamic>>> fetchPOIs(
     String location, String interests) async {
   bool isValidLocation = await validateLocation(location);
@@ -32,6 +79,13 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
   var originalLocationCoords = await getCoordinates(location);
   double? originalLat = originalLocationCoords['lat'];
   double? originalLon = originalLocationCoords['lon'];
+
+  // Reverse geocode the coordinates to get the human-readable address
+  Map<String, String> humanReadableLocation =
+      await reverseGeocode(originalLat!, originalLon!);
+
+  String locationDescription =
+      '${humanReadableLocation['city']}, ${humanReadableLocation['borough']}, ${humanReadableLocation['latLong']}';
 
   String? openAiApiKey = dotenv.env['OPENAI_API_KEY'];
   if (openAiApiKey == null) {
@@ -56,7 +110,7 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
     };
 
     var prompt = '''
-Generate a list of points of interest for location: $location (within 15 miles) with interests: $interests.$additionalPrompt
+Generate a list of points of interest for location: $locationDescription (within 15 miles) with interests: $interests.$additionalPrompt
 For each point of interest, provide the name, latitude, longitude, and a short description in the following format:
 Name - Latitude, Longitude - Description.
 ''';
@@ -86,7 +140,7 @@ Name - Latitude, Longitude - Description.
           bool isValidPoi =
               await validatePoi(poi['name'], poi['latitude'], poi['longitude']);
           double distance = calculateDistance(
-              originalLat!, originalLon!, poi['latitude'], poi['longitude']);
+              originalLat, originalLon, poi['latitude'], poi['longitude']);
           print(
               'POI validation result for ${poi['name']}: $isValidPoi, Distance: $distance miles');
           if (isValidPoi && distance <= 15) {
