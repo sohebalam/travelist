@@ -8,10 +8,12 @@ import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:redacted/redacted.dart';
+import 'package:travelist/services/bottom_navbar.dart';
 import 'package:travelist/services/place_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places;
+import 'package:travelist/pages/home_page.dart'; // Ensure you import the HomePage
 import 'dart:io' show Platform;
 
 class ListDetailsPage extends StatefulWidget {
@@ -58,6 +60,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   late final PlacesService _placesService;
   places.LatLngBounds? _locationBias;
 
+  int _selectedIndex =
+      1; // Set the default selected index to 1 for ListDetailsPage
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +77,21 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   void dispose() {
     locationSubscription?.cancel();
     super.dispose();
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    if (index == 0) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+        (route) => false,
+      );
+    } else if (index == 1) {
+      // Already on the ListsPage, no need to navigate
+    }
   }
 
   gmaps.LatLng _calculateCentroid(List<gmaps.LatLng> points) {
@@ -639,8 +659,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                               itemBuilder: (BuildContext context, int index) {
                                 return ListTile(
                                   title: Text(
-                                    '${index + 1}. ${_poiData[index]['name']}',
-                                  ),
+                                      '${index + 1}. ${_poiData[index]['name']}'),
                                   subtitle: Text(_poiData[index]['address']),
                                   onTap: () {
                                     _calculateAndDisplayDistanceDuration(index);
@@ -734,6 +753,10 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                 ),
               ],
             ),
+      bottomNavigationBar: BottomNavBar(
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onItemTapped,
+      ),
     );
   }
 
@@ -838,10 +861,7 @@ class PlaceSearchDelegate extends SearchDelegate<String> {
   @override
   Widget buildSuggestions(BuildContext context) {
     return FutureBuilder<places.FindAutocompletePredictionsResponse>(
-      future: _placesService.findAutocompletePredictions(
-        query,
-        ['uk'],
-      ),
+      future: _placesService.findAutocompletePredictions(query, ['uk']),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done &&
             snapshot.hasData) {

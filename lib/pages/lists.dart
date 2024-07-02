@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:travelist/pages/list_detail.dart';
+import 'package:travelist/services/bottom_navbar.dart'; // Ensure this is the correct path to your BottomNavBar component
 
 class ListsPage extends StatefulWidget {
   @override
@@ -10,6 +11,17 @@ class ListsPage extends StatefulWidget {
 class _ListsPageState extends State<ListsPage> {
   final CollectionReference _listsCollection =
       FirebaseFirestore.instance.collection('lists');
+
+  int _selectedIndex = 1; // Set the default selected index to 1 (Lists Page)
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    if (index == 0) {
+      Navigator.pushNamed(context, '/'); // Navigate to HomePage
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +86,10 @@ class _ListsPageState extends State<ListsPage> {
         onPressed: () => _showAddListDialog(context),
         child: Icon(Icons.add),
         tooltip: 'Add New List',
+      ),
+      bottomNavigationBar: BottomNavBar(
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onItemTapped,
       ),
     );
   }
