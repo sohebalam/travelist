@@ -8,6 +8,7 @@ import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:redacted/redacted.dart'; // Updated import
 
 class ListDetailsPage extends StatefulWidget {
   final String listId;
@@ -215,14 +216,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       southwest: LatLng(southWestLat, southWestLng),
       northeast: LatLng(northEastLat, northEastLng),
     );
-  }
-
-  Future<void> _addPOIFromGooglePlaces() async {
-    // Implement your logic to add POI from Google Places
-  }
-
-  Future<void> _recommendPOIsUsingOpenAI() async {
-    // Implement your logic to get POI recommendations from OpenAI
   }
 
   Future<void> _navigateToSelectedLocation(LatLng selectedLocation) async {
@@ -490,194 +483,213 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       appBar: AppBar(
         title: Text(widget.listName),
       ),
-      body: Stack(
-        children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: LatLng(51.509865, -0.118092),
-              zoom: 13,
-            ),
-            markers: Set.from(_markers),
-            polylines: _polylines,
-            onMapCreated: (controller) {
-              _mapController = controller;
-              _controller.complete(controller);
-              if (_polylinePoints.isNotEmpty && !_userHasInteractedWithMap) {
-                _mapController?.animateCamera(
-                  CameraUpdate.newLatLngBounds(
-                    _calculateBounds(_polylinePoints),
-                    50,
-                  ),
-                );
-              }
-            },
-            myLocationEnabled: true,
-            onCameraMove: (CameraPosition position) {
-              _userHasInteractedWithMap = true;
-            },
-          ),
-          if (_isLoading)
-            Center(child: CircularProgressIndicator())
-          else if (_error != null)
-            Center(child: Text('Error: $_error')),
-          Positioned(
-            top: 10,
-            right: 10,
-            child: FloatingActionButton(
-              onPressed: () async {
-                if (_navigationDestination == null) {
-                  _setNearestDestination();
-                }
-                final url =
-                    'google.navigation:q=${_navigationDestination!.latitude},${_navigationDestination!.longitude}&key=$_googleMapsApiKey';
-                final uri = Uri.parse(url);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri);
-                } else {
-                  throw 'Could not launch $url';
-                }
-              },
-              child: Icon(Icons.navigation_outlined),
-              tooltip: 'Navigate to the nearest location',
-            ),
-          ),
-          Positioned(
-            top: 80,
-            right: 10,
-            child: Column(
+      body: _isLoading
+          ? _buildLoadingSkeleton(context)
+          : Stack(
               children: [
-                FloatingActionButton(
-                  onPressed: () {
-                    _mapController?.animateCamera(CameraUpdate.zoomIn());
+                GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: LatLng(51.509865, -0.118092),
+                    zoom: 13,
+                  ),
+                  markers: Set.from(_markers),
+                  polylines: _polylines,
+                  onMapCreated: (controller) {
+                    _mapController = controller;
+                    _controller.complete(controller);
+                    if (_polylinePoints.isNotEmpty &&
+                        !_userHasInteractedWithMap) {
+                      _mapController?.animateCamera(
+                        CameraUpdate.newLatLngBounds(
+                          _calculateBounds(_polylinePoints),
+                          50,
+                        ),
+                      );
+                    }
                   },
-                  child: Icon(Icons.zoom_in),
-                  tooltip: 'Zoom in',
-                ),
-                SizedBox(height: 10),
-                FloatingActionButton(
-                  onPressed: () {
-                    _mapController?.animateCamera(CameraUpdate.zoomOut());
+                  myLocationEnabled: true,
+                  onCameraMove: (CameraPosition position) {
+                    _userHasInteractedWithMap = true;
                   },
-                  child: Icon(Icons.zoom_out),
-                  tooltip: 'Zoom out',
                 ),
-              ],
-            ),
-          ),
-          DraggableScrollableSheet(
-            initialChildSize: 0.3,
-            minChildSize: 0.1,
-            maxChildSize: 0.8,
-            builder: (BuildContext context, ScrollController scrollController) {
-              return SingleChildScrollView(
-                controller: scrollController,
-                child: Container(
-                  color: Colors.white,
-                  padding: EdgeInsets.all(8.0),
+                if (_error != null) Center(child: Text('Error: $_error')),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: FloatingActionButton(
+                    onPressed: () async {
+                      if (_navigationDestination == null) {
+                        _setNearestDestination();
+                      }
+                      final url =
+                          'google.navigation:q=${_navigationDestination!.latitude},${_navigationDestination!.longitude}&key=$_googleMapsApiKey';
+                      final uri = Uri.parse(url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri);
+                      } else {
+                        throw 'Could not launch $url';
+                      }
+                    },
+                    child: Icon(Icons.navigation_outlined),
+                    tooltip: 'Navigate to the nearest location',
+                  ),
+                ),
+                Positioned(
+                  top: 80,
+                  right: 10,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Route Points:'),
-                      ListView.builder(
-                        controller: scrollController,
-                        shrinkWrap: true,
-                        itemCount: _poiData.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          return ListTile(
-                            title: Text(
-                              '${index + 1}. ${_poiData[index]['name']}',
-                            ),
-                            subtitle: Text(_poiData[index]['address']),
-                            onTap: () {
-                              _calculateAndDisplayDistanceDuration(index);
-                            },
-                          );
+                      FloatingActionButton(
+                        onPressed: () {
+                          _mapController?.animateCamera(CameraUpdate.zoomIn());
                         },
+                        child: Icon(Icons.zoom_in),
+                        tooltip: 'Zoom in',
                       ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Slider(
-                              value: _currentSliderValue,
-                              min: 0,
-                              max: (_polylinePoints.length - 1).toDouble(),
-                              divisions: _polylinePoints.length - 1,
-                              label:
-                                  (_currentSliderValue + 1).round().toString(),
-                              onChanged: (double value) {
-                                setState(() {
-                                  _currentSliderValue = value;
-                                  _calculateAndDisplayDistanceDuration(
-                                      value.toInt());
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Distance: $_distanceText'),
-                              Text('Duration: $_durationText'),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.directions_car),
-                                onPressed: () {
-                                  setState(() {
-                                    _transportMode = 'driving';
-                                    _getRoutePolyline();
-                                  });
-                                },
-                                color: _transportMode == 'driving'
-                                    ? Colors.blue
-                                    : Colors.grey,
-                                iconSize: 20,
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.directions_walk),
-                                onPressed: () {
-                                  setState(() {
-                                    _transportMode = 'walking';
-                                    _getRoutePolyline();
-                                  });
-                                },
-                                color: _transportMode == 'walking'
-                                    ? Colors.blue
-                                    : Colors.grey,
-                                iconSize: 20,
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.directions_bike),
-                                onPressed: () {
-                                  setState(() {
-                                    _transportMode = 'bicycling';
-                                    _getRoutePolyline();
-                                  });
-                                },
-                                color: _transportMode == 'bicycling'
-                                    ? Colors.blue
-                                    : Colors.grey,
-                                iconSize: 20,
-                              ),
-                            ],
-                          ),
-                        ],
+                      SizedBox(height: 10),
+                      FloatingActionButton(
+                        onPressed: () {
+                          _mapController?.animateCamera(CameraUpdate.zoomOut());
+                        },
+                        child: Icon(Icons.zoom_out),
+                        tooltip: 'Zoom out',
                       ),
                     ],
                   ),
                 ),
-              );
-            },
+                DraggableScrollableSheet(
+                  initialChildSize: 0.3,
+                  minChildSize: 0.1,
+                  maxChildSize: 0.8,
+                  builder: (BuildContext context,
+                      ScrollController scrollController) {
+                    return SingleChildScrollView(
+                      controller: scrollController,
+                      child: Container(
+                        color: Colors.white,
+                        padding: EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Route Points:'),
+                            ListView.builder(
+                              controller: scrollController,
+                              shrinkWrap: true,
+                              itemCount: _poiData.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                return ListTile(
+                                  title: Text(
+                                    '${index + 1}. ${_poiData[index]['name']}',
+                                  ),
+                                  subtitle: Text(_poiData[index]['address']),
+                                  onTap: () {
+                                    _calculateAndDisplayDistanceDuration(index);
+                                  },
+                                );
+                              },
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Slider(
+                                    value: _currentSliderValue,
+                                    min: 0,
+                                    max:
+                                        (_polylinePoints.length - 1).toDouble(),
+                                    divisions: _polylinePoints.length - 1,
+                                    label: (_currentSliderValue + 1)
+                                        .round()
+                                        .toString(),
+                                    onChanged: (double value) {
+                                      setState(() {
+                                        _currentSliderValue = value;
+                                        _calculateAndDisplayDistanceDuration(
+                                            value.toInt());
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Distance: $_distanceText'),
+                                    Text('Duration: $_durationText'),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.directions_car),
+                                      onPressed: () {
+                                        setState(() {
+                                          _transportMode = 'driving';
+                                          _getRoutePolyline();
+                                        });
+                                      },
+                                      color: _transportMode == 'driving'
+                                          ? Colors.blue
+                                          : Colors.grey,
+                                      iconSize: 20,
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.directions_walk),
+                                      onPressed: () {
+                                        setState(() {
+                                          _transportMode = 'walking';
+                                          _getRoutePolyline();
+                                        });
+                                      },
+                                      color: _transportMode == 'walking'
+                                          ? Colors.blue
+                                          : Colors.grey,
+                                      iconSize: 20,
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.directions_bike),
+                                      onPressed: () {
+                                        setState(() {
+                                          _transportMode = 'bicycling';
+                                          _getRoutePolyline();
+                                        });
+                                      },
+                                      color: _transportMode == 'bicycling'
+                                          ? Colors.blue
+                                          : Colors.grey,
+                                      iconSize: 20,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildLoadingSkeleton(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: Container().redacted(
+            context: context,
+            redact: true,
+            configuration: RedactedConfiguration(
+              animationDuration: const Duration(milliseconds: 800),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
