@@ -8,6 +8,7 @@ import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:redacted/redacted.dart';
+import 'package:travelist/services/place_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places;
@@ -54,7 +55,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   bool _locationBiasEnabled = true;
   bool _locationRestrictionEnabled = false;
 
-  late final places.FlutterGooglePlacesSdk _places;
+  late final PlacesService _placesService;
   places.LatLngBounds? _locationBias;
 
   @override
@@ -62,7 +63,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     super.initState();
     _googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'];
     gmd.GoogleMapsDirections.init(googleAPIKey: _googleMapsApiKey!);
-    _places = places.FlutterGooglePlacesSdk(_googleMapsApiKey!);
+    _placesService = PlacesService(_googleMapsApiKey!, _locationBias);
     _fetchPlaces();
     _getCurrentLocation();
   }
@@ -755,22 +756,19 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   void _showSearch(BuildContext context) async {
     final query = await showSearch<String>(
       context: context,
-      delegate: PlaceSearchDelegate(_places, _locationBias),
+      delegate: PlaceSearchDelegate(_placesService),
     );
 
     if (query != null && query.isNotEmpty) {
       try {
-        final result = await _places.findAutocompletePredictions(
+        final result = await _placesService.findAutocompletePredictions(
           query,
-          countries: _countriesEnabled ? ['uk'] : null,
-          locationBias: _locationBiasEnabled ? _locationBias : null,
-          locationRestriction:
-              _locationRestrictionEnabled ? _locationBias : null,
+          _countriesEnabled ? ['uk'] : null,
         );
 
         if (result.predictions.isNotEmpty) {
           final placeId = result.predictions.first.placeId;
-          final placeDetails = await _places.fetchPlace(placeId, fields: [
+          final placeDetails = await _placesService.fetchPlace(placeId, [
             places.PlaceField.Address,
             places.PlaceField.AddressComponents,
             places.PlaceField.Location,
@@ -817,10 +815,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 }
 
 class PlaceSearchDelegate extends SearchDelegate<String> {
-  final places.FlutterGooglePlacesSdk _places;
-  final places.LatLngBounds? locationBias;
+  final PlacesService _placesService;
 
-  PlaceSearchDelegate(this._places, this.locationBias);
+  PlaceSearchDelegate(this._placesService);
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -841,10 +838,9 @@ class PlaceSearchDelegate extends SearchDelegate<String> {
   @override
   Widget buildSuggestions(BuildContext context) {
     return FutureBuilder<places.FindAutocompletePredictionsResponse>(
-      future: _places.findAutocompletePredictions(
+      future: _placesService.findAutocompletePredictions(
         query,
-        countries: ['uk'],
-        locationBias: locationBias,
+        ['uk'],
       ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done &&
