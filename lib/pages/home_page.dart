@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:travelist/pages/lists.dart';
 import 'package:travelist/services/location_service.dart';
+import 'package:travelist/services/styles.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -373,6 +374,8 @@ class _HomePageState extends State<HomePage> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Switch(
+                                  activeTrackColor: AppColors.primaryColor,
+                                  activeColor: Colors.white,
                                   value: useCurrentLocation,
                                   onChanged: (value) {
                                     setState(() {
@@ -383,14 +386,15 @@ class _HomePageState extends State<HomePage> {
                                 Icon(
                                   Icons.location_on,
                                   color: useCurrentLocation
-                                      ? Colors.blue
+                                      ? AppColors.secondaryColor
                                       : Colors.grey,
                                 ),
                               ],
                             ),
                             ElevatedButton(
                               onPressed: _generatePOIs,
-                              child: Icon(Icons.search),
+                              child: Icon(Icons.search,
+                                  color: AppColors.secondaryColor),
                             ),
                           ],
                         ),
@@ -460,7 +464,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue,
+        selectedItemColor: AppColors.primaryColor,
         onTap: _onItemTapped,
       ),
     );
