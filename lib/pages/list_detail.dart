@@ -10,6 +10,7 @@ import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:redacted/redacted.dart';
 import 'package:travelist/services/bottom_navbar.dart';
 import 'package:travelist/services/place_service.dart';
+import 'package:travelist/services/poi_service.dart'; // Import the new POIService
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places;
@@ -58,6 +59,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   bool _locationRestrictionEnabled = false;
 
   late final PlacesService _placesService;
+  late final POIService _poiService; // Add the POIService instance
   places.LatLngBounds? _locationBias;
 
   int _selectedIndex =
@@ -69,6 +71,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     _googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'];
     gmd.GoogleMapsDirections.init(googleAPIKey: _googleMapsApiKey!);
     _placesService = PlacesService(_googleMapsApiKey!, _locationBias);
+    _poiService = POIService(); // Initialize the POIService
     _fetchPlaces();
     _getCurrentLocation();
   }
@@ -550,71 +553,19 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
-  Future<void> _addNearbyPlace(
-      String name, double latitude, double longitude, String address) async {
-    if (_poiData.length >= 10) {
-      setState(() {
-        _error = 'You can only have up to 10 places of interest in the list.';
-      });
-      return;
-    }
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('lists')
-          .doc(widget.listId)
-          .collection('pois')
-          .add({
-        'name': name,
-        'latitude': latitude,
-        'longitude': longitude,
-        'address': address,
-      });
-
-      setState(() {
-        _poiData.add({
-          'name': name,
-          'latitude': latitude,
-          'longitude': longitude,
-          'address': address,
-          'distance': _currentLocation != null
-              ? _calculateDistance(
-                  _currentLocation!, gmaps.LatLng(latitude, longitude))
-              : double.infinity,
-        });
-      });
-
-      _fetchPlaces();
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
-    }
-  }
-
   Future<void> _confirmAddPlace(
       String name, double latitude, double longitude, String address) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Add Place'),
-        content: Text('Do you want to add $name to your list?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Add'),
-          ),
-        ],
-      ),
+    await _poiService.addNearbyPlace(
+      context,
+      widget.listId,
+      name,
+      latitude,
+      longitude,
+      address,
+      _poiData,
+      _currentLocation,
+      _fetchPlaces,
     );
-
-    if (confirm == true) {
-      await _addNearbyPlace(name, latitude, longitude, address);
-    }
   }
 
   @override
@@ -786,6 +737,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       color: _transportMode == 'driving'
                                           ? Colors.blue
                                           : Colors.grey,
+                                      iconSize: 20,
                                     ),
                                     IconButton(
                                       icon: Icon(Icons.directions_walk),
@@ -798,6 +750,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       color: _transportMode == 'walking'
                                           ? Colors.blue
                                           : Colors.grey,
+                                      iconSize: 20,
                                     ),
                                     IconButton(
                                       icon: Icon(Icons.directions_bike),
@@ -810,6 +763,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       color: _transportMode == 'bicycling'
                                           ? Colors.blue
                                           : Colors.grey,
+                                      iconSize: 20,
                                     ),
                                   ],
                                 ),
@@ -852,7 +806,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       delegate: PlaceSearchDelegate(_placesService),
     );
 
-    if (query != null && query is String && query.isNotEmpty) {
+    if (query != null && query.isNotEmpty) {
       try {
         final result = await _placesService.findAutocompletePredictions(
           query,
