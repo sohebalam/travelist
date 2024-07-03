@@ -152,6 +152,12 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
               title: poi['name'],
               snippet: poi['address'],
             ),
+            onTap: () => _confirmAddPlace(
+              poi['name'],
+              poi['latitude'],
+              poi['longitude'],
+              poi['address'],
+            ),
           ),
         );
       }
@@ -544,6 +550,73 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
+  Future<void> _addNearbyPlace(
+      String name, double latitude, double longitude, String address) async {
+    if (_poiData.length >= 10) {
+      setState(() {
+        _error = 'You can only have up to 10 places of interest in the list.';
+      });
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('lists')
+          .doc(widget.listId)
+          .collection('pois')
+          .add({
+        'name': name,
+        'latitude': latitude,
+        'longitude': longitude,
+        'address': address,
+      });
+
+      setState(() {
+        _poiData.add({
+          'name': name,
+          'latitude': latitude,
+          'longitude': longitude,
+          'address': address,
+          'distance': _currentLocation != null
+              ? _calculateDistance(
+                  _currentLocation!, gmaps.LatLng(latitude, longitude))
+              : double.infinity,
+        });
+      });
+
+      _fetchPlaces();
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    }
+  }
+
+  Future<void> _confirmAddPlace(
+      String name, double latitude, double longitude, String address) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Add Place'),
+        content: Text('Do you want to add $name to your list?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Add'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _addNearbyPlace(name, latitude, longitude, address);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -713,7 +786,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       color: _transportMode == 'driving'
                                           ? Colors.blue
                                           : Colors.grey,
-                                      iconSize: 20,
                                     ),
                                     IconButton(
                                       icon: Icon(Icons.directions_walk),
@@ -726,7 +798,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       color: _transportMode == 'walking'
                                           ? Colors.blue
                                           : Colors.grey,
-                                      iconSize: 20,
                                     ),
                                     IconButton(
                                       icon: Icon(Icons.directions_bike),
@@ -739,7 +810,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       color: _transportMode == 'bicycling'
                                           ? Colors.blue
                                           : Colors.grey,
-                                      iconSize: 20,
                                     ),
                                   ],
                                 ),
@@ -782,7 +852,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       delegate: PlaceSearchDelegate(_placesService),
     );
 
-    if (query != null && query.isNotEmpty) {
+    if (query != null && query is String && query.isNotEmpty) {
       try {
         final result = await _placesService.findAutocompletePredictions(
           query,
@@ -810,18 +880,34 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           final place = placeDetails.place;
           if (place != null && place.latLng != null) {
             final location = place.latLng!;
+            final address = place.address ?? 'No address available';
             setState(() {
               _markers.add(
                 gmaps.Marker(
                   markerId: gmaps.MarkerId(placeId),
                   position: gmaps.LatLng(location.lat, location.lng),
-                  infoWindow: gmaps.InfoWindow(title: place.name ?? 'Unknown'),
+                  infoWindow: gmaps.InfoWindow(
+                    title: place.name ?? 'Unknown',
+                    snippet: address,
+                  ),
+                  onTap: () => _confirmAddPlace(
+                    place.name ?? 'Unknown',
+                    location.lat,
+                    location.lng,
+                    address,
+                  ),
                 ),
               );
               _mapController?.animateCamera(gmaps.CameraUpdate.newLatLngZoom(
                 gmaps.LatLng(location.lat, location.lng),
                 14.0,
               ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                      'Tap on the pin to add ${place.name ?? 'Unknown'} to your list.'),
+                ),
+              );
             });
           }
         } else {
