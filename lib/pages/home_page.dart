@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:travelist/pages/lists.dart';
@@ -10,6 +10,7 @@ import 'package:travelist/services/place_service.dart';
 import 'package:travelist/services/styles.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places_sdk;
+import 'package:travelist/services/poi_service.dart'; // Import POIService
 
 class HomePage extends StatefulWidget {
   @override
@@ -32,10 +33,9 @@ class _HomePageState extends State<HomePage> {
 
   final CollectionReference _listsCollection =
       FirebaseFirestore.instance.collection('lists');
-
   int _selectedIndex = 0;
-
   PlacesService? _placesService;
+  final POIService _poiService = POIService();
 
   @override
   void initState() {
@@ -105,7 +105,10 @@ class _HomePageState extends State<HomePage> {
             infoWindow: InfoWindow(
               title: poi['name'],
               snippet: poi['description'],
-              onTap: () => _showAddToListDialog(poi),
+              onTap: () {
+                print('Marker tapped: ${poi['name']}');
+                _showAddToListDialog(poi);
+              },
             ),
           );
         }).toList();
@@ -113,6 +116,12 @@ class _HomePageState extends State<HomePage> {
       });
 
       _updateCameraPosition();
+
+      // Print POI names to console
+      pois.forEach((poi) {
+        print(
+            'POI found: ${poi['name']} at ${poi['latitude']}, ${poi['longitude']}');
+      });
     } catch (e) {
       print('Error fetching nearby places: $e');
       setState(() {
@@ -184,7 +193,10 @@ class _HomePageState extends State<HomePage> {
           infoWindow: InfoWindow(
             title: poi['name'],
             snippet: poi['description'],
-            onTap: () => _showAddToListDialog(poi),
+            onTap: () {
+              print('Marker tapped: ${poi['name']}');
+              _showAddToListDialog(poi);
+            },
           ),
         );
       }).toList();
@@ -271,9 +283,24 @@ class _HomePageState extends State<HomePage> {
                       child: Text('Cancel'),
                     ),
                     ElevatedButton(
-                      onPressed: () {
-                        _savePOIToList(poi);
-                        Navigator.of(context).pop();
+                      onPressed: () async {
+                        if (_selectedListId != null) {
+                          final listDoc =
+                              await _listsCollection.doc(_selectedListId).get();
+                          final poiCollectionRef = _listsCollection
+                              .doc(_selectedListId)
+                              .collection('pois');
+                          final poiCount =
+                              (await poiCollectionRef.get()).docs.length;
+
+                          if (poiCount >= 10) {
+                            _showErrorSnackBar(
+                                'This list already has 10 POIs.');
+                          } else {
+                            _savePOIToList(poi);
+                            Navigator.of(context).pop();
+                          }
+                        }
                       },
                       child: Text('Add to List'),
                     ),
@@ -287,15 +314,26 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _savePOIToList(Map<String, dynamic> poi) {
+  void _savePOIToList(Map<String, dynamic> poi) async {
     if (_selectedListId != null) {
-      _listsCollection.doc(_selectedListId).collection('pois').add({
-        'name': poi['name'],
-        'latitude': poi['latitude'],
-        'longitude': poi['longitude'],
-        'description': poi['description']
-      });
+      try {
+        final listDocRef = _listsCollection.doc(_selectedListId);
+        final poiCollectionRef = listDocRef.collection('pois');
+
+        // Add the new POI to the pois subcollection
+        await poiCollectionRef.add(poi);
+
+        _showSuccessSnackBar('POI added to list successfully.');
+      } catch (e) {
+        print('Error saving POI to list: $e');
+        _showErrorSnackBar('Error saving POI to list.');
+      }
     }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    final snackBar = SnackBar(content: Text(message));
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   void _selectList(String listId) {
@@ -419,12 +457,23 @@ class _HomePageState extends State<HomePage> {
           final place = placeDetails.place;
           if (place != null && place.latLng != null) {
             final location = place.latLng!;
+            final address = place.address ?? 'No address available';
+
             setState(() {
               _markers.add(
                 Marker(
                   markerId: MarkerId(placeId),
                   position: LatLng(location.lat, location.lng),
-                  infoWindow: InfoWindow(title: place.name ?? 'Unknown'),
+                  infoWindow: InfoWindow(
+                    title: place.name ?? 'Unknown',
+                    snippet: address,
+                  ),
+                  onTap: () => _confirmAddPlace(
+                    place.name ?? 'Unknown',
+                    location.lat,
+                    location.lng,
+                    address,
+                  ),
                 ),
               );
               _mapController?.animateCamera(CameraUpdate.newLatLngZoom(
@@ -443,6 +492,17 @@ class _HomePageState extends State<HomePage> {
         });
       }
     }
+  }
+
+  void _confirmAddPlace(
+      String name, double lat, double lng, String description) {
+    final poi = {
+      'name': name,
+      'latitude': lat,
+      'longitude': lng,
+      'description': description,
+    };
+    _showAddToListDialog(poi);
   }
 
   @override
