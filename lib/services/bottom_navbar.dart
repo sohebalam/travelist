@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:travelist/pages/auth/login_page.dart';
 import 'package:travelist/services/styles.dart';
 
 class BottomNavBar extends StatelessWidget {
@@ -13,7 +15,7 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      items: const <BottomNavigationBarItem>[
+      items: <BottomNavigationBarItem>[
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
           label: 'Home',
@@ -22,10 +24,25 @@ class BottomNavBar extends StatelessWidget {
           icon: Icon(Icons.list),
           label: 'Lists',
         ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.logout),
+          label: 'Logout',
+        ),
       ],
       currentIndex: selectedIndex,
       selectedItemColor: AppColors.primaryColor,
-      onTap: onItemTapped,
+      onTap: (index) async {
+        if (index == 2) {
+          // Logout logic
+          await FirebaseAuth.instance.signOut();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+          );
+        } else {
+          onItemTapped(index);
+        }
+      },
     );
   }
 }
