@@ -674,6 +674,9 @@ class _HomePageState extends State<HomePage> {
       bottomNavigationBar: BottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
+        onLogoutTapped: () {
+          print('logout');
+        },
       ),
     );
   }

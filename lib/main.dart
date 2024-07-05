@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:travelist/firebase_options.dart';
 import 'package:travelist/pages/auth/login_page.dart';
+import 'package:travelist/pages/chat/chat_list.dart';
+import 'package:travelist/pages/chat/chat_page.dart';
 import 'pages/home_page.dart';
 
 Future<void> main() async {
@@ -22,6 +24,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       home: LoginScreen(),
+      // home: ChatList(),
     );
   }
 }

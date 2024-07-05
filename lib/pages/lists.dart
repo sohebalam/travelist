@@ -90,6 +90,9 @@ class _ListsPageState extends State<ListsPage> {
       bottomNavigationBar: BottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
+        onLogoutTapped: () {
+          print('logout');
+        },
       ),
     );
   }

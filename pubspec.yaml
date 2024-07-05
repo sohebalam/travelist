@@ -52,6 +52,9 @@ dependencies:
   flutter_google_places_sdk: ^0.3.9
   firebase_auth: ^5.1.1
   google_sign_in: ^6.2.1
+  cached_network_image: ^3.3.1
+  provider: ^6.1.2
+  firebase_storage: ^12.1.0
 
 dev_dependencies:
   flutter_test:
@@ -77,6 +80,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
 
   assets:
+    - assets/
     - .env
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

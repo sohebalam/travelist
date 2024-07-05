@@ -780,6 +780,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       bottomNavigationBar: BottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
+        onLogoutTapped: () {
+          print('logout');
+        },
       ),
     );
   }
