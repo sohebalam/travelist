@@ -1,10 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:travelist/pages/lists.dart';
-import 'package:travelist/services/bottom_navbar.dart';
 import 'package:travelist/services/location_service.dart';
 import 'package:travelist/services/place_service.dart';
 import 'package:travelist/services/styles.dart';
@@ -33,7 +31,6 @@ class _HomePageState extends State<HomePage> {
 
   final CollectionReference _listsCollection =
       FirebaseFirestore.instance.collection('lists');
-  int _selectedIndex = 0;
   PlacesService? _placesService;
   final POIService _poiService = POIService();
 
@@ -354,18 +351,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    if (index == 1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ListsPage()),
-      );
-    }
-  }
-
   Future<Position> _determinePosition() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -670,13 +655,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-        onLogoutTapped: () {
-          print('logout');
-        },
       ),
     );
   }
