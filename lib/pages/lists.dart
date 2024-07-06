@@ -87,13 +87,13 @@ class _ListsPageState extends State<ListsPage> {
         child: Icon(Icons.add),
         tooltip: 'Add New List',
       ),
-      bottomNavigationBar: BottomNavBar(
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-        onLogoutTapped: () {
-          print('logout');
-        },
-      ),
+      // bottomNavigationBar: BottomNavBar(
+      //   selectedIndex: _selectedIndex,
+      //   onItemTapped: _onItemTapped,
+      //   onLogoutTapped: () {
+      //     print('logout');
+      //   },
+      // ),
     );
   }
 

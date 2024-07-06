@@ -1,135 +1,169 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:intl/intl.dart';
-import 'package:travelist/services/styles.dart';
-import 'package:travelist/services/widgets/message_textfield.dart';
-import 'package:travelist/services/widgets/single_message.dart';
+import 'package:flutter/material.dart';
 
 class ChatPage extends StatefulWidget {
-  final String u_id;
+  final String u_id; // This should be the friend's ID
   final String currentUserId;
 
-  const ChatPage({Key? key, required this.u_id, required this.currentUserId})
-      : super(key: key);
+  ChatPage({required this.u_id, required this.currentUserId});
 
   @override
   _ChatPageState createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
-  String _otherUserName = '';
-  String _otherUserImage = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.u_id)
-          .get();
-      if (documentSnapshot.exists) {
-        setState(() {
-          _otherUserName = documentSnapshot.get('name') ?? '';
-          _otherUserImage = documentSnapshot.get('image') ?? '';
-        });
-      } else {
-        print('User does not exist in the database');
-      }
-    } catch (error) {
-      print('Error retrieving user data: $error');
-    }
-  }
+  TextEditingController _messageController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.primaryColor,
-        title: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(80),
-              child: _otherUserImage.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: _otherUserImage,
-                      width: 30,
-                      height: 30,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) =>
-                          CircularProgressIndicator(),
-                      errorWidget: (context, url, error) => Icon(Icons.error),
-                    )
-                  : Image.asset(
-                      'assets/person.png',
-                      height: 30,
-                      width: 30,
-                    ),
-            ),
-            SizedBox(width: 5),
-            Text(_otherUserName, style: TextStyle(fontSize: 20)),
-          ],
-        ),
+        title: Text('Chat'),
       ),
       body: Column(
         children: [
           Expanded(
-            child: Container(
-              padding: EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(25),
-                    topRight: Radius.circular(25)),
-              ),
-              child: StreamBuilder(
-                stream: FirebaseFirestore.instance
-                    .collection("users")
-                    .doc(widget.currentUserId)
-                    .collection('messages')
-                    .doc(widget.u_id)
-                    .collection('chats')
-                    .orderBy("date", descending: true)
-                    .snapshots(),
-                builder: (context, AsyncSnapshot snapshot) {
-                  if (snapshot.hasData) {
-                    if (snapshot.data.docs.isEmpty) {
-                      return Center(child: Text("Say Hi"));
-                    }
-                    return ListView.builder(
-                      itemCount: snapshot.data.docs.length,
-                      reverse: true,
-                      physics: BouncingScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        bool isMe = snapshot.data.docs[index]['senderId'] ==
-                            widget.currentUserId;
-                        DateTime date =
-                            snapshot.data.docs[index]['date'].toDate();
-                        String datetime =
-                            DateFormat('MMM d, h:mm a').format(date);
-                        String message = snapshot.data.docs[index]['message'];
-                        return SingleMessage(
-                          friendName: _otherUserName,
-                          datetime: datetime,
-                          message: message,
-                          isMe: isMe,
-                        );
-                      },
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('chats')
+                  .doc(getChatId(widget.currentUserId, widget.u_id))
+                  .collection('messages')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                var messages = snapshot.data!.docs;
+
+                return ListView.builder(
+                  reverse: true,
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    var message = messages[index];
+                    bool isSentByCurrentUser =
+                        message['senderId'] == widget.currentUserId;
+
+                    return Align(
+                      alignment: isSentByCurrentUser
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Container(
+                        margin:
+                            EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isSentByCurrentUser
+                              ? Colors.blue
+                              : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: isSentByCurrentUser
+                              ? CrossAxisAlignment.end
+                              : CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              message['text'],
+                              style: TextStyle(
+                                color: isSentByCurrentUser
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
+                            ),
+                            SizedBox(height: 5),
+                            Text(
+                              message['timestamp'] != null
+                                  ? (message['timestamp'] as Timestamp)
+                                      .toDate()
+                                      .toLocal()
+                                      .toString()
+                                  : 'Sending...',
+                              style: TextStyle(
+                                color: isSentByCurrentUser
+                                    ? Colors.white70
+                                    : Colors.black54,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     );
-                  }
-                  return Center(child: CircularProgressIndicator());
-                },
-              ),
+                  },
+                );
+              },
             ),
           ),
-          MessageTextField(widget.currentUserId, widget.u_id),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: InputDecoration(
+                      hintText: 'Type a message',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    onSubmitted: (text) {
+                      sendMessage(text);
+                    },
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.send),
+                  onPressed: () {
+                    sendMessage(_messageController.text);
+                  },
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  String getChatId(String userId, String peerId) {
+    return userId.hashCode <= peerId.hashCode
+        ? '$userId-$peerId'
+        : '$peerId-$userId';
+  }
+
+  void sendMessage(String text) {
+    if (text.isNotEmpty) {
+      var chatId = getChatId(widget.currentUserId, widget.u_id);
+      var senderId = widget.currentUserId;
+      var receiverId = widget.u_id;
+
+      // Debug prints to check values
+      print('Chat ID: $chatId');
+      print('Sender ID: $senderId');
+      print('Receiver ID: $receiverId');
+      print('Message Text: $text');
+
+      FirebaseFirestore.instance
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .add({
+        'text': text,
+        'senderId': senderId,
+        'receiverId': receiverId, // Ensure receiverId is set correctly
+        'timestamp': FieldValue.serverTimestamp(),
+      }).then((value) {
+        print("Message sent successfully: $value");
+      }).catchError((error) {
+        print("Failed to send message: $error");
+      });
+
+      _messageController.clear();
+    }
   }
 }
