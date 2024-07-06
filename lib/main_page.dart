@@ -3,9 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:travelist/pages/chat/chat_list.dart';
 import 'package:travelist/pages/home_page.dart';
 import 'package:travelist/pages/lists.dart';
-import 'package:travelist/services/auth_bloc.dart';
-import 'package:travelist/services/auth_event.dart';
-import 'package:travelist/services/bottom_navbar.dart';
+import 'package:travelist/services/auth/auth_bloc.dart';
+import 'package:travelist/services/auth/auth_event.dart';
+import 'package:travelist/services/widgets/bottom_navbar.dart';
 
 class MainPage extends StatefulWidget {
   @override

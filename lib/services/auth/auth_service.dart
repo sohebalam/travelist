@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'user_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
@@ -11,10 +10,12 @@ class AuthService {
   Future<User?> signInWithEmail(String email, String password) async {
     try {
       UserCredential result = await _firebaseAuth.signInWithEmailAndPassword(
-          email: email, password: password);
+        email: email,
+        password: password,
+      );
       return result.user;
     } catch (e) {
-      print(e.toString());
+      print('Error signing in with email and password: $e');
       return null;
     }
   }
@@ -23,7 +24,7 @@ class AuthService {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        return null; // the user canceled the sign-in
+        return null; // The user canceled the sign-in
       }
 
       final GoogleSignInAuthentication googleAuth =
@@ -37,11 +38,11 @@ class AuthService {
           await _firebaseAuth.signInWithCredential(credential);
       final User? user = result.user;
       if (user != null) {
-        await saveUserToFirestore(user, user.displayName);
+        await saveUserToFirestore(user, user.displayName, user.photoURL);
       }
       return user;
     } catch (e) {
-      print(e.toString());
+      print('Error signing in with Google: $e');
       return null;
     }
   }
@@ -50,22 +51,37 @@ class AuthService {
     try {
       await _firebaseAuth.sendPasswordResetEmail(email: email);
     } catch (e) {
-      print(e.toString());
+      print('Error sending password reset email: $e');
       throw e;
     }
   }
 
   Future<void> signOut() async {
-    await _firebaseAuth.signOut();
-    await _googleSignIn.signOut();
+    try {
+      await _firebaseAuth.signOut();
+      await _googleSignIn.signOut();
+    } catch (e) {
+      print('Error signing out: $e');
+      throw e;
+    }
   }
 
   Stream<User?> get user => _firebaseAuth.authStateChanges();
 
-  Future<void> saveUserToFirestore(User user, String? name) async {
-    final userRef = _firestore.collection('users').doc(user.uid);
-    final userData =
-        UserModel(uid: user.uid, email: user.email ?? '', name: name).toJson();
-    await userRef.set(userData);
+  Future<void> saveUserToFirestore(
+      User user, String? name, String? image) async {
+    try {
+      final userRef = _firestore.collection('users').doc(user.uid);
+      await userRef.set({
+        'email': user.email ?? '',
+        'name': name,
+        'image': image, // Save the user's image
+        'uid': user.uid,
+        'date': DateTime.now(),
+      });
+    } catch (e) {
+      print('Error saving user to Firestore: $e');
+      throw e;
+    }
   }
 }

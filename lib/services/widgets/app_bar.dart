@@ -1,6 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:travelist/services/functions.dart';
 import 'package:travelist/services/styles.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -66,4 +65,10 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => Size.fromHeight(kToolbarHeight);
+}
+
+final _auth = FirebaseAuth.instance;
+Future<void> disconnect() async {
+// User? get user => _auth.currentUser;
+  await _auth.signOut();
 }

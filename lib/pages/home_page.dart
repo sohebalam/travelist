@@ -3,12 +3,12 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:travelist/services/location_service.dart';
-import 'package:travelist/services/place_service.dart';
+import 'package:travelist/services/location/location_service.dart';
+import 'package:travelist/services/location/place_service.dart';
 import 'package:travelist/services/styles.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places_sdk;
-import 'package:travelist/services/poi_service.dart'; // Import POIService
+import 'package:travelist/services/location/poi_service.dart'; // Import POIService
 
 class HomePage extends StatefulWidget {
   @override

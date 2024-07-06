@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:travelist/pages/list_detail.dart';
-import 'package:travelist/services/bottom_navbar.dart'; // Ensure this is the correct path to your BottomNavBar component
+import 'package:travelist/services/widgets/bottom_navbar.dart'; // Ensure this is the correct path to your BottomNavBar component
 
 class ListsPage extends StatefulWidget {
   @override

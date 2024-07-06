@@ -8,9 +8,9 @@ import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:redacted/redacted.dart';
-import 'package:travelist/services/bottom_navbar.dart';
-import 'package:travelist/services/place_service.dart';
-import 'package:travelist/services/poi_service.dart'; // Import the new POIService
+import 'package:travelist/services/widgets/bottom_navbar.dart';
+import 'package:travelist/services/location/place_service.dart';
+import 'package:travelist/services/location/poi_service.dart'; // Import the new POIService
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places;

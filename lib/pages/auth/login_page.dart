@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:travelist/services/auth_bloc.dart';
-import 'package:travelist/services/auth_event.dart';
-import 'package:travelist/services/auth_service.dart';
+import 'package:travelist/services/auth/auth_bloc.dart';
+import 'package:travelist/services/auth/auth_event.dart';
+import 'package:travelist/services/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -156,7 +156,7 @@ class RegisterPage extends StatelessWidget {
       User? user = result.user;
 
       if (user != null) {
-        await authService.saveUserToFirestore(user, name);
+        await authService.saveUserToFirestore(user, name, null);
         context.read<AuthenticationBloc>().add(LoggedIn());
       }
     } on FirebaseAuthException catch (e) {
