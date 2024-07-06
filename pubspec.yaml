@@ -59,6 +59,7 @@ dependencies:
   sign_in_button: ^3.2.0
   animate_do: ^3.3.4
   auth_buttons: ^3.0.3
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
