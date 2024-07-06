@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:travelist/pages/auth/login_page.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:travelist/pages/chat/chat_list.dart';
 import 'package:travelist/pages/home_page.dart';
 import 'package:travelist/pages/lists.dart';
+import 'package:travelist/services/auth_bloc.dart';
+import 'package:travelist/services/auth_event.dart';
 import 'package:travelist/services/bottom_navbar.dart';
-import 'package:travelist/services/styles.dart';
 
 class MainPage extends StatefulWidget {
   @override
@@ -23,13 +23,8 @@ class _MainPageState extends State<MainPage> {
     _pageController.jumpToPage(index);
   }
 
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
-      (Route<dynamic> route) => false,
-    );
+  void _onLogoutTapped() {
+    BlocProvider.of<AuthenticationBloc>(context).add(LoggedOut());
   }
 
   @override
@@ -51,7 +46,7 @@ class _MainPageState extends State<MainPage> {
       bottomNavigationBar: BottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
-        onLogoutTapped: _logout, // Pass the logout function
+        onLogoutTapped: _onLogoutTapped,
       ),
     );
   }

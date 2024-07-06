@@ -4,12 +4,12 @@ import 'package:travelist/services/styles.dart';
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemTapped;
-  final VoidCallback onLogoutTapped; // Add logout callback
+  final VoidCallback onLogoutTapped;
 
   BottomNavBar({
     required this.selectedIndex,
     required this.onItemTapped,
-    required this.onLogoutTapped, // Add this parameter
+    required this.onLogoutTapped,
   });
 
   @override
@@ -35,10 +35,10 @@ class BottomNavBar extends StatelessWidget {
       ],
       currentIndex: selectedIndex,
       selectedItemColor: AppColors.primaryColor,
-      unselectedItemColor: AppColors.tertiryColor, // Correct spelling
+      unselectedItemColor: AppColors.tertiryColor,
       onTap: (index) {
         if (index == 3) {
-          onLogoutTapped(); // Call logout function
+          onLogoutTapped();
         } else {
           onItemTapped(index);
         }

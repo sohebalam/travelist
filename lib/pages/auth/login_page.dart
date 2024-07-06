@@ -1,125 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:travelist/services/auth_bloc.dart';
+import 'package:travelist/services/auth_event.dart';
+import 'package:travelist/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:travelist/pages/auth/reg_page.dart';
-import 'package:travelist/pages/home_page.dart';
 
-class LoginScreen extends StatelessWidget {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+class LoginPage extends StatelessWidget {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  Future<void> _signInWithEmail(BuildContext context) async {
-    try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
-      if (userCredential.user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomePage()),
-        );
-      }
-    } catch (e) {
-      _showErrorDialog(context, e.toString());
-    }
-  }
-
-  Future<void> _signInWithGoogle(BuildContext context) async {
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) {
-        return; // The user canceled the sign-in
-      }
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      UserCredential userCredential =
-          await _auth.signInWithCredential(credential);
-      if (userCredential.user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomePage()),
-        );
-      }
-    } catch (e) {
-      _showErrorDialog(context, e.toString());
-    }
-  }
-
-  Future<void> _resetPassword(BuildContext context) async {
+  void _login(BuildContext context) async {
+    final authService = AuthService();
     final email = _emailController.text;
-    if (email.isEmpty) {
-      _showErrorDialog(context, "Please enter your email.");
-      return;
-    }
+    final password = _passwordController.text;
 
     try {
-      await _auth.sendPasswordResetEmail(email: email);
-      _showErrorDialog(context, "Password reset email sent. Check your inbox.");
+      final user = await authService.signInWithEmail(email, password);
+      if (user != null) {
+        context.read<AuthenticationBloc>().add(LoggedIn());
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Login failed. Please check your credentials.')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login failed: ${e.message}')),
+      );
     } catch (e) {
-      _showErrorDialog(context, e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An unexpected error occurred.')),
+      );
     }
-  }
-
-  void _showErrorDialog(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Reset Password"),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text("OK"),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Login"),
+        title: Text('Login'),
       ),
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
+          children: [
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(labelText: "Email"),
+              decoration: InputDecoration(labelText: 'Email'),
             ),
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(labelText: "Password"),
+              decoration: InputDecoration(labelText: 'Password'),
               obscureText: true,
             ),
+            SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => _signInWithEmail(context),
-              child: Text("Sign in with Email"),
-            ),
-            ElevatedButton(
-              onPressed: () => _signInWithGoogle(context),
-              child: Text("Sign in with Google"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => RegisterScreen()),
-              ),
-              child: Text("Register"),
-            ),
-            TextButton(
-              onPressed: () => _resetPassword(context),
-              child: Text("Forgot Password"),
+              onPressed: () => _login(context),
+              child: Text('Login'),
             ),
           ],
         ),
