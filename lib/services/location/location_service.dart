@@ -140,7 +140,7 @@ Name - Latitude, Longitude - Description.
 
       if (response.statusCode == 200) {
         Map<String, dynamic> data = json.decode(response.body);
-        print('Data received: ${data}');
+        print('Data received: $data');
         List<Map<String, dynamic>> pois =
             parsePOIs(data['choices'][0]['message']['content']);
 

@@ -11,6 +11,8 @@ import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
 import 'package:travelist/services/location/poi_service.dart'; // Import POIService
 
 class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -115,10 +117,10 @@ class _HomePageState extends State<HomePage> {
       _updateCameraPosition();
 
       // Print POI names to console
-      pois.forEach((poi) {
+      for (var poi in pois) {
         print(
             'POI found: ${poi['name']} at ${poi['latitude']}, ${poi['longitude']}');
-      });
+      }
     } catch (e) {
       print('Error fetching nearby places: $e');
       setState(() {
@@ -138,7 +140,7 @@ class _HomePageState extends State<HomePage> {
     if (useCurrentLocation) {
       try {
         position = await _determinePosition();
-        if (_mapController != null && position != null) {
+        if (_mapController != null) {
           _mapController!.animateCamera(CameraUpdate.newLatLng(
             LatLng(position.latitude, position.longitude),
           ));
@@ -217,13 +219,13 @@ class _HomePageState extends State<HomePage> {
                 bool hasLists =
                     snapshot.hasData && snapshot.data!.docs.isNotEmpty;
                 return AlertDialog(
-                  title: Text('Add POI to List'),
+                  title: const Text('Add POI to List'),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (hasLists) ...[
                         SwitchListTile(
-                          title: Text('Create new list'),
+                          title: const Text('Create new list'),
                           value: _showNewListFields,
                           onChanged: (value) {
                             setState(() {
@@ -235,7 +237,7 @@ class _HomePageState extends State<HomePage> {
                       if (!hasLists || _showNewListFields) ...[
                         TextField(
                           controller: newListController,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             labelText: 'Enter new list name',
                             border: OutlineInputBorder(),
                           ),
@@ -245,12 +247,12 @@ class _HomePageState extends State<HomePage> {
                             _createList(newListController.text);
                             newListController.clear();
                           },
-                          child: Text('Create New List'),
+                          child: const Text('Create New List'),
                         ),
                       ],
                       if (hasLists && !_showNewListFields)
                         DropdownButton<String>(
-                          hint: Text('Select List'),
+                          hint: const Text('Select List'),
                           value: _selectedListId,
                           items: snapshot.data!.docs.map((list) {
                             var listData = list.data() as Map<String, dynamic>;
@@ -277,7 +279,7 @@ class _HomePageState extends State<HomePage> {
                       onPressed: () {
                         Navigator.of(context).pop();
                       },
-                      child: Text('Cancel'),
+                      child: const Text('Cancel'),
                     ),
                     ElevatedButton(
                       onPressed: () async {
@@ -299,7 +301,7 @@ class _HomePageState extends State<HomePage> {
                           }
                         }
                       },
-                      child: Text('Add to List'),
+                      child: const Text('Add to List'),
                     ),
                   ],
                 );
@@ -511,7 +513,7 @@ class _HomePageState extends State<HomePage> {
                                 padding: const EdgeInsets.only(bottom: 8.0),
                                 child: TextField(
                                   controller: locationController,
-                                  decoration: InputDecoration(
+                                  decoration: const InputDecoration(
                                     labelText: 'Enter location',
                                     floatingLabelBehavior:
                                         FloatingLabelBehavior.auto,
@@ -521,7 +523,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                             TextField(
                               controller: interestsController,
-                              decoration: InputDecoration(
+                              decoration: const InputDecoration(
                                 labelText: 'Enter interests',
                                 floatingLabelBehavior:
                                     FloatingLabelBehavior.auto,
@@ -562,7 +564,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                             ElevatedButton(
                               onPressed: _generatePOIs,
-                              child: Icon(Icons.search,
+                              child: const Icon(Icons.search,
                                   color: AppColors.secondaryColor),
                             ),
                           ],
@@ -573,7 +575,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 Expanded(
                   child: GoogleMap(
-                    initialCameraPosition: CameraPosition(
+                    initialCameraPosition: const CameraPosition(
                       target: LatLng(51.509865, -0.118092), // Default location
                       zoom: 13,
                     ),
@@ -588,7 +590,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             if (_isLoading)
-              Center(
+              const Center(
                 child: CircularProgressIndicator(),
               ),
             _poiList.isNotEmpty
@@ -621,13 +623,18 @@ class _HomePageState extends State<HomePage> {
             Positioned(
               top: 140,
               left: 10,
-              child: Container(
+              child: SizedBox(
                 width: 150, // Adjust the width as needed
                 child: ElevatedButton(
                   onPressed: () {
                     _showSearch(context);
                   },
-                  child: Row(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: .0, vertical: 4.0), // Reduce padding here
+                  ),
+                  child: const Row(
                     mainAxisAlignment:
                         MainAxisAlignment.center, // Center the content
                     children: [
@@ -644,11 +651,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ],
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryColor,
-                    padding: EdgeInsets.symmetric(
-                        horizontal: .0, vertical: 4.0), // Reduce padding here
                   ),
                 ),
               ),
@@ -667,13 +669,13 @@ class PlaceSearchDelegate extends SearchDelegate<String> {
 
   @override
   List<Widget> buildActions(BuildContext context) {
-    return [IconButton(icon: Icon(Icons.clear), onPressed: () => query = '')];
+    return [IconButton(icon: const Icon(Icons.clear), onPressed: () => query = '')];
   }
 
   @override
   Widget buildLeading(BuildContext context) {
     return IconButton(
-        icon: Icon(Icons.arrow_back), onPressed: () => close(context, ''));
+        icon: const Icon(Icons.arrow_back), onPressed: () => close(context, ''));
   }
 
   @override
@@ -705,7 +707,7 @@ class PlaceSearchDelegate extends SearchDelegate<String> {
             },
           );
         } else {
-          return Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator());
         }
       },
     );

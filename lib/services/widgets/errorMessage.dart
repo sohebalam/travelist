@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
-Widget buildErrorMessage(BuildContext context, _errorMessage) {
-  if (_errorMessage != null) {
+Widget buildErrorMessage(BuildContext context, errorMessage) {
+  if (errorMessage != null) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Text(
-        _errorMessage!,
-        style: TextStyle(
+        errorMessage!,
+        style: const TextStyle(
           color: Colors.red,
         ),
       ),
     );
   } else {
-    return SizedBox.shrink();
+    return const SizedBox.shrink();
   }
 }

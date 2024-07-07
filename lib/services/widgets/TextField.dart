@@ -12,7 +12,7 @@ Widget textFieldWidget({
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(title,
-          style: TextStyle(
+          style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: Color(0xffA7A7A7))),
@@ -33,7 +33,7 @@ Widget textFieldWidget({
         child: TextFormField(
           controller: controller,
           // validator: validator,
-          style: TextStyle(
+          style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: Color(0xffA7A7A7)),

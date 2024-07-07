@@ -6,7 +6,7 @@ class BottomNavBar extends StatelessWidget {
   final ValueChanged<int> onItemTapped;
   final VoidCallback onLogoutTapped;
 
-  BottomNavBar({
+  const BottomNavBar({super.key, 
     required this.selectedIndex,
     required this.onItemTapped,
     required this.onLogoutTapped,
@@ -15,7 +15,7 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      items: <BottomNavigationBarItem>[
+      items: const <BottomNavigationBarItem>[
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
           label: 'Home',

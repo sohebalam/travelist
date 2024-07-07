@@ -9,9 +9,10 @@ import 'package:travelist/services/auth/auth_event.dart';
 import 'package:travelist/services/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
+
   @override
   _RegisterPageState createState() => _RegisterPageState();
 }
@@ -31,7 +32,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (email.isEmpty || password.isEmpty || name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('All fields are required.')),
+        const SnackBar(content: Text('All fields are required.')),
       );
       return;
     }
@@ -56,7 +57,7 @@ class _RegisterPageState extends State<RegisterPage> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An unexpected error occurred.')),
+        const SnackBar(content: Text('An unexpected error occurred.')),
       );
     }
   }
@@ -83,19 +84,19 @@ class _RegisterPageState extends State<RegisterPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Select Image Source'),
+          title: const Text('Select Image Source'),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
                 GestureDetector(
-                  child: Text('Camera'),
+                  child: const Text('Camera'),
                   onTap: () {
                     Navigator.of(context).pop(ImageSource.camera);
                   },
                 ),
-                Padding(padding: EdgeInsets.all(8.0)),
+                const Padding(padding: EdgeInsets.all(8.0)),
                 GestureDetector(
-                  child: Text('Gallery'),
+                  child: const Text('Gallery'),
                   onTap: () {
                     Navigator.of(context).pop(ImageSource.gallery);
                   },
@@ -132,10 +133,10 @@ class _RegisterPageState extends State<RegisterPage> {
                 height: 120,
               ),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
                   height: 240,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     image: DecorationImage(
                       image: AssetImage('assets/Logo.png'),
                       fit: BoxFit.fill,
@@ -144,18 +145,18 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.all(30.0),
+                padding: const EdgeInsets.all(30.0),
                 child: Column(
                   children: <Widget>[
                     FadeInUp(
-                      duration: Duration(milliseconds: 1800),
+                      duration: const Duration(milliseconds: 1800),
                       child: Container(
-                        padding: EdgeInsets.all(5),
+                        padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: Color.fromRGBO(143, 148, 251, 1),
+                            color: const Color.fromRGBO(143, 148, 251, 1),
                           ),
                           boxShadow: const [
                             BoxShadow(
@@ -168,8 +169,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         child: Column(
                           children: <Widget>[
                             Container(
-                              padding: EdgeInsets.all(8.0),
-                              decoration: BoxDecoration(
+                              padding: const EdgeInsets.all(8.0),
+                              decoration: const BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
                                     color: Color.fromRGBO(143, 148, 251, 1),
@@ -186,7 +187,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                             ),
                             Container(
-                              padding: EdgeInsets.all(8.0),
+                              padding: const EdgeInsets.all(8.0),
                               decoration: const BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
@@ -204,7 +205,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                             ),
                             Container(
-                              padding: EdgeInsets.all(8.0),
+                              padding: const EdgeInsets.all(8.0),
                               child: TextField(
                                 controller: _passwordController,
                                 obscureText: true,
@@ -219,21 +220,21 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 30,
                     ),
                     if (_image != null) ...[
                       FadeInUp(
-                        duration: Duration(milliseconds: 2000),
+                        duration: const Duration(milliseconds: 2000),
                         child: CircleAvatar(
                           radius: 40,
                           backgroundImage: FileImage(_image!),
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                     ],
                     FadeInUp(
-                      duration: Duration(milliseconds: 1900),
+                      duration: const Duration(milliseconds: 1900),
                       child: GestureDetector(
                         onTap: () => _register(context),
                         child: Container(
@@ -259,25 +260,25 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 20,
                     ),
                     FadeInUp(
-                      duration: Duration(milliseconds: 1900),
+                      duration: const Duration(milliseconds: 1900),
                       child: GestureDetector(
                         onTap: _getImage,
                         child: Container(
                           height: 50,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
-                            gradient: LinearGradient(
+                            gradient: const LinearGradient(
                               colors: [
                                 Color.fromRGBO(143, 148, 251, 1),
                                 Color.fromRGBO(143, 148, 251, .6),
                               ],
                             ),
                           ),
-                          child: Center(
+                          child: const Center(
                             child: Text(
                               "Upload Image",
                               style: TextStyle(
@@ -289,14 +290,14 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                     FadeInUp(
-                      duration: Duration(milliseconds: 2000),
+                      duration: const Duration(milliseconds: 2000),
                       child: TextButton(
                         onPressed: () => _login(context),
-                        child: Text(
+                        child: const Text(
                           "Login",
                           style: TextStyle(
                             color: Color.fromRGBO(143, 148, 251, 1),

@@ -8,20 +8,23 @@ import 'package:travelist/services/auth/auth_wrapper.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Travelist',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
       home: BlocProvider(
         create: (context) => AuthenticationBloc()..add(AppStarted()),
-        child: AuthWrapper(),
+        child: const AuthWrapper(),
       ),
     );
   }

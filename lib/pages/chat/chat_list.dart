@@ -6,6 +6,8 @@ import 'package:travelist/services/widgets/search_dialog.dart';
 import 'chat_page.dart';
 
 class ChatList extends StatefulWidget {
+  const ChatList({super.key});
+
   @override
   _ChatListState createState() => _ChatListState();
 }
@@ -40,11 +42,11 @@ class _ChatListState extends State<ChatList> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('No chats available.'));
+            return const Center(child: Text('No chats available.'));
           }
 
           var chatDocs = snapshot.data!.docs;
@@ -66,7 +68,7 @@ class _ChatListState extends State<ChatList> {
                     .get(),
                 builder: (context, friendSnapshot) {
                   if (!friendSnapshot.hasData) {
-                    return ListTile(
+                    return const ListTile(
                       title: Text('Loading...'),
                     );
                   }
@@ -80,7 +82,7 @@ class _ChatListState extends State<ChatList> {
                     leading: CircleAvatar(
                       backgroundImage: friendImage.isNotEmpty
                           ? NetworkImage(friendImage)
-                          : AssetImage('assets/person.png'),
+                          : const AssetImage('assets/person.png'),
                     ),
                     title: Text(friendName),
                     subtitle: Text(lastMessage),
@@ -109,15 +111,15 @@ class _ChatListState extends State<ChatList> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chats'),
+        title: const Text('Chats'),
         backgroundColor: AppColors.primaryColor,
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout),
             onPressed: _signOut,
           ),
           IconButton(
-            icon: Icon(Icons.search),
+            icon: const Icon(Icons.search),
             onPressed: () {
               showSearchDialog(context, currentUser);
             },

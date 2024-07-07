@@ -13,7 +13,7 @@ void showSearchDialog(BuildContext context, User? currentUser) {
 class SearchDialog extends StatefulWidget {
   final User? currentUser;
 
-  const SearchDialog({Key? key, this.currentUser}) : super(key: key);
+  const SearchDialog({super.key, this.currentUser});
 
   @override
   _SearchDialogState createState() => _SearchDialogState();
@@ -36,12 +36,12 @@ class _SearchDialogState extends State<SearchDialog> {
 
       final searchByName = await usersCollection
           .where('name', isGreaterThanOrEqualTo: query)
-          .where('name', isLessThanOrEqualTo: query + '\uf8ff')
+          .where('name', isLessThanOrEqualTo: '$query\uf8ff')
           .get();
 
       final searchByEmail = await usersCollection
           .where('email', isGreaterThanOrEqualTo: query)
-          .where('email', isLessThanOrEqualTo: query + '\uf8ff')
+          .where('email', isLessThanOrEqualTo: '$query\uf8ff')
           .get();
 
       final allResults = searchByName.docs + searchByEmail.docs;
@@ -60,7 +60,7 @@ class _SearchDialogState extends State<SearchDialog> {
 
   Widget buildSearchResults() {
     return searchResults.isEmpty
-        ? Center(child: Text('No users found.'))
+        ? const Center(child: Text('No users found.'))
         : ListView.builder(
             shrinkWrap: true,
             itemCount: searchResults.length,
@@ -72,7 +72,7 @@ class _SearchDialogState extends State<SearchDialog> {
                   backgroundImage:
                       userData != null && userData.containsKey('image')
                           ? NetworkImage(userData['image'])
-                          : AssetImage('assets/person.png') as ImageProvider,
+                          : const AssetImage('assets/person.png') as ImageProvider,
                 ),
                 title: Text(userData != null && userData.containsKey('name')
                     ? userData['name']
@@ -155,7 +155,7 @@ class _SearchDialogState extends State<SearchDialog> {
                   borderRadius: BorderRadius.circular(8.0),
                 ),
                 suffixIcon: IconButton(
-                  icon: Icon(Icons.search),
+                  icon: const Icon(Icons.search),
                   onPressed: () {
                     searchUsers(searchController.text);
                   },

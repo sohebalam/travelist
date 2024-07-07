@@ -18,7 +18,7 @@ class POIService {
   ) async {
     if (poiData.length >= 10) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
             content: Text(
                 'You can only have up to 10 places of interest in the list.')),
       );
@@ -28,16 +28,16 @@ class POIService {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Add to list'),
+        title: const Text('Add to list'),
         content: Text('Do you want to add $name to your list?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Close'),
+            child: const Text('Close'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Add'),
+            child: const Text('Add'),
           ),
         ],
       ),

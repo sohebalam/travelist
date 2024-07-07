@@ -15,13 +15,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places;
 import 'package:travelist/pages/home_page.dart'; // Ensure you import the HomePage
-import 'dart:io' show Platform;
 
 class ListDetailsPage extends StatefulWidget {
   final String listId;
   final String listName;
 
-  ListDetailsPage({required this.listId, required this.listName});
+  const ListDetailsPage({super.key, required this.listId, required this.listName});
 
   @override
   _ListDetailsPageState createState() => _ListDetailsPageState();
@@ -32,8 +31,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   List<gmaps.Marker> _markers = [];
   List<Map<String, dynamic>> _poiData = [];
   List<gmaps.LatLng> _polylinePoints = [];
-  List<gmaps.LatLng> _routePoints = [];
-  Set<gmaps.Polyline> _polylines = {};
+  final List<gmaps.LatLng> _routePoints = [];
+  final Set<gmaps.Polyline> _polylines = {};
   PolylinePoints polylinePoints = PolylinePoints();
   String? _googleMapsApiKey;
   bool _isLoading = false;
@@ -54,9 +53,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   String _durationText = '';
   String _transportMode = 'driving';
 
-  bool _countriesEnabled = true;
-  bool _locationBiasEnabled = true;
-  bool _locationRestrictionEnabled = false;
+  final bool _countriesEnabled = true;
+  final bool _locationBiasEnabled = true;
+  final bool _locationRestrictionEnabled = false;
 
   late final PlacesService _placesService;
   late final POIService _poiService; // Add the POIService instance
@@ -89,7 +88,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     if (index == 0) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => HomePage()),
+        MaterialPageRoute(builder: (context) => const HomePage()),
         (route) => false,
       );
     } else if (index == 1) {
@@ -246,7 +245,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     setState(() {
       _polylines.add(
         gmaps.Polyline(
-          polylineId: gmaps.PolylineId('route'),
+          polylineId: const gmaps.PolylineId('route'),
           color: Colors.blue,
           width: 5,
           points: _routePoints,
@@ -321,7 +320,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       setState(() {
         _polylines.add(
           gmaps.Polyline(
-            polylineId: gmaps.PolylineId('navigation_route'),
+            polylineId: const gmaps.PolylineId('navigation_route'),
             color: Colors.green,
             width: 5,
             points: points,
@@ -397,27 +396,27 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   }
 
   Future<void> _getCurrentLocation() async {
-    bool _serviceEnabled;
-    PermissionStatus _permissionGranted;
+    bool serviceEnabled;
+    PermissionStatus permissionGranted;
     final gmaps.GoogleMapController? controller = await _controller.future;
 
-    _serviceEnabled = await location.serviceEnabled();
-    if (!_serviceEnabled) {
-      _serviceEnabled = await location.requestService();
-      if (!_serviceEnabled) {
+    serviceEnabled = await location.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+      if (!serviceEnabled) {
         return;
       }
     }
 
-    _permissionGranted = await location.hasPermission();
-    if (_permissionGranted == PermissionStatus.denied) {
-      _permissionGranted = await location.requestPermission();
-      if (_permissionGranted != PermissionStatus.granted) {
+    permissionGranted = await location.hasPermission();
+    if (permissionGranted == PermissionStatus.denied) {
+      permissionGranted = await location.requestPermission();
+      if (permissionGranted != PermissionStatus.granted) {
         return;
       }
     }
 
-    if (_permissionGranted == PermissionStatus.granted) {
+    if (permissionGranted == PermissionStatus.granted) {
       _currentPosition = await location.getLocation();
       setState(() {
         _currentLocation = gmaps.LatLng(
@@ -579,7 +578,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           : Stack(
               children: [
                 gmaps.GoogleMap(
-                  initialCameraPosition: gmaps.CameraPosition(
+                  initialCameraPosition: const gmaps.CameraPosition(
                     target: gmaps.LatLng(51.509865, -0.118092),
                     zoom: 13,
                   ),
@@ -621,8 +620,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                         throw 'Could not launch $url';
                       }
                     },
-                    child: Icon(Icons.navigation_outlined),
                     tooltip: 'Navigate to the nearest location',
+                    child: const Icon(Icons.navigation_outlined),
                   ),
                 ),
                 Positioned(
@@ -632,8 +631,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                     onPressed: () {
                       _showSearch(context);
                     },
-                    child: Icon(Icons.add),
                     tooltip: 'Search for places',
+                    child: const Icon(Icons.add),
                   ),
                 ),
                 Positioned(
@@ -646,17 +645,17 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                           _mapController
                               ?.animateCamera(gmaps.CameraUpdate.zoomIn());
                         },
-                        child: Icon(Icons.zoom_in),
                         tooltip: 'Zoom in',
+                        child: const Icon(Icons.zoom_in),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       FloatingActionButton(
                         onPressed: () {
                           _mapController
                               ?.animateCamera(gmaps.CameraUpdate.zoomOut());
                         },
-                        child: Icon(Icons.zoom_out),
                         tooltip: 'Zoom out',
+                        child: const Icon(Icons.zoom_out),
                       ),
                     ],
                   ),
@@ -671,11 +670,11 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                       controller: scrollController,
                       child: Container(
                         color: Colors.white,
-                        padding: EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.all(8.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Route Points:'),
+                            const Text('Route Points:'),
                             ListView.builder(
                               controller: scrollController,
                               shrinkWrap: true,
@@ -727,7 +726,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                 Row(
                                   children: [
                                     IconButton(
-                                      icon: Icon(Icons.directions_car),
+                                      icon: const Icon(Icons.directions_car),
                                       onPressed: () {
                                         setState(() {
                                           _transportMode = 'driving';
@@ -740,7 +739,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       iconSize: 20,
                                     ),
                                     IconButton(
-                                      icon: Icon(Icons.directions_walk),
+                                      icon: const Icon(Icons.directions_walk),
                                       onPressed: () {
                                         setState(() {
                                           _transportMode = 'walking';
@@ -753,7 +752,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       iconSize: 20,
                                     ),
                                     IconButton(
-                                      icon: Icon(Icons.directions_bike),
+                                      icon: const Icon(Icons.directions_bike),
                                       onPressed: () {
                                         setState(() {
                                           _transportMode = 'bicycling';
@@ -887,13 +886,13 @@ class PlaceSearchDelegate extends SearchDelegate<String> {
 
   @override
   List<Widget> buildActions(BuildContext context) {
-    return [IconButton(icon: Icon(Icons.clear), onPressed: () => query = '')];
+    return [IconButton(icon: const Icon(Icons.clear), onPressed: () => query = '')];
   }
 
   @override
   Widget buildLeading(BuildContext context) {
     return IconButton(
-        icon: Icon(Icons.arrow_back), onPressed: () => close(context, ''));
+        icon: const Icon(Icons.arrow_back), onPressed: () => close(context, ''));
   }
 
   @override
@@ -922,7 +921,7 @@ class PlaceSearchDelegate extends SearchDelegate<String> {
             },
           );
         } else {
-          return Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator());
         }
       },
     );

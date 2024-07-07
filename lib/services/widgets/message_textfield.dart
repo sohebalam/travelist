@@ -5,8 +5,7 @@ class MessageTextField extends StatefulWidget {
   final String currentUserId;
   final String friendId;
 
-  const MessageTextField(this.currentUserId, this.friendId, {Key? key})
-      : super(key: key);
+  const MessageTextField(this.currentUserId, this.friendId, {super.key});
 
   @override
   _MessageTextFieldState createState() => _MessageTextFieldState();
@@ -51,7 +50,7 @@ class _MessageTextFieldState extends State<MessageTextField> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       color: Colors.grey[200],
       child: Row(
         children: [
@@ -65,16 +64,16 @@ class _MessageTextFieldState extends State<MessageTextField> {
                 ),
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: EdgeInsets.symmetric(horizontal: 20),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20),
               ),
             ),
           ),
-          SizedBox(width: 10),
+          const SizedBox(width: 10),
           FloatingActionButton(
             onPressed: _sendMessage,
-            child: Icon(Icons.send),
             backgroundColor: Colors.blue,
             elevation: 0,
+            child: const Icon(Icons.send),
           ),
         ],
       ),

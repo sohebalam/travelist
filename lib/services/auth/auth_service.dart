@@ -52,7 +52,7 @@ class AuthService {
       await _firebaseAuth.sendPasswordResetEmail(email: email);
     } catch (e) {
       print('Error sending password reset email: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -62,7 +62,7 @@ class AuthService {
       await _googleSignIn.signOut();
     } catch (e) {
       print('Error signing out: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -81,7 +81,7 @@ class AuthService {
       });
     } catch (e) {
       print('Error saving user to Firestore: $e');
-      throw e;
+      rethrow;
     }
   }
 }

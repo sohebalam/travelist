@@ -8,13 +8,15 @@ import 'package:travelist/services/auth/auth_event.dart';
 import 'package:travelist/services/widgets/bottom_navbar.dart';
 
 class MainPage extends StatefulWidget {
+  const MainPage({super.key});
+
   @override
   _MainPageState createState() => _MainPageState();
 }
 
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
-  PageController _pageController = PageController();
+  final PageController _pageController = PageController();
 
   void _onItemTapped(int index) {
     setState(() {
@@ -37,7 +39,7 @@ class _MainPageState extends State<MainPage> {
             _selectedIndex = index;
           });
         },
-        children: [
+        children: const [
           HomePage(),
           ListsPage(),
           ChatList(),

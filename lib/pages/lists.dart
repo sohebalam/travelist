@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:travelist/pages/list_detail.dart';
-import 'package:travelist/services/widgets/bottom_navbar.dart'; // Ensure this is the correct path to your BottomNavBar component
+// Ensure this is the correct path to your BottomNavBar component
 
 class ListsPage extends StatefulWidget {
+  const ListsPage({super.key});
+
   @override
   _ListsPageState createState() => _ListsPageState();
 }
@@ -27,13 +29,13 @@ class _ListsPageState extends State<ListsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Lists'),
+        title: const Text('Lists'),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _listsCollection.snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           var lists = snapshot.data!.docs;
@@ -53,7 +55,7 @@ class _ListsPageState extends State<ListsPage> {
                       title: Text(listData.containsKey('list')
                           ? listData['list']
                           : 'Unnamed List'),
-                      subtitle: Text('Loading...'),
+                      subtitle: const Text('Loading...'),
                     );
                   }
 
@@ -84,8 +86,8 @@ class _ListsPageState extends State<ListsPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddListDialog(context),
-        child: Icon(Icons.add),
         tooltip: 'Add New List',
+        child: const Icon(Icons.add),
       ),
       // bottomNavigationBar: BottomNavBar(
       //   selectedIndex: _selectedIndex,
@@ -98,25 +100,25 @@ class _ListsPageState extends State<ListsPage> {
   }
 
   void _showAddListDialog(BuildContext context) {
-    final _formKey = GlobalKey<FormState>();
-    final _listNameController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final listNameController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Add New List'),
+          title: const Text('Add New List'),
           content: Form(
-            key: _formKey,
+            key: formKey,
             child: TextFormField(
-              controller: _listNameController,
+              controller: listNameController,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter a list name';
                 }
                 return null;
               },
-              decoration: InputDecoration(hintText: 'List Name'),
+              decoration: const InputDecoration(hintText: 'List Name'),
             ),
           ),
           actions: [
@@ -124,18 +126,18 @@ class _ListsPageState extends State<ListsPage> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
-                if (_formKey.currentState!.validate()) {
+                if (formKey.currentState!.validate()) {
                   _listsCollection.add({
-                    'list': _listNameController.text,
+                    'list': listNameController.text,
                   });
                   Navigator.of(context).pop();
                 }
               },
-              child: Text('Add'),
+              child: const Text('Add'),
             ),
           ],
         );

@@ -6,18 +6,20 @@ import 'auth_bloc.dart';
 import 'auth_state.dart';
 
 class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthenticationBloc, AuthenticationState>(
       builder: (context, state) {
         if (state is AuthenticationInitial) {
-          return Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator());
         } else if (state is Authenticated) {
-          return MainPage();
+          return const MainPage();
         } else if (state is Unauthenticated) {
           return LoginPage();
         } else {
-          return Center(child: Text('Unknown state'));
+          return const Center(child: Text('Unknown state'));
         }
       },
     );

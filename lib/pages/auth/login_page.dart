@@ -5,14 +5,15 @@ import 'package:travelist/services/auth/auth_bloc.dart';
 import 'package:travelist/services/auth/auth_event.dart';
 import 'package:travelist/services/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:sign_in_button/sign_in_button.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:travelist/services/widgets/google.dart';
 
 class LoginPage extends StatelessWidget {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _obscureText = true;
+  final bool _obscureText = true;
+
+  LoginPage({super.key});
 
   void _login(BuildContext context) async {
     final authService = AuthService();
@@ -25,7 +26,7 @@ class LoginPage extends StatelessWidget {
         context.read<AuthenticationBloc>().add(LoggedIn());
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
               content: Text('Login failed. Please check your credentials.')),
         );
       }
@@ -35,7 +36,7 @@ class LoginPage extends StatelessWidget {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An unexpected error occurred.')),
+        const SnackBar(content: Text('An unexpected error occurred.')),
       );
     }
   }
@@ -49,12 +50,12 @@ class LoginPage extends StatelessWidget {
         context.read<AuthenticationBloc>().add(LoggedIn());
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google sign-in failed. Please try again.')),
+          const SnackBar(content: Text('Google sign-in failed. Please try again.')),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An unexpected error occurred.')),
+        const SnackBar(content: Text('An unexpected error occurred.')),
       );
     }
   }
@@ -65,7 +66,7 @@ class LoginPage extends StatelessWidget {
 
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter your email to reset password.')),
+        const SnackBar(content: Text('Please enter your email to reset password.')),
       );
       return;
     }
@@ -73,7 +74,7 @@ class LoginPage extends StatelessWidget {
     try {
       await authService.resetPassword(email);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Password reset email sent.')),
+        const SnackBar(content: Text('Password reset email sent.')),
       );
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -81,7 +82,7 @@ class LoginPage extends StatelessWidget {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An unexpected error occurred.')),
+        const SnackBar(content: Text('An unexpected error occurred.')),
       );
     }
   }
@@ -89,7 +90,7 @@ class LoginPage extends StatelessWidget {
   void _register(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => RegisterPage()),
+      MaterialPageRoute(builder: (context) => const RegisterPage()),
     );
   }
 
@@ -105,10 +106,10 @@ class LoginPage extends StatelessWidget {
                 height: 120,
               ),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
                   height: 240,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     image: DecorationImage(
                       image: AssetImage('assets/Logo.png'),
                       fit: BoxFit.fill,
@@ -116,24 +117,24 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 10,
               ),
               Padding(
-                padding: EdgeInsets.all(30.0),
+                padding: const EdgeInsets.all(30.0),
                 child: Column(
                   children: <Widget>[
                     FadeInUp(
-                      duration: Duration(milliseconds: 1800),
+                      duration: const Duration(milliseconds: 1800),
                       child: Container(
-                        padding: EdgeInsets.all(5),
+                        padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: Color.fromRGBO(143, 148, 251, 1),
+                            color: const Color.fromRGBO(143, 148, 251, 1),
                           ),
-                          boxShadow: [
+                          boxShadow: const [
                             BoxShadow(
                               color: Color.fromRGBO(143, 148, 251, .2),
                               blurRadius: 20.0,
@@ -144,8 +145,8 @@ class LoginPage extends StatelessWidget {
                         child: Column(
                           children: <Widget>[
                             Container(
-                              padding: EdgeInsets.all(8.0),
-                              decoration: BoxDecoration(
+                              padding: const EdgeInsets.all(8.0),
+                              decoration: const BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
                                     color: Color.fromRGBO(143, 148, 251, 1),
@@ -162,7 +163,7 @@ class LoginPage extends StatelessWidget {
                               ),
                             ),
                             Container(
-                              padding: EdgeInsets.all(8.0),
+                              padding: const EdgeInsets.all(8.0),
                               child: TextField(
                                 controller: _passwordController,
                                 obscureText: _obscureText,
@@ -177,25 +178,25 @@ class LoginPage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 30,
                     ),
                     FadeInUp(
-                      duration: Duration(milliseconds: 1900),
+                      duration: const Duration(milliseconds: 1900),
                       child: GestureDetector(
                         onTap: () => _login(context),
                         child: Container(
                           height: 50,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
-                            gradient: LinearGradient(
+                            gradient: const LinearGradient(
                               colors: [
                                 Color.fromRGBO(143, 148, 251, 1),
                                 Color.fromRGBO(143, 148, 251, .6),
                               ],
                             ),
                           ),
-                          child: Center(
+                          child: const Center(
                             child: Text(
                               "Login",
                               style: TextStyle(
@@ -207,7 +208,7 @@ class LoginPage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 30,
                     ),
                     CustomGoogleButton(
@@ -215,14 +216,14 @@ class LoginPage extends StatelessWidget {
                         _loginWithGoogle(context);
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 20,
                     ),
                     FadeInUp(
-                      duration: Duration(milliseconds: 2000),
+                      duration: const Duration(milliseconds: 2000),
                       child: TextButton(
                         onPressed: () => _resetPassword(context),
-                        child: Text(
+                        child: const Text(
                           "Forgot Password?",
                           style: TextStyle(
                             color: Color.fromRGBO(143, 148, 251, 1),
@@ -230,14 +231,14 @@ class LoginPage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 0,
                     ),
                     FadeInUp(
-                      duration: Duration(milliseconds: 2000),
+                      duration: const Duration(milliseconds: 2000),
                       child: TextButton(
                         onPressed: () => _register(context),
-                        child: Text(
+                        child: const Text(
                           "Register",
                           style: TextStyle(
                             color: Color.fromRGBO(143, 148, 251, 1),

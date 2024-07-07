@@ -7,7 +7,7 @@ class SingleMessage extends StatelessWidget {
   final String friendName;
   final String datetime;
 
-  SingleMessage({
+  const SingleMessage({super.key, 
     required this.message,
     required this.isMe,
     required this.friendName,
@@ -17,7 +17,7 @@ class SingleMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.all(8.0),
+      padding: const EdgeInsets.all(8.0),
       child: Column(
         crossAxisAlignment:
             isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -30,14 +30,14 @@ class SingleMessage extends StatelessWidget {
                     ? Theme.of(context).colorScheme.secondary
                     : AppColors.quateraryColor),
           ),
-          SizedBox(height: 4.0),
+          const SizedBox(height: 4.0),
           Text(
             message,
             style: TextStyle(
               color: isMe ? Colors.blue : Colors.black,
             ),
           ),
-          SizedBox(height: 3.0),
+          const SizedBox(height: 3.0),
           Text(
             datetime,
             style: TextStyle(
