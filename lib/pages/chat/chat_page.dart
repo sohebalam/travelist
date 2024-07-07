@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:travelist/services/styles.dart';
 
 class ChatPage extends StatefulWidget {
   final String u_id; // This should be the friend's ID
@@ -19,6 +20,7 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chat'),
+        backgroundColor: AppColors.primaryColor,
       ),
       body: Column(
         children: [
@@ -52,8 +54,8 @@ class _ChatPageState extends State<ChatPage> {
                           ? Alignment.centerRight
                           : Alignment.centerLeft,
                       child: Container(
-                        margin:
-                            const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 5, horizontal: 10),
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: isSentByCurrentUser

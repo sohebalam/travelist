@@ -45,6 +45,10 @@ class _ChatListState extends State<ChatList> {
             return const Center(child: CircularProgressIndicator());
           }
 
+          if (snapshot.hasError) {
+            return const Center(child: Text('An error occurred.'));
+          }
+
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text('No chats available.'));
           }
@@ -67,9 +71,22 @@ class _ChatListState extends State<ChatList> {
                     .doc(friendId)
                     .get(),
                 builder: (context, friendSnapshot) {
-                  if (!friendSnapshot.hasData) {
+                  if (friendSnapshot.connectionState ==
+                      ConnectionState.waiting) {
                     return const ListTile(
                       title: Text('Loading...'),
+                    );
+                  }
+
+                  if (friendSnapshot.hasError) {
+                    return ListTile(
+                      title: Text('Error: ${friendSnapshot.error}'),
+                    );
+                  }
+
+                  if (!friendSnapshot.hasData || !friendSnapshot.data!.exists) {
+                    return const ListTile(
+                      title: Text('User not found'),
                     );
                   }
 
@@ -82,7 +99,8 @@ class _ChatListState extends State<ChatList> {
                     leading: CircleAvatar(
                       backgroundImage: friendImage.isNotEmpty
                           ? NetworkImage(friendImage)
-                          : const AssetImage('assets/person.png'),
+                          : const AssetImage('assets/person.png')
+                              as ImageProvider,
                     ),
                     title: Text(friendName),
                     subtitle: Text(lastMessage),
@@ -114,10 +132,6 @@ class _ChatListState extends State<ChatList> {
         title: const Text('Chats'),
         backgroundColor: AppColors.primaryColor,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _signOut,
-          ),
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {

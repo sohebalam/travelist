@@ -6,14 +6,20 @@ import 'package:travelist/services/auth/auth_event.dart';
 import 'package:travelist/services/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:travelist/services/styles.dart';
 import 'package:travelist/services/widgets/google.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
+  LoginPage({super.key});
+
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final bool _obscureText = true;
-
-  LoginPage({super.key});
+  bool _obscureText = true;
 
   void _login(BuildContext context) async {
     final authService = AuthService();
@@ -50,7 +56,8 @@ class LoginPage extends StatelessWidget {
         context.read<AuthenticationBloc>().add(LoggedIn());
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google sign-in failed. Please try again.')),
+          const SnackBar(
+              content: Text('Google sign-in failed. Please try again.')),
         );
       }
     } catch (e) {
@@ -66,7 +73,8 @@ class LoginPage extends StatelessWidget {
 
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your email to reset password.')),
+        const SnackBar(
+            content: Text('Please enter your email to reset password.')),
       );
       return;
     }
@@ -171,6 +179,21 @@ class LoginPage extends StatelessWidget {
                                   border: InputBorder.none,
                                   hintText: "Password",
                                   hintStyle: TextStyle(color: Colors.grey[700]),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureText
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: _obscureText
+                                          ? AppColors.tertiryColor
+                                          : AppColors.primaryColor,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureText = !_obscureText;
+                                      });
+                                    },
+                                  ),
                                 ),
                               ),
                             ),

@@ -9,6 +9,7 @@ import 'package:travelist/services/auth/auth_event.dart';
 import 'package:travelist/services/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:travelist/services/styles.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -23,6 +24,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _nameController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   File? _image;
+  bool _obscureText = true; // Added to handle password visibility
 
   Future<void> _register(BuildContext context) async {
     final authService = AuthService();
@@ -208,11 +210,26 @@ class _RegisterPageState extends State<RegisterPage> {
                               padding: const EdgeInsets.all(8.0),
                               child: TextField(
                                 controller: _passwordController,
-                                obscureText: true,
+                                obscureText: _obscureText,
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
                                   hintText: "Password",
                                   hintStyle: TextStyle(color: Colors.grey[700]),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureText
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: _obscureText
+                                          ? AppColors.tertiryColor
+                                          : AppColors.primaryColor,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureText = !_obscureText;
+                                      });
+                                    },
+                                  ),
                                 ),
                               ),
                             ),
