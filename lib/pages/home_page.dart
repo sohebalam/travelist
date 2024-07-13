@@ -66,6 +66,9 @@ class _HomePageState extends State<HomePage> {
       List<String> interests = await AuthService().getUserInterests(user);
       setState(() {
         userInterests = interests;
+        if (userInterests.isEmpty) {
+          customSearch = true;
+        }
       });
     }
   }
@@ -516,9 +519,9 @@ class _HomePageState extends State<HomePage> {
                 ),
 
                 // Second row: "Search by My Interests" button and "Custom Search" switch
-                Row(
-                  children: [
-                    if (userInterests.isNotEmpty)
+                if (userInterests.isNotEmpty)
+                  Row(
+                    children: [
                       Expanded(
                         flex: 5,
                         child: Padding(
@@ -551,36 +554,31 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         ),
-                      )
-                    else
+                      ),
                       Expanded(
-                        flex: 5,
-                        child:
-                            Container(), // Empty container when there are no interests
+                        flex: 4,
+                        child: Row(
+                          children: [
+                            const Text('Custom Search'),
+                            SizedBox(
+                              width: 5,
+                            ),
+                            Switch(
+                              activeTrackColor: AppColors.primaryColor,
+                              activeColor: Colors.white,
+                              value: customSearch,
+                              onChanged: (value) {
+                                setState(() {
+                                  customSearch = value;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    Expanded(
-                      flex: 4,
-                      child: Row(
-                        children: [
-                          Switch(
-                            activeTrackColor: AppColors.primaryColor,
-                            activeColor: Colors.white,
-                            value: customSearch,
-                            onChanged: (value) {
-                              setState(() {
-                                customSearch = value;
-                              });
-                            },
-                          ),
-                          SizedBox(
-                            width: 5,
-                          ),
-                          const Text('Custom Search'),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+
                 // Third row: Custom search field and search button
                 if (customSearch)
                   Row(
