@@ -473,6 +473,8 @@ class _HomePageState extends State<HomePage> {
             Column(
               children: [
                 Row(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start, // Aligns children at the start
                   children: [
                     Expanded(
                       flex: 6,
@@ -502,6 +504,19 @@ class _HomePageState extends State<HomePage> {
                                 border: OutlineInputBorder(),
                               ),
                             ),
+                            if (userInterests.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: ElevatedButton(
+                                  onPressed: () =>
+                                      _generatePOIs(interests: userInterests),
+                                  child: const Text(
+                                    'Search by my interests',
+                                    style: TextStyle(
+                                        color: AppColors.secondaryColor),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -511,11 +526,12 @@ class _HomePageState extends State<HomePage> {
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.start,
                           children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
+                                SizedBox(height: 15.0),
                                 Switch(
                                   activeTrackColor: AppColors.primaryColor,
                                   activeColor: Colors.white,
@@ -534,22 +550,15 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ],
                             ),
+                            SizedBox(
+                                height:
+                                    15.0), // Add spacing between switch and button
                             ElevatedButton(
                               onPressed: () => _generatePOIs(
                                   interests: [interestsController.text.trim()]),
                               child: const Icon(Icons.search,
                                   color: AppColors.secondaryColor),
                             ),
-                            if (userInterests.isNotEmpty)
-                              ElevatedButton(
-                                onPressed: () =>
-                                    _generatePOIs(interests: userInterests),
-                                child: const Text(
-                                  'Search by your interests',
-                                  style: TextStyle(
-                                      color: AppColors.secondaryColor),
-                                ),
-                              ),
                           ],
                         ),
                       ),
@@ -604,7 +613,7 @@ class _HomePageState extends State<HomePage> {
                   )
                 : Container(),
             Positioned(
-              top: 140,
+              top: 200,
               left: 10,
               child: SizedBox(
                 width: 150, // Adjust the width as needed
