@@ -551,15 +551,17 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         ),
+                      )
+                    else
+                      Expanded(
+                        flex: 5,
+                        child:
+                            Container(), // Empty container when there are no interests
                       ),
                     Expanded(
                       flex: 4,
                       child: Row(
                         children: [
-                          const Text('Custom Search'),
-                          SizedBox(
-                            width: 5,
-                          ),
                           Switch(
                             activeTrackColor: AppColors.primaryColor,
                             activeColor: Colors.white,
@@ -570,12 +572,15 @@ class _HomePageState extends State<HomePage> {
                               });
                             },
                           ),
+                          SizedBox(
+                            width: 5,
+                          ),
+                          const Text('Custom Search'),
                         ],
                       ),
                     ),
                   ],
                 ),
-
                 // Third row: Custom search field and search button
                 if (customSearch)
                   Row(
@@ -597,22 +602,14 @@ class _HomePageState extends State<HomePage> {
                       Expanded(
                         flex: 2,
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Expanded(
-                              flex: 2,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  ElevatedButton(
-                                    onPressed: () => _generatePOIs(interests: [
-                                      interestsController.text.trim()
-                                    ]),
-                                    child: const Icon(Icons.search,
-                                        color: AppColors.secondaryColor),
-                                  ),
-                                ],
-                              ),
-                            )
+                            ElevatedButton(
+                              onPressed: () => _generatePOIs(
+                                  interests: [interestsController.text.trim()]),
+                              child: const Icon(Icons.search,
+                                  color: AppColors.secondaryColor),
+                            ),
                           ],
                         ),
                       ),
