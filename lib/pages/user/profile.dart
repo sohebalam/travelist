@@ -28,16 +28,31 @@ class UserProfilePage extends StatelessWidget {
 
           Map<String, dynamic> data =
               snapshot.data!.data() as Map<String, dynamic>;
-          return Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text('Name: ${data['name']}', style: TextStyle(fontSize: 20)),
-                SizedBox(height: 10),
-                Text('Email: ${data['email']}', style: TextStyle(fontSize: 20)),
-                // Add more fields as necessary
-              ],
+          return Center(
+            child: Transform.translate(
+              offset: Offset(0, -60),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(height: 16),
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundImage:
+                        AssetImage(data['images'] ?? 'assets/person.png'),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Name: ${data['name']}',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Email: ${data['email']}',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                ],
+              ),
             ),
           );
         },
