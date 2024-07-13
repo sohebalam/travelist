@@ -23,6 +23,7 @@ class _HomePageState extends State<HomePage> {
   TextEditingController interestsController = TextEditingController();
   TextEditingController newListController = TextEditingController();
   bool useCurrentLocation = false;
+  bool customSearch = false;
   List<Marker> _markers = [];
   List<Map<String, dynamic>> _poiList = [];
   GoogleMapController? _mapController;
@@ -121,13 +122,6 @@ class _HomePageState extends State<HomePage> {
         return;
       }
     } else {
-      if (locationController.text.isEmpty) {
-        _showErrorSnackBar('Please enter a location');
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
       String location = locationController.text;
       List<String> latLng = location.split(',');
       if (latLng.length == 2) {
@@ -479,108 +473,114 @@ class _HomePageState extends State<HomePage> {
           children: [
             Column(
               children: [
+                // First row: Location input and "Use My Location" switch
                 Row(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start, // Aligns children at the start
                   children: [
-                    Expanded(
-                      flex: 6,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          children: [
-                            if (!useCurrentLocation)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8.0),
-                                child: TextField(
-                                  controller: locationController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Enter location',
-                                    floatingLabelBehavior:
-                                        FloatingLabelBehavior.auto,
-                                    border: OutlineInputBorder(),
-                                  ),
-                                ),
-                              ),
-                            TextField(
-                              controller: interestsController,
-                              decoration: const InputDecoration(
-                                labelText: 'Enter interests',
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.auto,
-                                border: OutlineInputBorder(),
-                              ),
+                    if (!useCurrentLocation)
+                      Expanded(
+                        flex: 6,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: TextField(
+                            controller: locationController,
+                            decoration: const InputDecoration(
+                              labelText: 'Enter location',
+                              floatingLabelBehavior: FloatingLabelBehavior.auto,
+                              border: OutlineInputBorder(),
                             ),
-                            if (userInterests.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: ElevatedButton(
-                                  onPressed: () =>
-                                      _generatePOIs(interests: userInterests),
-                                  child: const Text(
-                                    'Search by my interests',
-                                    style: TextStyle(
-                                        color: AppColors.secondaryColor),
-                                  ),
-                                ),
-                              ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
                     Expanded(
                       flex: 2,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(height: 15.0),
-                                Switch(
-                                  activeTrackColor: AppColors.primaryColor,
-                                  activeColor: Colors.white,
-                                  value: useCurrentLocation,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      useCurrentLocation = value;
-                                    });
-                                  },
-                                ),
-                                Icon(
-                                  Icons.my_location,
-                                  color: useCurrentLocation
-                                      ? AppColors.secondaryColor
-                                      : Colors.grey,
-                                ),
-                              ],
-                            ),
-                            SizedBox(
-                                height:
-                                    15.0), // Add spacing between switch and button
-                            ElevatedButton(
-                              onPressed: () {
-                                if (useCurrentLocation ||
-                                    locationController.text.isNotEmpty) {
-                                  _generatePOIs(interests: [
-                                    interestsController.text.trim()
-                                  ]);
-                                } else {
-                                  _showErrorSnackBar(
-                                      'Please enter a location or use your current location.');
-                                }
-                              },
-                              child: const Icon(Icons.search,
-                                  color: AppColors.secondaryColor),
-                            ),
-                          ],
-                        ),
+                      child: Column(
+                        children: [
+                          Switch(
+                            activeTrackColor: AppColors.primaryColor,
+                            activeColor: Colors.white,
+                            value: useCurrentLocation,
+                            onChanged: (value) {
+                              setState(() {
+                                useCurrentLocation = value;
+                              });
+                            },
+                          ),
+                          Icon(
+                            Icons.my_location,
+                            color: useCurrentLocation
+                                ? AppColors.secondaryColor
+                                : Colors.grey,
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
+
+                // Second row: "Search by My Interests" button and "Custom Search" switch
+                Row(
+                  children: [
+                    if (userInterests.isNotEmpty)
+                      Expanded(
+                        flex: 6,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: ElevatedButton(
+                            onPressed: () =>
+                                _generatePOIs(interests: userInterests),
+                            child: const Text(
+                              'Search by my interests',
+                              style: TextStyle(color: AppColors.secondaryColor),
+                            ),
+                          ),
+                        ),
+                      ),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        children: [
+                          Switch(
+                            activeTrackColor: AppColors.primaryColor,
+                            activeColor: Colors.white,
+                            value: customSearch,
+                            onChanged: (value) {
+                              setState(() {
+                                customSearch = value;
+                              });
+                            },
+                          ),
+                          const Text('Custom Search'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Third row: Custom search field and search button
+                if (customSearch)
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: interestsController,
+                          decoration: const InputDecoration(
+                            labelText: 'Enter interests',
+                            floatingLabelBehavior: FloatingLabelBehavior.auto,
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => _generatePOIs(
+                              interests: [interestsController.text.trim()]),
+                          child: const Icon(Icons.search,
+                              color: AppColors.secondaryColor),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Expanded Google Map
                 Expanded(
                   child: GoogleMap(
                     initialCameraPosition: const CameraPosition(
