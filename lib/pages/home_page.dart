@@ -23,7 +23,6 @@ class _HomePageState extends State<HomePage> {
   TextEditingController interestsController = TextEditingController();
   TextEditingController newListController = TextEditingController();
   bool useCurrentLocation = false;
-  bool searchByInterests = false;
   List<Marker> _markers = [];
   List<Map<String, dynamic>> _poiList = [];
   GoogleMapController? _mapController;
@@ -32,6 +31,7 @@ class _HomePageState extends State<HomePage> {
   bool _showNewListFields = false;
   bool _isLoading = false;
   String? _error;
+  List<String> userInterests = [];
 
   final CollectionReference _listsCollection =
       FirebaseFirestore.instance.collection('lists');
@@ -42,7 +42,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadEnv();
-    _fetchUserInterests();
+    _loadUserInterests();
   }
 
   Future<void> _loadEnv() async {
@@ -57,59 +57,24 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  Future<void> _fetchUserInterests() async {
+  Future<void> _loadUserInterests() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      DocumentReference userDoc =
-          FirebaseFirestore.instance.collection('users').doc(user.uid);
-      DocumentSnapshot userSnapshot = await userDoc.get();
-
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       if (userSnapshot.exists) {
         UserModel userModel =
             UserModel.fromJson(userSnapshot.data() as Map<String, dynamic>);
-        if (userModel.interests.isNotEmpty) {
-          _showSearchByInterestsDialog(userModel.interests);
-        }
+        setState(() {
+          userInterests = userModel.interests;
+        });
       }
     }
   }
 
-  void _showSearchByInterestsDialog(List<String> interests) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Search by Interests'),
-          content: Text(
-              'Would you like to search by your interests: ${interests.join(', ')}?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() {
-                  searchByInterests = false;
-                });
-              },
-              child: Text('No'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() {
-                  searchByInterests = true;
-                  interestsController.text = interests.join(', ');
-                });
-                _generatePOIs();
-              },
-              child: Text('Yes'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> updateUserInterests(String interest) async {
+  Future<void> updateUserInterests(List<String> interests) async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -120,7 +85,9 @@ class _HomePageState extends State<HomePage> {
         if (userSnapshot.exists) {
           UserModel userModel =
               UserModel.fromJson(userSnapshot.data() as Map<String, dynamic>);
-          userModel.addInterest(interest);
+          for (String interest in interests) {
+            userModel.addInterest(interest);
+          }
 
           await userDoc.update(userModel.toJson());
         }
@@ -130,7 +97,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _generatePOIs() async {
+  void _generatePOIs({List<String>? interests}) async {
     setState(() {
       _isLoading = true;
     });
@@ -170,10 +137,9 @@ class _HomePageState extends State<HomePage> {
     String location = useCurrentLocation && position != null
         ? '${position.latitude}, ${position.longitude}'
         : locationController.text;
-    String interests = interestsController.text;
 
     // Update user interests in Firestore
-    if (interests.isNotEmpty) {
+    if (interests != null && interests.isNotEmpty) {
       await updateUserInterests(interests);
     }
 
@@ -181,7 +147,8 @@ class _HomePageState extends State<HomePage> {
 
     List<Map<String, dynamic>> pois = [];
     try {
-      pois = await fetchPOIs(location, interests);
+      pois = await fetchPOIs(
+          location, interests?.join(',') ?? ''); // Use the new function
     } catch (e) {
       print('Error fetching POIs: $e');
       _showErrorSnackBar('Locations not found, please try again');
@@ -568,10 +535,21 @@ class _HomePageState extends State<HomePage> {
                               ],
                             ),
                             ElevatedButton(
-                              onPressed: _generatePOIs,
+                              onPressed: () => _generatePOIs(
+                                  interests: [interestsController.text.trim()]),
                               child: const Icon(Icons.search,
                                   color: AppColors.secondaryColor),
                             ),
+                            if (userInterests.isNotEmpty)
+                              ElevatedButton(
+                                onPressed: () =>
+                                    _generatePOIs(interests: userInterests),
+                                child: const Text(
+                                  'Search by your interests',
+                                  style: TextStyle(
+                                      color: AppColors.secondaryColor),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -758,21 +736,11 @@ class UserModel {
   }
 
   void addInterest(String interest) {
-    interest = interest.trim().toLowerCase();
-
-    // Normalize interest (e.g., "parks" and "park" considered the same)
-    if (interest.endsWith('s')) {
-      interest = interest.substring(0, interest.length - 1);
+    interest = interest.trim();
+    if (!interests.any((i) => i.toLowerCase() == interest.toLowerCase())) {
+      interests.insert(0, interest);
     }
 
-    // Check for duplicates
-    if (interests.contains(interest)) {
-      return;
-    }
-
-    interests.insert(0, interest);
-
-    // Ensure the list has a maximum of 10 interests
     if (interests.length > 10) {
       interests = interests.sublist(0, 10);
     }

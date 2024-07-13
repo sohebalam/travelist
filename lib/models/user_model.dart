@@ -3,14 +3,14 @@ class UserModel {
   String email;
   String? name;
   String image;
-  List<String>? interests;
+  List<String> interests;
 
   UserModel({
     required this.uid,
     required this.email,
     this.name,
     this.image = '',
-    this.interests,
+    this.interests = const [],
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -19,32 +19,34 @@ class UserModel {
       email: json['email'],
       name: json['name'],
       image: json.containsKey('image') ? json['image'] : '',
-      interests: json.containsKey('interests')
-          ? List<String>.from(json['interests'])
-          : null,
+      interests: List<String>.from(json['interests'] ?? []),
     );
   }
 
   Map<String, dynamic> toJson() {
-    final data = {
+    return {
       'uid': uid,
       'email': email,
       'name': name,
       'image': image,
+      'interests': interests,
     };
-
-    if (interests != null) {
-      data['interests'] = interests as String?;
-    }
-
-    return data;
   }
 
   void addInterest(String interest) {
-    if (interests == null) {
-      interests = [interest];
-    } else {
-      interests!.insert(0, interest);
+    interest = interest.trim().toLowerCase();
+
+    for (String existingInterest in interests) {
+      if (existingInterest == interest ||
+          existingInterest.contains(interest) ||
+          interest.contains(existingInterest)) {
+        return;
+      }
     }
+
+    if (interests.length >= 10) {
+      interests.removeLast();
+    }
+    interests.insert(0, interest);
   }
 }
