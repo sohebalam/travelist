@@ -23,6 +23,7 @@ class _HomePageState extends State<HomePage> {
   TextEditingController interestsController = TextEditingController();
   TextEditingController newListController = TextEditingController();
   bool useCurrentLocation = false;
+  bool searchByInterests = false;
   List<Marker> _markers = [];
   List<Map<String, dynamic>> _poiList = [];
   GoogleMapController? _mapController;
@@ -41,6 +42,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadEnv();
+    _fetchUserInterests();
   }
 
   Future<void> _loadEnv() async {
@@ -55,80 +57,56 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  Future<void> _findNearbyPlaces() async {
-    if (_mapController == null) {
-      _showErrorSnackBar('Map is not ready');
-      return;
-    }
+  Future<void> _fetchUserInterests() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      DocumentReference userDoc =
+          FirebaseFirestore.instance.collection('users').doc(user.uid);
+      DocumentSnapshot userSnapshot = await userDoc.get();
 
-    if (_placesService == null) {
-      _showErrorSnackBar('Places service is not initialized');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      LatLngBounds bounds = await _mapController!.getVisibleRegion();
-      final response = await _placesService!.findAutocompletePredictions(
-        '', // Empty query for nearby places
-        null,
-      );
-
-      List<Map<String, dynamic>> pois = [];
-      for (var prediction in response.predictions) {
-        final placeDetails =
-            await _placesService!.fetchPlace(prediction.placeId, [
-          places_sdk.PlaceField.Location,
-          places_sdk.PlaceField.Name,
-        ]);
-
-        final place = placeDetails.place;
-        if (place != null && place.latLng != null) {
-          pois.add({
-            'name': place.name,
-            'latitude': place.latLng?.lat,
-            'longitude': place.latLng?.lng,
-            'description': prediction.secondaryText,
-          });
+      if (userSnapshot.exists) {
+        UserModel userModel =
+            UserModel.fromJson(userSnapshot.data() as Map<String, dynamic>);
+        if (userModel.interests.isNotEmpty) {
+          _showSearchByInterestsDialog(userModel.interests);
         }
       }
-
-      setState(() {
-        _poiList = pois;
-        _markers = pois.map((poi) {
-          return Marker(
-            markerId: MarkerId('${poi['latitude']},${poi['longitude']}'),
-            position: LatLng(poi['latitude'], poi['longitude']),
-            infoWindow: InfoWindow(
-              title: poi['name'],
-              snippet: poi['description'],
-              onTap: () {
-                print('Marker tapped: ${poi['name']}');
-                _showAddToListDialog(poi);
-              },
-            ),
-          );
-        }).toList();
-        _isLoading = false;
-      });
-
-      _updateCameraPosition();
-
-      // Print POI names to console
-      for (var poi in pois) {
-        print(
-            'POI found: ${poi['name']} at ${poi['latitude']}, ${poi['longitude']}');
-      }
-    } catch (e) {
-      print('Error fetching nearby places: $e');
-      setState(() {
-        _isLoading = false;
-      });
-      _showErrorSnackBar('Error fetching nearby places');
     }
+  }
+
+  void _showSearchByInterestsDialog(List<String> interests) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Search by Interests'),
+          content: Text(
+              'Would you like to search by your interests: ${interests.join(', ')}?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                setState(() {
+                  searchByInterests = false;
+                });
+              },
+              child: Text('No'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                setState(() {
+                  searchByInterests = true;
+                  interestsController.text = interests.join(', ');
+                });
+                _generatePOIs();
+              },
+              child: Text('Yes'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> updateUserInterests(String interest) async {
@@ -203,7 +181,7 @@ class _HomePageState extends State<HomePage> {
 
     List<Map<String, dynamic>> pois = [];
     try {
-      pois = await fetchPOIs(location, interests); // Use the new function
+      pois = await fetchPOIs(location, interests);
     } catch (e) {
       print('Error fetching POIs: $e');
       _showErrorSnackBar('Locations not found, please try again');
@@ -780,6 +758,23 @@ class UserModel {
   }
 
   void addInterest(String interest) {
+    interest = interest.trim().toLowerCase();
+
+    // Normalize interest (e.g., "parks" and "park" considered the same)
+    if (interest.endsWith('s')) {
+      interest = interest.substring(0, interest.length - 1);
+    }
+
+    // Check for duplicates
+    if (interests.contains(interest)) {
+      return;
+    }
+
     interests.insert(0, interest);
+
+    // Ensure the list has a maximum of 10 interests
+    if (interests.length > 10) {
+      interests = interests.sublist(0, 10);
+    }
   }
 }
