@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
 import 'package:travelist/services/location/location_service.dart';
 import 'package:travelist/services/location/place_service.dart';
 import 'package:travelist/services/styles.dart';
@@ -130,6 +131,27 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> updateUserInterests(String interest) async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        DocumentReference userDoc =
+            FirebaseFirestore.instance.collection('users').doc(user.uid);
+        DocumentSnapshot userSnapshot = await userDoc.get();
+
+        if (userSnapshot.exists) {
+          UserModel userModel =
+              UserModel.fromJson(userSnapshot.data() as Map<String, dynamic>);
+          userModel.addInterest(interest);
+
+          await userDoc.update(userModel.toJson());
+        }
+      }
+    } catch (e) {
+      print('Error updating user interests: $e');
+    }
+  }
+
   void _generatePOIs() async {
     setState(() {
       _isLoading = true;
@@ -171,6 +193,11 @@ class _HomePageState extends State<HomePage> {
         ? '${position.latitude}, ${position.longitude}'
         : locationController.text;
     String interests = interestsController.text;
+
+    // Update user interests in Firestore
+    if (interests.isNotEmpty) {
+      await updateUserInterests(interests);
+    }
 
     print('Generating POIs for location: $location with interests: $interests');
 
@@ -632,11 +659,11 @@ class _HomePageState extends State<HomePage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryColor,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: .0, vertical: 4.0), // Reduce padding here
+                        horizontal: 10.0,
+                        vertical: 4.0), // Adjust padding as needed
                   ),
                   child: const Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.center, // Center the content
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.add,
@@ -669,13 +696,16 @@ class PlaceSearchDelegate extends SearchDelegate<String> {
 
   @override
   List<Widget> buildActions(BuildContext context) {
-    return [IconButton(icon: const Icon(Icons.clear), onPressed: () => query = '')];
+    return [
+      IconButton(icon: const Icon(Icons.clear), onPressed: () => query = '')
+    ];
   }
 
   @override
   Widget buildLeading(BuildContext context) {
     return IconButton(
-        icon: const Icon(Icons.arrow_back), onPressed: () => close(context, ''));
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => close(context, ''));
   }
 
   @override
@@ -711,5 +741,45 @@ class PlaceSearchDelegate extends SearchDelegate<String> {
         }
       },
     );
+  }
+}
+
+class UserModel {
+  String uid;
+  String email;
+  String? name;
+  String image;
+  List<String> interests;
+
+  UserModel({
+    required this.uid,
+    required this.email,
+    this.name,
+    this.image = '',
+    this.interests = const [],
+  });
+
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return UserModel(
+      uid: json['uid'],
+      email: json['email'],
+      name: json['name'],
+      image: json.containsKey('image') ? json['image'] : '',
+      interests: List<String>.from(json['interests'] ?? []),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'uid': uid,
+      'email': email,
+      'name': name,
+      'image': image,
+      'interests': interests,
+    };
+  }
+
+  void addInterest(String interest) {
+    interests.insert(0, interest);
   }
 }
