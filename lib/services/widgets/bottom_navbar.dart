@@ -6,7 +6,8 @@ class BottomNavBar extends StatelessWidget {
   final ValueChanged<int> onItemTapped;
   final VoidCallback onLogoutTapped;
 
-  const BottomNavBar({super.key, 
+  const BottomNavBar({
+    super.key,
     required this.selectedIndex,
     required this.onItemTapped,
     required this.onLogoutTapped,
@@ -15,7 +16,7 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      items: const <BottomNavigationBarItem>[
+      items: <BottomNavigationBarItem>[
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
           label: 'Home',
@@ -29,6 +30,10 @@ class BottomNavBar extends StatelessWidget {
           label: 'Chat',
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.logout),
           label: 'Logout',
         ),
@@ -37,7 +42,7 @@ class BottomNavBar extends StatelessWidget {
       selectedItemColor: AppColors.primaryColor,
       unselectedItemColor: AppColors.tertiryColor,
       onTap: (index) {
-        if (index == 3) {
+        if (index == 4) {
           onLogoutTapped();
         } else {
           onItemTapped(index);
