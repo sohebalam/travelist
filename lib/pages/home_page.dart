@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
+import 'package:travelist/models/user_model.dart';
 import 'package:travelist/services/location/location_service.dart';
 import 'package:travelist/services/location/place_service.dart';
 import 'package:travelist/services/styles.dart';
@@ -103,6 +104,15 @@ class _HomePageState extends State<HomePage> {
       _isLoading = true;
     });
 
+    // Check if a location is provided or the user's current location is available
+    if (!useCurrentLocation && locationController.text.isEmpty) {
+      _showErrorSnackBar('Please enter a location');
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
     Position? position;
 
     if (useCurrentLocation) {
@@ -139,8 +149,8 @@ class _HomePageState extends State<HomePage> {
         ? '${position.latitude}, ${position.longitude}'
         : locationController.text;
 
-    // Update user interests in Firestore
-    if (interests != null && interests.isNotEmpty) {
+    // Update user interests in Firestore only if it's from custom search
+    if (customSearch && interests != null && interests.isNotEmpty) {
       await updateUserInterests(interests);
     }
 
@@ -764,52 +774,5 @@ class PlaceSearchDelegate extends SearchDelegate<String> {
         }
       },
     );
-  }
-}
-
-class UserModel {
-  String uid;
-  String email;
-  String? name;
-  String image;
-  List<String> interests;
-
-  UserModel({
-    required this.uid,
-    required this.email,
-    this.name,
-    this.image = '',
-    this.interests = const [],
-  });
-
-  factory UserModel.fromJson(Map<String, dynamic> json) {
-    return UserModel(
-      uid: json['uid'],
-      email: json['email'],
-      name: json['name'],
-      image: json.containsKey('image') ? json['image'] : '',
-      interests: List<String>.from(json['interests'] ?? []),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'uid': uid,
-      'email': email,
-      'name': name,
-      'image': image,
-      'interests': interests,
-    };
-  }
-
-  void addInterest(String interest) {
-    interest = interest.trim();
-    if (!interests.any((i) => i.toLowerCase() == interest.toLowerCase())) {
-      interests.insert(0, interest);
-    }
-
-    if (interests.length > 10) {
-      interests = interests.sublist(0, 10);
-    }
   }
 }
