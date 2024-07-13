@@ -13,7 +13,8 @@ class AuthService {
         email: email,
         password: password,
       );
-      return result.user;
+      User? user = result.user;
+      return user;
     } catch (e) {
       print('Error signing in with email and password: $e');
       return null;
@@ -78,10 +79,28 @@ class AuthService {
         'image': image, // Save the user's image
         'uid': user.uid,
         'date': DateTime.now(),
-      });
+        'interests': FieldValue.arrayUnion(
+            []), // Initialize interests as empty array if not present
+      }, SetOptions(merge: true));
     } catch (e) {
       print('Error saving user to Firestore: $e');
       rethrow;
     }
+  }
+
+  Future<List<String>> getUserInterests(User user) async {
+    try {
+      DocumentSnapshot userSnapshot =
+          await _firestore.collection('users').doc(user.uid).get();
+      if (userSnapshot.exists) {
+        Map<String, dynamic> userData =
+            userSnapshot.data() as Map<String, dynamic>;
+        List<String> interests = List<String>.from(userData['interests'] ?? []);
+        return interests;
+      }
+    } catch (e) {
+      print('Error loading user interests: $e');
+    }
+    return [];
   }
 }

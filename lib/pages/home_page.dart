@@ -3,14 +3,15 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travelist/models/user_model.dart';
+import 'package:travelist/services/auth/auth_service.dart';
 import 'package:travelist/services/location/location_service.dart';
 import 'package:travelist/services/location/place_service.dart';
 import 'package:travelist/services/styles.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places_sdk;
-import 'package:travelist/services/location/poi_service.dart'; // Import POIService
+import 'package:travelist/services/location/poi_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -44,7 +45,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadEnv();
-    _loadUserInterests();
+    _loadUserInterests(); // Ensure user interests are loaded after initialization
   }
 
   Future<void> _loadEnv() async {
@@ -62,17 +63,10 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadUserInterests() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      if (userSnapshot.exists) {
-        UserModel userModel =
-            UserModel.fromJson(userSnapshot.data() as Map<String, dynamic>);
-        setState(() {
-          userInterests = userModel.interests;
-        });
-      }
+      List<String> interests = await AuthService().getUserInterests(user);
+      setState(() {
+        userInterests = interests;
+      });
     }
   }
 
@@ -82,17 +76,9 @@ class _HomePageState extends State<HomePage> {
       if (user != null) {
         DocumentReference userDoc =
             FirebaseFirestore.instance.collection('users').doc(user.uid);
-        DocumentSnapshot userSnapshot = await userDoc.get();
-
-        if (userSnapshot.exists) {
-          UserModel userModel =
-              UserModel.fromJson(userSnapshot.data() as Map<String, dynamic>);
-          for (String interest in interests) {
-            userModel.addInterest(interest);
-          }
-
-          await userDoc.update(userModel.toJson());
-        }
+        await userDoc.update({
+          'interests': FieldValue.arrayUnion(interests),
+        });
       }
     } catch (e) {
       print('Error updating user interests: $e');
@@ -681,7 +667,7 @@ class _HomePageState extends State<HomePage> {
                   )
                 : Container(),
             Positioned(
-              top: 200,
+              top: customSearch ? 210 : 140,
               left: 10,
               child: SizedBox(
                 width: 150, // Adjust the width as needed
@@ -714,7 +700,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-            ),
+            )
           ],
         ),
       ),
