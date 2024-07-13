@@ -121,6 +121,13 @@ class _HomePageState extends State<HomePage> {
         return;
       }
     } else {
+      if (locationController.text.isEmpty) {
+        _showErrorSnackBar('Please enter a location');
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
       String location = locationController.text;
       List<String> latLng = location.split(',');
       if (latLng.length == 2) {
@@ -554,8 +561,17 @@ class _HomePageState extends State<HomePage> {
                                 height:
                                     15.0), // Add spacing between switch and button
                             ElevatedButton(
-                              onPressed: () => _generatePOIs(
-                                  interests: [interestsController.text.trim()]),
+                              onPressed: () {
+                                if (useCurrentLocation ||
+                                    locationController.text.isNotEmpty) {
+                                  _generatePOIs(interests: [
+                                    interestsController.text.trim()
+                                  ]);
+                                } else {
+                                  _showErrorSnackBar(
+                                      'Please enter a location or use your current location.');
+                                }
+                              },
                               child: const Icon(Icons.search,
                                   color: AppColors.secondaryColor),
                             ),
