@@ -476,24 +476,26 @@ class _HomePageState extends State<HomePage> {
                 // First row: Location input and "Use My Location" switch
                 Row(
                   children: [
-                    if (!useCurrentLocation)
-                      Expanded(
-                        flex: 6,
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: TextField(
-                            controller: locationController,
-                            decoration: const InputDecoration(
-                              labelText: 'Enter location',
-                              floatingLabelBehavior: FloatingLabelBehavior.auto,
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
+                    Expanded(
+                      flex: 6,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: !useCurrentLocation
+                            ? TextField(
+                                controller: locationController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Enter location',
+                                  floatingLabelBehavior:
+                                      FloatingLabelBehavior.auto,
+                                  border: OutlineInputBorder(),
+                                ),
+                              )
+                            : Container(), // Empty container to maintain layout
                       ),
+                    ),
                     Expanded(
                       flex: 2,
-                      child: Column(
+                      child: Row(
                         children: [
                           Switch(
                             activeTrackColor: AppColors.primaryColor,
@@ -522,23 +524,46 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     if (userInterests.isNotEmpty)
                       Expanded(
-                        flex: 6,
+                        flex: 5,
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: ElevatedButton(
                             onPressed: () =>
                                 _generatePOIs(interests: userInterests),
-                            child: const Text(
-                              'Search by my interests',
-                              style: TextStyle(color: AppColors.secondaryColor),
+                            style: ElevatedButton.styleFrom(
+                              padding:
+                                  EdgeInsets.zero, // Remove default padding
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 0.0), // Add custom padding
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.search,
+                                      color: AppColors.secondaryColor),
+                                  const SizedBox(
+                                      width:
+                                          2.0), // Space between icon and text
+                                  const Text(
+                                    'by my profile interests',
+                                    style: TextStyle(
+                                        color: AppColors.secondaryColor),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                     Expanded(
-                      flex: 2,
-                      child: Column(
+                      flex: 4,
+                      child: Row(
                         children: [
+                          const Text('Custom Search'),
+                          SizedBox(
+                            width: 5,
+                          ),
                           Switch(
                             activeTrackColor: AppColors.primaryColor,
                             activeColor: Colors.white,
@@ -549,7 +574,6 @@ class _HomePageState extends State<HomePage> {
                               });
                             },
                           ),
-                          const Text('Custom Search'),
                         ],
                       ),
                     ),
@@ -558,29 +582,47 @@ class _HomePageState extends State<HomePage> {
 
                 // Third row: Custom search field and search button
                 if (customSearch)
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      children: [
-                        TextField(
-                          controller: interestsController,
-                          decoration: const InputDecoration(
-                            labelText: 'Enter interests',
-                            floatingLabelBehavior: FloatingLabelBehavior.auto,
-                            border: OutlineInputBorder(),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 6,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: TextField(
+                            controller: interestsController,
+                            decoration: const InputDecoration(
+                              labelText: 'Enter interests',
+                              floatingLabelBehavior: FloatingLabelBehavior.auto,
+                              border: OutlineInputBorder(),
+                            ),
                           ),
                         ),
-                        ElevatedButton(
-                          onPressed: () => _generatePOIs(
-                              interests: [interestsController.text.trim()]),
-                          child: const Icon(Icons.search,
-                              color: AppColors.secondaryColor),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () => _generatePOIs(interests: [
+                                      interestsController.text.trim()
+                                    ]),
+                                    child: const Icon(Icons.search,
+                                        color: AppColors.secondaryColor),
+                                  ),
+                                ],
+                              ),
+                            )
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
 
-                // Expanded Google Map
                 Expanded(
                   child: GoogleMap(
                     initialCameraPosition: const CameraPosition(
