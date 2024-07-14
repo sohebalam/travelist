@@ -8,6 +8,7 @@ import 'package:travelist/models/user_model.dart';
 import 'package:travelist/services/auth/auth_service.dart';
 import 'package:travelist/services/location/location_service.dart';
 import 'package:travelist/services/location/place_service.dart';
+import 'package:travelist/services/shared_functions.dart';
 import 'package:travelist/services/styles.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places_sdk;
@@ -73,20 +74,20 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> updateUserInterests(List<String> interests) async {
-    try {
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        DocumentReference userDoc =
-            FirebaseFirestore.instance.collection('users').doc(user.uid);
-        await userDoc.update({
-          'interests': FieldValue.arrayUnion(interests),
-        });
-      }
-    } catch (e) {
-      print('Error updating user interests: $e');
-    }
-  }
+  // Future<void> updateUserInterests(List<String> interests) async {
+  //   try {
+  //     User? user = FirebaseAuth.instance.currentUser;
+  //     if (user != null) {
+  //       DocumentReference userDoc =
+  //           FirebaseFirestore.instance.collection('users').doc(user.uid);
+  //       await userDoc.update({
+  //         'interests': FieldValue.arrayUnion(interests),
+  //       });
+  //     }
+  //   } catch (e) {
+  //     print('Error updating user interests: $e');
+  //   }
+  // }
 
   void _generatePOIs({List<String>? interests}) async {
     setState(() {

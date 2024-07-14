@@ -78,9 +78,11 @@ class AuthService {
       String? existingImage;
 
       if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
         // Preserve existing isAdmin value and image if the document exists
-        isAdmin = doc['isAdmin'] ?? false;
-        existingImage = doc['image'] as String?;
+        isAdmin = data.containsKey('isAdmin') ? data['isAdmin'] as bool : false;
+        existingImage =
+            data.containsKey('image') ? data['image'] as String? : null;
       }
 
       await userRef.set({

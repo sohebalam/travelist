@@ -4,7 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:travelist/services/widgets/image_picker.dart';
+import 'package:travelist/services/shared_functions.dart';
+import '../../services/widgets/image_picker.dart'; // Adjust the import according to your project structure
 
 class UserProfilePage extends StatefulWidget {
   @override
@@ -18,6 +19,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
   final TextEditingController _imageController = TextEditingController();
   final TextEditingController _interestController = TextEditingController();
   File? _image;
+  late Future<DocumentSnapshot> _userFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _userFuture =
+        FirebaseFirestore.instance.collection('users').doc(user?.uid).get();
+  }
 
   Future<void> _updateProfile() async {
     try {
@@ -57,16 +66,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
   Future<void> _addInterest() async {
     if (_interestController.text.trim().isEmpty) return;
     try {
-      final userRef =
-          FirebaseFirestore.instance.collection('users').doc(user!.uid);
-      await userRef.update({
-        'interests': FieldValue.arrayUnion(
-            [_interestController.text.trim().toLowerCase()]),
-      });
+      await updateUserInterests(
+          [_interestController.text.trim().toLowerCase()]);
       _interestController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Interest added')),
       );
+      setState(() {
+        _userFuture =
+            FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+      });
     } catch (e) {
       print('Error adding interest: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,19 +95,17 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final uid = user?.uid;
-
     return Scaffold(
       appBar: AppBar(
         title: Text('User Profile'),
         backgroundColor: Colors.teal,
       ),
       body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+        future: _userFuture,
         builder:
             (BuildContext context, AsyncSnapshot<DocumentSnapshot> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return _buildSkeletonLoading();
           }
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
@@ -109,9 +116,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
           Map<String, dynamic> data =
               snapshot.data!.data() as Map<String, dynamic>;
-          _nameController.text = data['name'];
-          _emailController.text = data['email'];
-          _imageController.text = data['image'];
+
+          if (_nameController.text.isEmpty) {
+            _nameController.text = data['name'];
+            _emailController.text = data['email'];
+            _imageController.text = data['image'];
+          }
 
           return SingleChildScrollView(
             child: Padding(
@@ -127,6 +137,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             ? FileImage(_image!)
                             : NetworkImage(data['image'] ?? 'assets/person.png')
                                 as ImageProvider,
+                        onBackgroundImageError: (_, __) {
+                          setState(() {
+                            _image = null;
+                          });
+                        },
                       ),
                       Positioned(
                         bottom: 0,
@@ -157,15 +172,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       labelText: 'Email',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.email),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: _imageController,
-                    decoration: InputDecoration(
-                      labelText: 'Image URL',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.image),
                     ),
                   ),
                   SizedBox(height: 16),
@@ -219,6 +225,98 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildSkeletonLoading() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.grey[300],
+                  child: Icon(Icons.person, size: 50, color: Colors.grey[400]),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.grey[300],
+                    child: Icon(Icons.edit, color: Colors.grey[400]),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              height: 56,
+              color: Colors.grey[300],
+            ),
+            SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              height: 56,
+              color: Colors.grey[300],
+            ),
+            SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              height: 56,
+              color: Colors.grey[300],
+            ),
+            SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              height: 40,
+              color: Colors.grey[300],
+            ),
+            SizedBox(height: 16),
+            Divider(),
+            SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              height: 24,
+              color: Colors.grey[300],
+            ),
+            SizedBox(height: 8),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: 3,
+              itemBuilder: (context, index) {
+                return Card(
+                  child: ListTile(
+                    title: Container(
+                      width: double.infinity,
+                      height: 20,
+                      color: Colors.grey[300],
+                    ),
+                    leading: Icon(Icons.star, color: Colors.grey[300]),
+                  ),
+                );
+              },
+            ),
+            SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              height: 56,
+              color: Colors.grey[300],
+            ),
+            SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              height: 40,
+              color: Colors.grey[300],
+            ),
+          ],
+        ),
       ),
     );
   }
