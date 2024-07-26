@@ -33,3 +33,13 @@ Future<void> updateUserInterests(List<String> newInterests) async {
     print('Error updating user interests: $e');
   }
 }
+
+Future<void> createList(
+    String listName, CollectionReference listsCollection) async {
+  if (listName.isNotEmpty) {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await listsCollection.add({'list': listName, 'userId': user.uid});
+    }
+  }
+}

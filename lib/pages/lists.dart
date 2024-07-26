@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travelist/pages/list_detail.dart';
+import 'package:travelist/services/shared_functions.dart';
 
 class ListsPage extends StatefulWidget {
   const ListsPage({super.key});
@@ -131,12 +132,9 @@ class _ListsPageState extends State<ListsPage> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 if (formKey.currentState!.validate()) {
-                  _listsCollection.add({
-                    'list': listNameController.text,
-                    'userId': _currentUser?.uid, // Add userId to the new list
-                  });
+                  await createList(listNameController.text, _listsCollection);
                   Navigator.of(context).pop();
                 }
               },

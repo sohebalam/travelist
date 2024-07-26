@@ -206,8 +206,9 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         ElevatedButton(
-                          onPressed: () {
-                            _createList(newListController.text);
+                          onPressed: () async {
+                            await createList(
+                                newListController.text, _listsCollection);
                             newListController.clear();
                           },
                           child: const Text('Create New List'),
@@ -302,22 +303,6 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _selectedListId = listId;
     });
-  }
-
-  void _createList(String listName) {
-    if (listName.isNotEmpty) {
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        _listsCollection
-            .add({'list': listName, 'userId': user.uid}).then((docRef) {
-          setState(() {
-            _selectedListId = docRef.id;
-            _selectedListName = listName;
-            _showNewListFields = false;
-          });
-        });
-      }
-    }
   }
 
   Future<Position> _determinePosition() async {
