@@ -8,6 +8,7 @@ import 'package:travelist/services/shared_functions.dart';
 import 'package:travelist/models/user_model.dart';
 import 'package:travelist/services/widgets/image_picker.dart'; // Adjust the import according to your project structure
 import 'view_user_profile_page.dart'; // Import the new profile viewing page
+import 'view_pois_page.dart'; // Import the page to view POIs
 
 class UserProfilePage extends StatefulWidget {
   @override
@@ -20,6 +21,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _imageController = TextEditingController();
   final TextEditingController _interestController = TextEditingController();
+  final TextEditingController _listController = TextEditingController();
   File? _image;
   late Future<DocumentSnapshot> _userFuture;
   bool isAdmin = false;
@@ -27,6 +29,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   List<Map<String, dynamic>> allLists = [];
   String selectedView = 'Interests'; // Default view
   String? editingInterest; // To keep track of the interest being edited
+  String? editingList; // To keep track of the list being edited
 
   @override
   void initState() {
@@ -48,6 +51,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
     if (isAdmin) {
       await _loadAllUsers();
+      await _loadAllLists();
     }
   }
 
@@ -66,7 +70,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         await FirebaseFirestore.instance.collection('lists').get();
     setState(() {
       allLists = querySnapshot.docs
-          .map((doc) => doc.data() as Map<String, dynamic>)
+          .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
           .toList();
     });
   }
@@ -174,6 +178,68 @@ class _UserProfilePageState extends State<UserProfilePage> {
     }
   }
 
+  Future<void> _addList() async {
+    if (_listController.text.trim().isEmpty) return;
+    try {
+      await FirebaseFirestore.instance.collection('lists').add({
+        'list': _listController.text.trim(),
+        'userId': user?.uid,
+      });
+      _listController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('List added')),
+      );
+      setState(() {
+        _loadAllLists();
+      });
+    } catch (e) {
+      print('Error adding list: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add list')),
+      );
+    }
+  }
+
+  Future<void> _editList(String listId, String newListName) async {
+    if (newListName.trim().isEmpty) return;
+    try {
+      final listRef =
+          FirebaseFirestore.instance.collection('lists').doc(listId);
+      await listRef.update({'list': newListName.trim()});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('List updated')),
+      );
+      setState(() {
+        editingList = null;
+        _loadAllLists();
+      });
+    } catch (e) {
+      print('Error editing list: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to edit list')),
+      );
+    }
+  }
+
+  Future<void> _deleteList(String listId) async {
+    try {
+      final listRef =
+          FirebaseFirestore.instance.collection('lists').doc(listId);
+      await listRef.delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('List deleted')),
+      );
+      setState(() {
+        _loadAllLists();
+      });
+    } catch (e) {
+      print('Error deleting list: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete list')),
+      );
+    }
+  }
+
   Future<void> _pickImage() async {
     final pickedImage = await pickImage(context);
     if (pickedImage != null) {
@@ -219,6 +285,33 @@ class _UserProfilePageState extends State<UserProfilePage> {
             TextButton(
               onPressed: () {
                 _deleteUser(userId);
+                Navigator.of(context).pop();
+              },
+              child: Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showDeleteListConfirmationDialog(String listId) async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Delete List'),
+          content: Text('Are you sure you want to delete this list?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _deleteList(listId);
                 Navigator.of(context).pop();
               },
               child: Text('Delete'),
@@ -471,14 +564,70 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       physics: NeverScrollableScrollPhysics(),
                       itemCount: allLists.length,
                       itemBuilder: (context, index) {
+                        var listId = allLists[index]['id'];
+                        var listName =
+                            allLists[index]['list'] ?? 'Unnamed List';
                         return Card(
                           child: ListTile(
-                            title:
-                                Text(allLists[index]['list'] ?? 'Unnamed List'),
+                            title: editingList == listId
+                                ? TextField(
+                                    controller: _listController
+                                      ..text = listName,
+                                    onSubmitted: (newValue) {
+                                      _editList(listId, newValue);
+                                    },
+                                  )
+                                : Text(listName),
                             leading: Icon(Icons.list, color: Colors.teal),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.edit, color: Colors.blue),
+                                  onPressed: () {
+                                    setState(() {
+                                      editingList = listId;
+                                      _listController.text = listName;
+                                    });
+                                  },
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () {
+                                    _showDeleteListConfirmationDialog(listId);
+                                  },
+                                ),
+                              ],
+                            ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ViewPoisPage(listId: listId),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: _listController,
+                      decoration: InputDecoration(
+                        labelText: 'Add List',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.add),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: _addList,
+                      child: Text('Add List'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                      ),
                     ),
                   ],
                 ],
@@ -593,16 +742,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ),
             SizedBox(height: 16),
             Container(
-              width: double.infinity,
-              height: 56,
-              color: Colors.grey[300],
-            ),
+                width: double.infinity, height: 56, color: Colors.grey[300]),
             SizedBox(height: 8),
             Container(
-              width: double.infinity,
-              height: 40,
-              color: Colors.grey[300],
-            ),
+                width: double.infinity, height: 40, color: Colors.grey[300]),
           ],
         ),
       ),
