@@ -24,6 +24,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   late Future<DocumentSnapshot> _userFuture;
   bool isAdmin = false;
   List<UserModel> allUsers = [];
+  List<Map<String, dynamic>> allLists = [];
   String selectedView = 'Interests'; // Default view
   String? editingInterest; // To keep track of the interest being edited
 
@@ -56,6 +57,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
     setState(() {
       allUsers = querySnapshot.docs
           .map((doc) => UserModel.fromJson(doc.data()))
+          .toList();
+    });
+  }
+
+  Future<void> _loadAllLists() async {
+    var querySnapshot =
+        await FirebaseFirestore.instance.collection('lists').get();
+    setState(() {
+      allLists = querySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
           .toList();
     });
   }
@@ -259,7 +270,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   if (isAdmin)
                     DropdownButton<String>(
                       value: selectedView,
-                      items: ['Interests', 'Users'].map((String value) {
+                      items:
+                          ['Interests', 'Users', 'Lists'].map((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
                           child: Text(value),
@@ -268,6 +280,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       onChanged: (String? newValue) {
                         setState(() {
                           selectedView = newValue!;
+                          if (selectedView == 'Lists') {
+                            _loadAllLists(); // Call the function to load all lists
+                          }
                         });
                       },
                     ),
@@ -393,7 +408,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         backgroundColor: Colors.teal,
                       ),
                     ),
-                  ] else ...[
+                  ] else if (selectedView == 'Users') ...[
                     Text(
                       'Users',
                       style:
@@ -440,6 +455,27 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                 ),
                               ],
                             ),
+                          ),
+                        );
+                      },
+                    ),
+                  ] else if (selectedView == 'Lists') ...[
+                    Text(
+                      'Lists',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      itemCount: allLists.length,
+                      itemBuilder: (context, index) {
+                        return Card(
+                          child: ListTile(
+                            title:
+                                Text(allLists[index]['list'] ?? 'Unnamed List'),
+                            leading: Icon(Icons.list, color: Colors.teal),
                           ),
                         );
                       },
