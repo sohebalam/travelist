@@ -1,74 +1,44 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:travelist/services/shared_functions.dart';
-import 'package:travelist/models/user_model.dart';
-import 'package:travelist/services/widgets/image_picker.dart'; // Adjust the import according to your project structure
-import 'view_user_profile_page.dart'; // Import the new profile viewing page
+import 'package:firebase_auth/firebase_auth.dart'; // For current user information
 
-class UserProfilePage extends StatefulWidget {
+class ViewUserProfilePage extends StatefulWidget {
+  final String userId;
+
+  ViewUserProfilePage({required this.userId});
+
   @override
-  _UserProfilePageState createState() => _UserProfilePageState();
+  _ViewUserProfilePageState createState() => _ViewUserProfilePageState();
 }
 
-class _UserProfilePageState extends State<UserProfilePage> {
-  final User? user = FirebaseAuth.instance.currentUser;
+class _ViewUserProfilePageState extends State<ViewUserProfilePage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _imageController = TextEditingController();
   final TextEditingController _interestController = TextEditingController();
   File? _image;
   late Future<DocumentSnapshot> _userFuture;
-  bool isAdmin = false;
-  List<UserModel> allUsers = [];
-  String selectedView = 'Interests'; // Default view
-  String? editingInterest; // To keep track of the interest being edited
+  String? editingInterest;
 
   @override
   void initState() {
     super.initState();
     _userFuture =
-        FirebaseFirestore.instance.collection('users').doc(user?.uid).get();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    var userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user?.uid)
-        .get();
-    var userData = userDoc.data() as Map<String, dynamic>;
-    setState(() {
-      isAdmin = userData['isAdmin'] ?? false;
-    });
-
-    if (isAdmin) {
-      await _loadAllUsers();
-    }
-  }
-
-  Future<void> _loadAllUsers() async {
-    var querySnapshot =
-        await FirebaseFirestore.instance.collection('users').get();
-    setState(() {
-      allUsers = querySnapshot.docs
-          .map((doc) => UserModel.fromJson(doc.data()))
-          .toList();
-    });
+        FirebaseFirestore.instance.collection('users').doc(widget.userId).get();
   }
 
   Future<void> _updateProfile() async {
     try {
       String? imageUrl;
       if (_image != null) {
-        imageUrl = await _uploadImageToFirebase(user!.uid);
+        imageUrl = await _uploadImageToFirebase(widget.userId);
       }
 
       final userRef =
-          FirebaseFirestore.instance.collection('users').doc(user!.uid);
+          FirebaseFirestore.instance.collection('users').doc(widget.userId);
       await userRef.update({
         'name': _nameController.text,
         'email': _emailController.text,
@@ -98,15 +68,18 @@ class _UserProfilePageState extends State<UserProfilePage> {
   Future<void> _addInterest() async {
     if (_interestController.text.trim().isEmpty) return;
     try {
-      await updateUserInterests(
-          [_interestController.text.trim().toLowerCase()]);
+      final userRef =
+          FirebaseFirestore.instance.collection('users').doc(widget.userId);
+      final userDoc = await userRef.get();
+      List<String> interests = List<String>.from(userDoc['interests']);
+      interests.add(_interestController.text.trim().toLowerCase());
+      await userRef.update({'interests': interests});
       _interestController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Interest added')),
       );
       setState(() {
-        _userFuture =
-            FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+        _userFuture = userRef.get();
       });
     } catch (e) {
       print('Error adding interest: $e');
@@ -120,7 +93,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     if (newInterest.trim().isEmpty) return;
     try {
       final userRef =
-          FirebaseFirestore.instance.collection('users').doc(user!.uid);
+          FirebaseFirestore.instance.collection('users').doc(widget.userId);
       final userDoc = await userRef.get();
       List<String> interests = List<String>.from(userDoc['interests']);
       interests[interests.indexOf(oldInterest)] =
@@ -144,7 +117,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   Future<void> _deleteInterest(String interest) async {
     try {
       final userRef =
-          FirebaseFirestore.instance.collection('users').doc(user!.uid);
+          FirebaseFirestore.instance.collection('users').doc(widget.userId);
       final userDoc = await userRef.get();
       List<String> interests = List<String>.from(userDoc['interests']);
       interests.remove(interest);
@@ -164,58 +137,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   Future<void> _pickImage() async {
-    final pickedImage = await pickImage(context);
+    final pickedImage =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedImage != null) {
       setState(() {
-        _image = pickedImage;
+        _image = File(pickedImage.path);
       });
     }
-  }
-
-  Future<void> _deleteUser(String userId) async {
-    try {
-      final userRef =
-          FirebaseFirestore.instance.collection('users').doc(userId);
-      await userRef.delete();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User deleted')),
-      );
-      setState(() {
-        _loadAllUsers();
-      });
-    } catch (e) {
-      print('Error deleting user: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete user')),
-      );
-    }
-  }
-
-  Future<void> _showDeleteUserConfirmationDialog(String userId) async {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Delete User'),
-          content: Text('Are you sure you want to delete this user?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                _deleteUser(userId);
-                Navigator.of(context).pop();
-              },
-              child: Text('Delete'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -256,21 +184,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  if (isAdmin)
-                    DropdownButton<String>(
-                      value: selectedView,
-                      items: ['Interests', 'Users'].map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          selectedView = newValue!;
-                        });
-                      },
-                    ),
                   Stack(
                     children: [
                       CircleAvatar(
@@ -326,125 +239,70 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   SizedBox(height: 16),
                   Divider(),
                   SizedBox(height: 16),
-                  if (selectedView == 'Interests') ...[
-                    Text(
-                      'Interests',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 8),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      itemCount: interests.length,
-                      itemBuilder: (context, index) {
-                        return Card(
-                          child: ListTile(
-                            title: editingInterest == interests[index]
-                                ? TextField(
-                                    controller: _interestController
-                                      ..text = interests[index],
-                                    onSubmitted: (newValue) {
-                                      _editInterest(interests[index], newValue);
-                                    },
-                                  )
-                                : Text(interests[index]),
-                            leading: Icon(Icons.star, color: Colors.teal),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.blue),
-                                  onPressed: () {
-                                    setState(() {
-                                      editingInterest = interests[index];
-                                      _interestController.text =
-                                          interests[index];
-                                    });
+                  Text(
+                    'Interests',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemCount: interests.length,
+                    itemBuilder: (context, index) {
+                      return Card(
+                        child: ListTile(
+                          title: editingInterest == interests[index]
+                              ? TextField(
+                                  controller: _interestController
+                                    ..text = interests[index],
+                                  onSubmitted: (newValue) {
+                                    _editInterest(interests[index], newValue);
                                   },
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () {
-                                    _showDeleteConfirmationDialog(
-                                        interests[index]);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    TextField(
-                      controller: _interestController,
-                      decoration: InputDecoration(
-                        labelText: 'Add Interest',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.add),
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: _addInterest,
-                      child: Text('Add Interest'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                      ),
-                    ),
-                  ] else ...[
-                    Text(
-                      'Users',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 8),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      itemCount: allUsers.length,
-                      itemBuilder: (context, index) {
-                        return Card(
-                          child: ListTile(
-                            title: Flexible(
-                              child: Text(
-                                allUsers[index].email,
-                                overflow: TextOverflow.ellipsis,
+                                )
+                              : Text(interests[index]),
+                          leading: Icon(Icons.star, color: Colors.teal),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () {
+                                  setState(() {
+                                    editingInterest = interests[index];
+                                    _interestController.text = interests[index];
+                                  });
+                                },
                               ),
-                            ),
-                            leading: Icon(Icons.person, color: Colors.teal),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.blue),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            ViewUserProfilePage(
-                                          userId: allUsers[index].uid,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () {
-                                    _showDeleteUserConfirmationDialog(
-                                        allUsers[index].uid);
-                                  },
-                                ),
-                              ],
-                            ),
+                              IconButton(
+                                icon: Icon(Icons.delete, color: Colors.red),
+                                onPressed: () {
+                                  _showDeleteConfirmationDialog(
+                                      interests[index]);
+                                },
+                              ),
+                            ],
                           ),
-                        );
-                      },
+                        ),
+                      );
+                    },
+                  ),
+                  SizedBox(height: 16),
+                  TextField(
+                    controller: _interestController,
+                    decoration: InputDecoration(
+                      labelText: 'Add Interest',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.add),
                     ),
-                  ],
+                  ),
+                  SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: _addInterest,
+                    child: Text('Add Interest'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                    ),
+                  ),
                 ],
               ),
             ),
