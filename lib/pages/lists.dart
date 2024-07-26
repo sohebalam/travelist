@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travelist/pages/list_detail.dart';
-// Ensure this is the correct path to your BottomNavBar component
 
 class ListsPage extends StatefulWidget {
   const ListsPage({super.key});
@@ -15,6 +15,13 @@ class _ListsPageState extends State<ListsPage> {
       FirebaseFirestore.instance.collection('lists');
 
   int _selectedIndex = 1; // Set the default selected index to 1 (Lists Page)
+  User? _currentUser; // Add a variable to hold the current user
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUser = FirebaseAuth.instance.currentUser; // Get the current user
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -32,7 +39,9 @@ class _ListsPageState extends State<ListsPage> {
         title: const Text('Lists'),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _listsCollection.snapshots(),
+        stream: _listsCollection
+            .where('userId', isEqualTo: _currentUser?.uid)
+            .snapshots(), // Filter lists by user ID
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -89,13 +98,6 @@ class _ListsPageState extends State<ListsPage> {
         tooltip: 'Add New List',
         child: const Icon(Icons.add),
       ),
-      // bottomNavigationBar: BottomNavBar(
-      //   selectedIndex: _selectedIndex,
-      //   onItemTapped: _onItemTapped,
-      //   onLogoutTapped: () {
-      //     print('logout');
-      //   },
-      // ),
     );
   }
 
@@ -133,6 +135,7 @@ class _ListsPageState extends State<ListsPage> {
                 if (formKey.currentState!.validate()) {
                   _listsCollection.add({
                     'list': listNameController.text,
+                    'userId': _currentUser?.uid, // Add userId to the new list
                   });
                   Navigator.of(context).pop();
                 }

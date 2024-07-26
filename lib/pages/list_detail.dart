@@ -20,7 +20,8 @@ class ListDetailsPage extends StatefulWidget {
   final String listId;
   final String listName;
 
-  const ListDetailsPage({super.key, required this.listId, required this.listName});
+  const ListDetailsPage(
+      {super.key, required this.listId, required this.listName});
 
   @override
   _ListDetailsPageState createState() => _ListDetailsPageState();
@@ -690,29 +691,30 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                 );
                               },
                             ),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Slider(
-                                    value: _currentSliderValue,
-                                    min: 0,
-                                    max:
-                                        (_polylinePoints.length - 1).toDouble(),
-                                    divisions: _polylinePoints.length - 1,
-                                    label: (_currentSliderValue + 1)
-                                        .round()
-                                        .toString(),
-                                    onChanged: (double value) {
-                                      setState(() {
-                                        _currentSliderValue = value;
-                                        _calculateAndDisplayDistanceDuration(
-                                            value.toInt());
-                                      });
-                                    },
+                            if (_polylinePoints.length > 1)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Slider(
+                                      value: _currentSliderValue,
+                                      min: 0,
+                                      max: (_polylinePoints.length - 1)
+                                          .toDouble(),
+                                      divisions: _polylinePoints.length - 1,
+                                      label: (_currentSliderValue + 1)
+                                          .round()
+                                          .toString(),
+                                      onChanged: (double value) {
+                                        setState(() {
+                                          _currentSliderValue = value;
+                                          _calculateAndDisplayDistanceDuration(
+                                              value.toInt());
+                                        });
+                                      },
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -886,13 +888,16 @@ class PlaceSearchDelegate extends SearchDelegate<String> {
 
   @override
   List<Widget> buildActions(BuildContext context) {
-    return [IconButton(icon: const Icon(Icons.clear), onPressed: () => query = '')];
+    return [
+      IconButton(icon: const Icon(Icons.clear), onPressed: () => query = '')
+    ];
   }
 
   @override
   Widget buildLeading(BuildContext context) {
     return IconButton(
-        icon: const Icon(Icons.arrow_back), onPressed: () => close(context, ''));
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => close(context, ''));
   }
 
   @override

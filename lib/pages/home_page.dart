@@ -74,21 +74,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Future<void> updateUserInterests(List<String> interests) async {
-  //   try {
-  //     User? user = FirebaseAuth.instance.currentUser;
-  //     if (user != null) {
-  //       DocumentReference userDoc =
-  //           FirebaseFirestore.instance.collection('users').doc(user.uid);
-  //       await userDoc.update({
-  //         'interests': FieldValue.arrayUnion(interests),
-  //       });
-  //     }
-  //   } catch (e) {
-  //     print('Error updating user interests: $e');
-  //   }
-  // }
-
   void _generatePOIs({List<String>? interests}) async {
     setState(() {
       _isLoading = true;
@@ -181,13 +166,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showAddToListDialog(Map<String, dynamic> poi) {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
             return StreamBuilder<QuerySnapshot>(
-              stream: _listsCollection.snapshots(),
+              stream: _listsCollection
+                  .where('userId', isEqualTo: user.uid)
+                  .snapshots(),
               builder: (context, snapshot) {
                 bool hasLists =
                     snapshot.hasData && snapshot.data!.docs.isNotEmpty;
@@ -316,13 +306,17 @@ class _HomePageState extends State<HomePage> {
 
   void _createList(String listName) {
     if (listName.isNotEmpty) {
-      _listsCollection.add({'list': listName}).then((docRef) {
-        setState(() {
-          _selectedListId = docRef.id;
-          _selectedListName = listName;
-          _showNewListFields = false;
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        _listsCollection
+            .add({'list': listName, 'userId': user.uid}).then((docRef) {
+          setState(() {
+            _selectedListId = docRef.id;
+            _selectedListName = listName;
+            _showNewListFields = false;
+          });
         });
-      });
+      }
     }
   }
 
