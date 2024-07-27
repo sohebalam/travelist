@@ -523,9 +523,9 @@ class _HomePageState extends State<HomePage> {
                                       color: AppColors.secondaryColor),
                                   const SizedBox(
                                       width:
-                                          2.0), // Space between icon and text
+                                          5.0), // Space between icon and text
                                   const Text(
-                                    'by my profile interests',
+                                    'Points of interest',
                                     style: TextStyle(
                                         color: AppColors.secondaryColor),
                                   ),

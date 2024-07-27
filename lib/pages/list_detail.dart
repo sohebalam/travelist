@@ -8,6 +8,7 @@ import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:redacted/redacted.dart';
+import 'package:travelist/services/styles.dart';
 import 'package:travelist/services/widgets/bottom_navbar.dart';
 import 'package:travelist/services/location/place_service.dart';
 import 'package:travelist/services/location/poi_service.dart'; // Import the new POIService
@@ -579,35 +580,37 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           : Stack(
               children: [
                 gmaps.GoogleMap(
-                  initialCameraPosition: const gmaps.CameraPosition(
-                    target: gmaps.LatLng(51.509865, -0.118092),
-                    zoom: 13,
-                  ),
-                  markers: Set.from(_markers),
-                  polylines: _polylines,
-                  onMapCreated: (controller) {
-                    _mapController = controller;
-                    _controller.complete(controller);
-                    if (_polylinePoints.isNotEmpty &&
-                        !_userHasInteractedWithMap) {
-                      _mapController?.animateCamera(
-                        gmaps.CameraUpdate.newLatLngBounds(
-                          _calculateBounds(_polylinePoints),
-                          50,
-                        ),
-                      );
-                    }
-                  },
-                  myLocationEnabled: true,
-                  onCameraMove: (gmaps.CameraPosition position) {
-                    _userHasInteractedWithMap = true;
-                  },
-                ),
+                    initialCameraPosition: const gmaps.CameraPosition(
+                      target: gmaps.LatLng(51.509865, -0.118092),
+                      zoom: 13,
+                    ),
+                    markers: Set.from(_markers),
+                    polylines: _polylines,
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                      _controller.complete(controller);
+                      if (_polylinePoints.isNotEmpty &&
+                          !_userHasInteractedWithMap) {
+                        _mapController?.animateCamera(
+                          gmaps.CameraUpdate.newLatLngBounds(
+                            _calculateBounds(_polylinePoints),
+                            50,
+                          ),
+                        );
+                      }
+                    },
+                    myLocationEnabled: true,
+                    onCameraMove: (gmaps.CameraPosition position) {
+                      _userHasInteractedWithMap = true;
+                    },
+                    zoomControlsEnabled: false),
                 if (_error != null) Center(child: Text('Error: $_error')),
                 Positioned(
                   top: 10,
                   right: 10,
                   child: FloatingActionButton(
+                    backgroundColor: AppColors.primaryColor,
+                    foregroundColor: Colors.white,
                     onPressed: () async {
                       if (_navigationDestination == null) {
                         _setNearestDestination();
@@ -629,6 +632,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                   top: 10,
                   left: 10,
                   child: FloatingActionButton(
+                    backgroundColor: AppColors.primaryColor,
+                    foregroundColor: Colors.white,
                     onPressed: () {
                       _showSearch(context);
                     },
@@ -641,22 +646,56 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                   right: 10,
                   child: Column(
                     children: [
-                      FloatingActionButton(
-                        onPressed: () {
-                          _mapController
-                              ?.animateCamera(gmaps.CameraUpdate.zoomIn());
-                        },
-                        tooltip: 'Zoom in',
-                        child: const Icon(Icons.zoom_in),
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.tertiryColor,
+                          borderRadius: BorderRadius.circular(4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 5,
+                              spreadRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.add),
+                          iconSize: 20,
+                          color: Colors.black87,
+                          onPressed: () {
+                            _mapController
+                                ?.animateCamera(gmaps.CameraUpdate.zoomIn());
+                          },
+                          tooltip: 'Zoom in',
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      FloatingActionButton(
-                        onPressed: () {
-                          _mapController
-                              ?.animateCamera(gmaps.CameraUpdate.zoomOut());
-                        },
-                        tooltip: 'Zoom out',
-                        child: const Icon(Icons.zoom_out),
+                      const SizedBox(height: 3),
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.tertiryColor,
+                          borderRadius: BorderRadius.circular(4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 5,
+                              spreadRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.remove),
+                          iconSize: 20,
+                          color: Colors.black87,
+                          onPressed: () {
+                            _mapController
+                                ?.animateCamera(gmaps.CameraUpdate.zoomOut());
+                          },
+                          tooltip: 'Zoom out',
+                        ),
                       ),
                     ],
                   ),

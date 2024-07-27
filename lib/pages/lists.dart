@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travelist/pages/list_detail.dart';
 import 'package:travelist/services/shared_functions.dart';
+import 'package:travelist/services/styles.dart';
 
 class ListsPage extends StatefulWidget {
   const ListsPage({super.key});
@@ -37,7 +38,11 @@ class _ListsPageState extends State<ListsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Lists'),
+        title: Text(
+          'Lists',
+          style: TextStyle(color: Colors.white), // Set the text color to white
+        ),
+        backgroundColor: AppColors.primaryColor,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _listsCollection
@@ -97,6 +102,9 @@ class _ListsPageState extends State<ListsPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddListDialog(context),
         tooltip: 'Add New List',
+        backgroundColor:
+            AppColors.primaryColor, // Change this to your desired color
+        foregroundColor: Colors.white, // Change this to your desired icon color
         child: const Icon(Icons.add),
       ),
     );

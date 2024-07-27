@@ -6,8 +6,9 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:travelist/services/shared_functions.dart';
 import 'package:travelist/models/user_model.dart';
+import 'package:travelist/services/styles.dart';
 import 'package:travelist/services/widgets/image_picker.dart'; // Adjust the import according to your project structure
-import 'view_user_profile_page.dart'; // Import the new profile viewing page
+import 'view_profile.dart'; // Import the new profile viewing page
 import 'view_pois_page.dart'; // Import the page to view POIs
 
 class UserProfilePage extends StatefulWidget {
@@ -326,8 +327,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('User Profile'),
-        backgroundColor: Colors.teal,
+        title: Text(
+          'User Profile',
+          style: TextStyle(color: Colors.white), // Set the text color to white
+        ),
+        backgroundColor: AppColors.primaryColor,
       ),
       body: FutureBuilder<DocumentSnapshot>(
         future: _userFuture,
@@ -360,25 +364,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  if (isAdmin)
-                    DropdownButton<String>(
-                      value: selectedView,
-                      items:
-                          ['Interests', 'Users', 'Lists'].map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          selectedView = newValue!;
-                          if (selectedView == 'Lists') {
-                            _loadAllLists(); // Call the function to load all lists
-                          }
-                        });
-                      },
-                    ),
                   Stack(
                     children: [
                       CircleAvatar(
@@ -398,7 +383,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         child: InkWell(
                           onTap: _pickImage,
                           child: CircleAvatar(
-                            backgroundColor: Colors.teal,
+                            backgroundColor: AppColors.primaryColor,
                             child: Icon(Icons.edit, color: Colors.white),
                           ),
                         ),
@@ -424,11 +409,51 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     ),
                   ),
                   SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _updateProfile,
-                    child: Text('Update Profile'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
+                  Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isAdmin) ...[
+                          Text(
+                            'Manage',
+                            style: TextStyle(
+                                fontSize:
+                                    16), // Customize the text style if needed
+                          ),
+                          SizedBox(width: 8),
+                          DropdownButton<String>(
+                            value: selectedView,
+                            items: ['Interests', 'Users', 'Lists']
+                                .map((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value),
+                              );
+                            }).toList(),
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                selectedView = newValue!;
+                                if (selectedView == 'Lists') {
+                                  _loadAllLists(); // Call the function to load all lists
+                                }
+                              });
+                            },
+                          ),
+                          SizedBox(width: 16),
+                          ElevatedButton(
+                            onPressed: _updateProfile,
+                            child: Text(
+                              'Update Profile',
+                              style: TextStyle(
+                                color: Colors.white,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   SizedBox(height: 16),
@@ -457,12 +482,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                     },
                                   )
                                 : Text(interests[index]),
-                            leading: Icon(Icons.star, color: Colors.teal),
+                            leading:
+                                Icon(Icons.star, color: AppColors.primaryColor),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.blue),
+                                  icon: Icon(Icons.edit,
+                                      color: AppColors.secondaryColor),
                                   onPressed: () {
                                     setState(() {
                                       editingInterest = interests[index];
@@ -472,7 +499,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                   },
                                 ),
                                 IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.red),
+                                  icon: Icon(Icons.delete,
+                                      color: AppColors.primaryColor),
                                   onPressed: () {
                                     _showDeleteConfirmationDialog(
                                         interests[index]);
@@ -496,9 +524,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     SizedBox(height: 8),
                     ElevatedButton(
                       onPressed: _addInterest,
-                      child: Text('Add Interest'),
+                      child: Text(
+                        'Add Interest',
+                        style: TextStyle(
+                            color: Colors.white), // Set the text color to white
+                      ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
+                        backgroundColor: AppColors.primaryColor,
                       ),
                     ),
                   ] else if (selectedView == 'Users') ...[
@@ -526,7 +558,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.blue),
+                                  icon: Icon(Icons.edit,
+                                      color: AppColors.secondaryColor),
                                   onPressed: () {
                                     Navigator.push(
                                       context,
