@@ -12,6 +12,9 @@ import 'view_profile.dart'; // Import the new profile viewing page
 import 'view_pois_page.dart'; // Import the page to view POIs
 
 class UserProfilePage extends StatefulWidget {
+  final Key? key;
+
+  const UserProfilePage({this.key}) : super(key: key);
   @override
   _UserProfilePageState createState() => _UserProfilePageState();
 }
@@ -370,7 +373,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         radius: 50,
                         backgroundImage: _image != null
                             ? FileImage(_image!)
-                            : NetworkImage(_imageController.text),
+                            : NetworkImage(_imageController.text)
+                                as ImageProvider,
                         onBackgroundImageError: (_, __) {
                           setState(() {
                             _image = null;
@@ -553,7 +557,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            leading: Icon(Icons.person, color: Colors.teal),
+                            leading: Icon(Icons.person,
+                                color: AppColors.primaryColor),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -573,7 +578,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                   },
                                 ),
                                 IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.red),
+                                  icon: Icon(Icons.delete,
+                                      color: AppColors.primaryColor),
                                   onPressed: () {
                                     _showDeleteUserConfirmationDialog(
                                         allUsers[index].uid);

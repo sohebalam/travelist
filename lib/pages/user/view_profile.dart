@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // For current user information
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:travelist/services/styles.dart'; // For current user information
 
 class ViewUserProfilePage extends StatefulWidget {
   final String userId;
@@ -150,8 +151,11 @@ class _ViewUserProfilePageState extends State<ViewUserProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('User Profile'),
-        backgroundColor: Colors.teal,
+        title: Text(
+          'User Profile',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: AppColors.primaryColor,
       ),
       body: FutureBuilder<DocumentSnapshot>(
         future: _userFuture,
@@ -203,7 +207,7 @@ class _ViewUserProfilePageState extends State<ViewUserProfilePage> {
                         child: InkWell(
                           onTap: _pickImage,
                           child: CircleAvatar(
-                            backgroundColor: Colors.teal,
+                            backgroundColor: AppColors.primaryColor,
                             child: Icon(Icons.edit, color: Colors.white),
                           ),
                         ),
@@ -231,9 +235,12 @@ class _ViewUserProfilePageState extends State<ViewUserProfilePage> {
                   SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _updateProfile,
-                    child: Text('Update Profile'),
+                    child: Text(
+                      'Update Profile',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
+                      backgroundColor: AppColors.primaryColor,
                     ),
                   ),
                   SizedBox(height: 16),
@@ -260,12 +267,14 @@ class _ViewUserProfilePageState extends State<ViewUserProfilePage> {
                                   },
                                 )
                               : Text(interests[index]),
-                          leading: Icon(Icons.star, color: Colors.teal),
+                          leading:
+                              Icon(Icons.star, color: AppColors.primaryColor),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: Icon(Icons.edit, color: Colors.blue),
+                                icon: Icon(Icons.edit,
+                                    color: AppColors.secondaryColor),
                                 onPressed: () {
                                   setState(() {
                                     editingInterest = interests[index];
@@ -274,7 +283,8 @@ class _ViewUserProfilePageState extends State<ViewUserProfilePage> {
                                 },
                               ),
                               IconButton(
-                                icon: Icon(Icons.delete, color: Colors.red),
+                                icon: Icon(Icons.delete,
+                                    color: AppColors.primaryColor),
                                 onPressed: () {
                                   _showDeleteConfirmationDialog(
                                       interests[index]);
@@ -298,9 +308,12 @@ class _ViewUserProfilePageState extends State<ViewUserProfilePage> {
                   SizedBox(height: 8),
                   ElevatedButton(
                     onPressed: _addInterest,
-                    child: Text('Add Interest'),
+                    child: Text(
+                      'Add Interest',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
+                      backgroundColor: AppColors.primaryColor,
                     ),
                   ),
                 ],

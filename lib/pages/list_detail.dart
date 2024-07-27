@@ -88,11 +88,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       _selectedIndex = index;
     });
     if (index == 0) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-        (route) => false,
-      );
+      Navigator.pop(
+          context, 0); // Navigate back to MainPage with HomePage selected
     } else if (index == 1) {
       // Already on the ListsPage, no need to navigate
     }
