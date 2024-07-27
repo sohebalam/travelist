@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:travelist/services/styles.dart';
 
 class CustomGoogleButton extends StatelessWidget {
   final VoidCallback onPressed;
@@ -16,26 +17,39 @@ class CustomGoogleButton extends StatelessWidget {
           height: 50,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            gradient: const LinearGradient(colors: [
-              Color.fromRGBO(211, 213, 248, 1),
-              // Color.fromRGBO(143, 148, 251, 1),
-              // Color.fromRGBO(143, 148, 251, .6),
-              Color.fromRGBO(176, 180, 243, 0.6),
-            ]),
+            gradient: const LinearGradient(
+              colors: [
+                AppColors.primaryColor,
+                AppColors.secondaryColor,
+              ],
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(
-                'assets/google.png', // Path to your Google logo asset
-                height: 24,
-                width: 24,
+              Container(
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.white,
+                      blurRadius: 8,
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Image.asset(
+                  'assets/google.png', // Path to your Google logo asset
+                  height: 24,
+                  width: 24,
+                ),
               ),
               const SizedBox(width: 10),
               const Text(
                 "Sign in with Google",
-                style:
-                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),

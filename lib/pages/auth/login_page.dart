@@ -140,7 +140,7 @@ class _LoginPageState extends State<LoginPage> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: const Color.fromRGBO(143, 148, 251, 1),
+                            color: AppColors.primaryColor,
                           ),
                           boxShadow: const [
                             BoxShadow(
@@ -157,7 +157,7 @@ class _LoginPageState extends State<LoginPage> {
                               decoration: const BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
-                                    color: Color.fromRGBO(143, 148, 251, 1),
+                                    color: AppColors.primaryColor,
                                   ),
                                 ),
                               ),
@@ -214,8 +214,8 @@ class _LoginPageState extends State<LoginPage> {
                             borderRadius: BorderRadius.circular(10),
                             gradient: const LinearGradient(
                               colors: [
-                                Color.fromRGBO(143, 148, 251, 1),
-                                Color.fromRGBO(143, 148, 251, .6),
+                                AppColors.primaryColor,
+                                AppColors.secondaryColor,
                               ],
                             ),
                           ),
@@ -249,7 +249,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: const Text(
                           "Forgot Password?",
                           style: TextStyle(
-                            color: Color.fromRGBO(143, 148, 251, 1),
+                            color: AppColors.secondaryColor,
                           ),
                         ),
                       ),
@@ -264,7 +264,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: const Text(
                           "Register",
                           style: TextStyle(
-                            color: Color.fromRGBO(143, 148, 251, 1),
+                            color: AppColors.secondaryColor,
                           ),
                         ),
                       ),

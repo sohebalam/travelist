@@ -158,13 +158,13 @@ class _RegisterPageState extends State<RegisterPage> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: const Color.fromRGBO(143, 148, 251, 1),
+                            color: AppColors.primaryColor,
                           ),
-                          boxShadow: const [
+                          boxShadow: [
                             BoxShadow(
-                              color: Color.fromRGBO(143, 148, 251, .2),
+                              color: AppColors.primaryColor.withOpacity(0.2),
                               blurRadius: 20.0,
-                              offset: Offset(0, 10),
+                              offset: const Offset(0, 10),
                             ),
                           ],
                         ),
@@ -175,7 +175,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               decoration: const BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
-                                    color: Color.fromRGBO(143, 148, 251, 1),
+                                    color: AppColors.primaryColor,
                                   ),
                                 ),
                               ),
@@ -193,7 +193,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               decoration: const BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
-                                    color: Color.fromRGBO(143, 148, 251, 1),
+                                    color: AppColors.primaryColor,
                                   ),
                                 ),
                               ),
@@ -260,8 +260,8 @@ class _RegisterPageState extends State<RegisterPage> {
                             borderRadius: BorderRadius.circular(10),
                             gradient: const LinearGradient(
                               colors: [
-                                Color.fromRGBO(143, 148, 251, 1),
-                                Color.fromRGBO(143, 148, 251, .6),
+                                AppColors.primaryColor,
+                                AppColors.secondaryColor,
                               ],
                             ),
                           ),
@@ -290,8 +290,8 @@ class _RegisterPageState extends State<RegisterPage> {
                             borderRadius: BorderRadius.circular(10),
                             gradient: const LinearGradient(
                               colors: [
-                                Color.fromRGBO(143, 148, 251, 1),
-                                Color.fromRGBO(143, 148, 251, .6),
+                                AppColors.primaryColor,
+                                AppColors.secondaryColor,
                               ],
                             ),
                           ),
@@ -317,7 +317,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         child: const Text(
                           "Login",
                           style: TextStyle(
-                            color: Color.fromRGBO(143, 148, 251, 1),
+                            color: AppColors.secondaryColor,
                           ),
                         ),
                       ),
