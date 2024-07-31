@@ -1,29 +1,29 @@
 {
-  "project_info": {
-    "project_number": "634216227694",
-    "project_id": "travelist-589cc",
-    "storage_bucket": "travelist-589cc.appspot.com"
-  },
-  "client": [
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:634216227694:android:cd5824c5739a638112577f",
-        "android_client_info": {
-          "package_name": "com.example.travelist"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBiseHRs6vsuUwvIdqNTgEilE9dW1cppd0"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    }
-  ],
-  "configuration_version": "1"
+	"project_info": {
+		"project_number": "634216227694",
+		"project_id": "travelist-589cc",
+		"storage_bucket": "travelist-589cc.appspot.com"
+	},
+	"client": [
+		{
+			"client_info": {
+				"mobilesdk_app_id": "1:634216227694:android:cd5824c5739a638112577f",
+				"android_client_info": {
+					"package_name": "com.travelist.app"
+				}
+			},
+			"oauth_client": [],
+			"api_key": [
+				{
+					"current_key": "AIzaSyBiseHRs6vsuUwvIdqNTgEilE9dW1cppd0"
+				}
+			],
+			"services": {
+				"appinvite_service": {
+					"other_platform_oauth_client": []
+				}
+			}
+		}
+	],
+	"configuration_version": "1"
 }

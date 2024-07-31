@@ -63,7 +63,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '634216227694',
     projectId: 'travelist-589cc',
     storageBucket: 'travelist-589cc.appspot.com',
-    iosBundleId: 'com.example.travelist',
+    iosBundleId: 'com.travelist.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -72,7 +72,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '634216227694',
     projectId: 'travelist-589cc',
     storageBucket: 'travelist-589cc.appspot.com',
-    iosBundleId: 'com.example.travelist',
+    iosBundleId: 'com.travelist.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
