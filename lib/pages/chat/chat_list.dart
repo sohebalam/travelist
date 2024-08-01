@@ -111,6 +111,8 @@ class _ChatListState extends State<ChatList> {
                           builder: (context) => ChatPage(
                             u_id: friendId,
                             currentUserId: currentUser!.uid,
+                            userName: friendName,
+                            userImage: friendImage,
                           ),
                         ),
                       );
@@ -144,6 +146,13 @@ class _ChatListState extends State<ChatList> {
               showSearchDialog(context, currentUser);
             },
           ),
+          // IconButton(
+          //   icon: const Icon(
+          //     Icons.logout,
+          //     color: Colors.white,
+          //   ),
+          //   onPressed: _signOut,
+          // ),
         ],
       ),
       body: Column(

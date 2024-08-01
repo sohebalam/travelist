@@ -1,12 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:travelist/services/styles.dart';
+import 'package:intl/intl.dart';
 
 class ChatPage extends StatefulWidget {
   final String u_id; // This should be the friend's ID
   final String currentUserId;
+  final String userName; // Add the user's name
+  final String userImage; // Add the user's image URL
 
-  const ChatPage({super.key, required this.u_id, required this.currentUserId});
+  const ChatPage({
+    super.key,
+    required this.u_id,
+    required this.currentUserId,
+    required this.userName,
+    required this.userImage,
+  });
 
   @override
   _ChatPageState createState() => _ChatPageState();
@@ -19,8 +29,45 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat'),
         backgroundColor: AppColors.primaryColor,
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(80),
+              child: widget.userImage.isNotEmpty
+                  ? Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        image: DecorationImage(
+                          fit: BoxFit.cover,
+                          image: CachedNetworkImageProvider(widget.userImage),
+                        ),
+                      ),
+                    )
+                  : Image.asset(
+                      'assets/person.png', // Replace with your local image path
+                      height: 30,
+                    ),
+            ),
+            if (widget.userImage.isEmpty)
+              Container(
+                height: 30,
+                width: 30,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(80),
+                ),
+                child: Icon(
+                  Icons.person,
+                  color: Colors.grey[500],
+                ),
+              ),
+            const SizedBox(width: 10), // Spacing between image and text
+            Text(widget.userName),
+          ],
+        ),
       ),
       body: Column(
         children: [
@@ -48,6 +95,15 @@ class _ChatPageState extends State<ChatPage> {
                     var message = messages[index];
                     bool isSentByCurrentUser =
                         message['senderId'] == widget.currentUserId;
+
+                    // Format timestamp
+                    String formattedDate = '';
+                    if (message['timestamp'] != null) {
+                      var date = (message['timestamp'] as Timestamp).toDate();
+                      formattedDate = DateFormat('MMM d, h:mm a').format(date);
+                    } else {
+                      formattedDate = 'Sending...';
+                    }
 
                     return Align(
                       alignment: isSentByCurrentUser
@@ -78,12 +134,7 @@ class _ChatPageState extends State<ChatPage> {
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              message['timestamp'] != null
-                                  ? (message['timestamp'] as Timestamp)
-                                      .toDate()
-                                      .toLocal()
-                                      .toString()
-                                  : 'Sending...',
+                              formattedDate,
                               style: TextStyle(
                                 color: isSentByCurrentUser
                                     ? Colors.white70
@@ -144,12 +195,6 @@ class _ChatPageState extends State<ChatPage> {
       var senderId = widget.currentUserId;
       var receiverId = widget.u_id;
 
-      // Debug prints to check values
-      print('Chat ID: $chatId');
-      print('Sender ID: $senderId');
-      print('Receiver ID: $receiverId');
-      print('Message Text: $text');
-
       FirebaseFirestore.instance
           .collection('chats')
           .doc(chatId)
@@ -157,7 +202,7 @@ class _ChatPageState extends State<ChatPage> {
           .add({
         'text': text,
         'senderId': senderId,
-        'receiverId': receiverId, // Ensure receiverId is set correctly
+        'receiverId': receiverId,
         'timestamp': FieldValue.serverTimestamp(),
       }).then((value) {
         print("Message sent successfully: $value");

@@ -1,29 +1,82 @@
 {
-	"project_info": {
-		"project_number": "634216227694",
-		"project_id": "travelist-589cc",
-		"storage_bucket": "travelist-589cc.appspot.com"
-	},
-	"client": [
-		{
-			"client_info": {
-				"mobilesdk_app_id": "1:634216227694:android:cd5824c5739a638112577f",
-				"android_client_info": {
-					"package_name": "com.travelist.app"
-				}
-			},
-			"oauth_client": [],
-			"api_key": [
-				{
-					"current_key": "AIzaSyBiseHRs6vsuUwvIdqNTgEilE9dW1cppd0"
-				}
-			],
-			"services": {
-				"appinvite_service": {
-					"other_platform_oauth_client": []
-				}
-			}
-		}
-	],
-	"configuration_version": "1"
+  "project_info": {
+    "project_number": "634216227694",
+    "project_id": "travelist-589cc",
+    "storage_bucket": "travelist-589cc.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:634216227694:android:af5592781b9d6ffe12577f",
+        "android_client_info": {
+          "package_name": "com.travelist.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "634216227694-skr0b9vo26opn036e1os7s1o0o7jeaju.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBiseHRs6vsuUwvIdqNTgEilE9dW1cppd0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "634216227694-skr0b9vo26opn036e1os7s1o0o7jeaju.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "634216227694-o94vbed4fcd87kq7dra5qhlp7bianp7u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.travelist"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:634216227694:android:edb239acad847d9912577f",
+        "android_client_info": {
+          "package_name": "com.travelist.com"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "634216227694-skr0b9vo26opn036e1os7s1o0o7jeaju.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBiseHRs6vsuUwvIdqNTgEilE9dW1cppd0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "634216227694-skr0b9vo26opn036e1os7s1o0o7jeaju.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "634216227694-o94vbed4fcd87kq7dra5qhlp7bianp7u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.travelist"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
 }

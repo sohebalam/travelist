@@ -69,10 +69,10 @@ class _SearchDialogState extends State<SearchDialog> {
               var userData = user.data() as Map<String, dynamic>?;
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundImage:
-                      userData != null && userData.containsKey('image')
-                          ? NetworkImage(userData['image'])
-                          : const AssetImage('assets/person.png') as ImageProvider,
+                  backgroundImage: userData != null &&
+                          userData.containsKey('image')
+                      ? NetworkImage(userData['image'])
+                      : const AssetImage('assets/person.png') as ImageProvider,
                 ),
                 title: Text(userData != null && userData.containsKey('name')
                     ? userData['name']
@@ -91,25 +91,13 @@ class _SearchDialogState extends State<SearchDialog> {
 
                     DocumentSnapshot? conversationDoc;
 
-                    if (existingConversations.docs.isNotEmpty) {
-                      try {
-                        conversationDoc = existingConversations.docs.firstWhere(
-                          (doc) =>
-                              (doc['participants'] as List).contains(user.id),
-                        );
-                      } catch (e) {
-                        // If no conversation exists, create a new one
-                        var newConversation = await FirebaseFirestore.instance
-                            .collection('chats')
-                            .add({
-                          'participants': [widget.currentUser!.uid, user.id],
-                          'lastMessage': '',
-                          'lastMessageTime': FieldValue.serverTimestamp(),
-                        });
-                        conversationDoc = await newConversation.get();
-                      }
-                    } else {
-                      // Create a new conversation if none exist
+                    try {
+                      conversationDoc = existingConversations.docs.firstWhere(
+                        (doc) =>
+                            (doc['participants'] as List).contains(user.id),
+                      );
+                    } catch (e) {
+                      // If no conversation exists, create a new one
                       var newConversation = await FirebaseFirestore.instance
                           .collection('chats')
                           .add({
@@ -120,13 +108,15 @@ class _SearchDialogState extends State<SearchDialog> {
                       conversationDoc = await newConversation.get();
                     }
 
-                    Navigator.pop(context); // Close the search results
+                    Navigator.pop(context); // Close the search dialog
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => ChatPage(
                           currentUserId: widget.currentUser!.uid,
-                          u_id: user.id, // Pass the correct user ID here
+                          u_id: user.id,
+                          userName: userData?['name'] ?? 'Unknown',
+                          userImage: userData?['image'] ?? '',
                         ),
                       ),
                     );
