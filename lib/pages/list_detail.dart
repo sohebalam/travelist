@@ -584,10 +584,14 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                         return Draggable<Map<String, dynamic>>(
                           data: reorderedPOIData[index],
                           childWhenDragging: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            padding: const EdgeInsets.symmetric(vertical: 2.0),
                             color: Colors.grey[200],
                             child: ListTile(
-                              contentPadding: EdgeInsets.zero,
+                              contentPadding: EdgeInsets.symmetric(
+                                  vertical: 0.0, horizontal: 4.0),
+                              dense: true, // Makes ListTile compact
+                              minVerticalPadding:
+                                  0, // Reduces vertical space inside ListTile
                               leading: Text(
                                 '${index + 1}.',
                                 style: TextStyle(
@@ -610,7 +614,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                               padding: const EdgeInsets.all(8.0),
                               color: Colors.blueAccent,
                               child: ListTile(
-                                contentPadding: EdgeInsets.zero,
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: 0.0, horizontal: 4.0),
+                                dense: true,
                                 leading: Text(
                                   '${index + 1}.',
                                   style: TextStyle(
@@ -629,10 +635,13 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                             ),
                           ),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            padding: const EdgeInsets.symmetric(vertical: 2.0),
                             color: Colors.grey[200],
                             child: ListTile(
-                              contentPadding: EdgeInsets.zero,
+                              contentPadding: EdgeInsets.symmetric(
+                                  vertical: 0.0, horizontal: 4.0),
+                              dense: true,
+                              minVerticalPadding: 0,
                               leading: Text(
                                 '${index + 1}.',
                                 style: TextStyle(
