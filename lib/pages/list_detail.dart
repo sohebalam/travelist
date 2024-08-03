@@ -12,9 +12,9 @@ import 'package:travelist/services/styles.dart';
 import 'package:travelist/services/widgets/bottom_navbar.dart';
 import 'package:travelist/services/location/place_service.dart';
 import 'package:travelist/services/location/poi_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places;
-import 'package:url_launcher/url_launcher.dart';
 
 class ListDetailsPage extends StatefulWidget {
   final String listId;
@@ -87,8 +87,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     });
     if (index == 0) {
       Navigator.pop(context, 0);
-    } else if (index == 1) {
-      // Already on the ListsPage, no need to navigate
     }
   }
 
@@ -574,83 +572,112 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
               title: Text("Reorder POIs"),
               content: Container(
                 width: double.maxFinite,
-                height: 400,
-                child: Scrollbar(
-                  child: ListView.builder(
-                    itemCount: reorderedPOIData.length,
-                    itemBuilder: (context, index) {
-                      return DragTarget<Map<String, dynamic>>(
-                        builder: (context, candidateData, rejectedData) {
-                          return Draggable<Map<String, dynamic>>(
-                            data: reorderedPOIData[index],
-                            childWhenDragging: Container(
-                              padding: const EdgeInsets.all(8.0),
-                              color: Colors.grey[200],
-                              child: ListTile(
-                                title: Text(
-                                  '${index + 1}. ${reorderedPOIData[index]['name']}',
-                                  style: TextStyle(color: Colors.grey),
+                height: MediaQuery.of(context).size.height * 0.6,
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: reorderedPOIData.length,
+                  itemBuilder: (context, index) {
+                    double textSize = reorderedPOIData.length > 5 ? 14 : 16;
+
+                    return DragTarget<Map<String, dynamic>>(
+                      builder: (context, candidateData, rejectedData) {
+                        return Draggable<Map<String, dynamic>>(
+                          data: reorderedPOIData[index],
+                          childWhenDragging: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            color: Colors.grey[200],
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Text(
+                                '${index + 1}.',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: textSize,
                                 ),
-                                trailing: Icon(Icons.drag_handle),
                               ),
-                            ),
-                            feedback: Material(
-                              child: Container(
-                                width: MediaQuery.of(context).size.width - 20,
-                                padding: const EdgeInsets.all(8.0),
-                                color: Colors.blueAccent,
-                                child: ListTile(
-                                  title: Text(
-                                    '${index + 1}. ${reorderedPOIData[index]['name']}',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  trailing: Icon(Icons.drag_handle,
-                                      color: Colors.white),
+                              title: Text(
+                                reorderedPOIData[index]['name'],
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: textSize,
                                 ),
                               ),
                             ),
+                          ),
+                          feedback: Material(
                             child: Container(
+                              width: MediaQuery.of(context).size.width - 20,
                               padding: const EdgeInsets.all(8.0),
-                              color: Colors.grey[200],
+                              color: Colors.blueAccent,
                               child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Text(
+                                  '${index + 1}.',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: textSize,
+                                  ),
+                                ),
                                 title: Text(
-                                    '${index + 1}. ${reorderedPOIData[index]['name']}'),
-                                trailing: Icon(Icons.drag_handle),
+                                  reorderedPOIData[index]['name'],
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: textSize,
+                                  ),
+                                ),
                               ),
                             ),
-                            onDragStarted: () {
-                              setState(() {
-                                _draggingIndex = index;
-                              });
-                            },
-                            onDragEnd: (details) {
-                              setState(() {
-                                _draggingIndex = -1;
-                              });
-                            },
-                          );
-                        },
-                        onWillAcceptWithDetails:
-                            (DragTargetDetails<Map<String, dynamic>> details) {
-                          return details.data != reorderedPOIData[index];
-                        },
-                        onAcceptWithDetails:
-                            (DragTargetDetails<Map<String, dynamic>> details) {
-                          final oldIndex =
-                              reorderedPOIData.indexOf(details.data);
-                          setState(() {
-                            if (oldIndex != index) {
-                              var movedItem =
-                                  reorderedPOIData.removeAt(oldIndex);
-                              reorderedPOIData.insert(index, movedItem);
-                              print('Reordered item from $oldIndex to $index');
-                              print('Reordered list: $reorderedPOIData');
-                            }
-                          });
-                        },
-                      );
-                    },
-                  ),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            color: Colors.grey[200],
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Text(
+                                '${index + 1}.',
+                                style: TextStyle(
+                                  fontSize: textSize,
+                                ),
+                              ),
+                              title: Text(
+                                reorderedPOIData[index]['name'],
+                                style: TextStyle(
+                                  fontSize: textSize,
+                                ),
+                              ),
+                              trailing: const Icon(Icons.drag_handle),
+                            ),
+                          ),
+                          onDragStarted: () {
+                            setState(() {
+                              _draggingIndex = index;
+                            });
+                          },
+                          onDragEnd: (details) {
+                            setState(() {
+                              _draggingIndex = -1;
+                            });
+                          },
+                        );
+                      },
+                      onWillAcceptWithDetails:
+                          (DragTargetDetails<Map<String, dynamic>> details) {
+                        return details.data != reorderedPOIData[index];
+                      },
+                      onAcceptWithDetails:
+                          (DragTargetDetails<Map<String, dynamic>> details) {
+                        final oldIndex = reorderedPOIData.indexOf(details.data);
+                        setState(() {
+                          if (oldIndex != index) {
+                            var movedItem = reorderedPOIData.removeAt(oldIndex);
+                            reorderedPOIData.insert(index, movedItem);
+                            print('Reordered item from $oldIndex to $index');
+                            print('Reordered list: $reorderedPOIData');
+                          }
+                        });
+                      },
+                    );
+                  },
                 ),
               ),
               actions: [
@@ -833,24 +860,43 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                       controller: scrollController,
                       child: Container(
                         color: Colors.white,
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.all(4.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text('Route Points:'),
                             ListView.builder(
-                              controller: scrollController,
                               shrinkWrap: true,
+                              controller: scrollController,
                               itemCount: _poiData.length,
                               itemBuilder: (BuildContext context, int index) {
-                                return ListTile(
-                                  title: Text(
-                                      '${index + 1}. ${_poiData[index]['name']}'),
-                                  subtitle: Text(_poiData[index]['address']),
-                                  onTap: () {
-                                    _showReorderDialog();
-                                  },
-                                  trailing: Icon(Icons.drag_handle),
+                                double textSize = _poiData.length > 7 ? 14 : 16;
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 0), // No vertical padding
+                                  child: ListTile(
+                                    dense: true, // Makes the ListTile smaller
+                                    contentPadding: EdgeInsets.symmetric(
+                                        vertical: 0, horizontal: 4.0),
+                                    visualDensity: VisualDensity
+                                        .compact, // Further reduces height
+                                    minVerticalPadding:
+                                        0, // Minimizes padding within the ListTile
+                                    title: Text(
+                                      '${index + 1}. ${_poiData[index]['name']}',
+                                      style: TextStyle(
+                                        fontSize: textSize,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      _poiData[index]['address'],
+                                      style: TextStyle(fontSize: textSize - 2),
+                                    ),
+                                    trailing: const Icon(Icons.drag_handle),
+                                    onTap: () {
+                                      _showReorderDialog();
+                                    },
+                                  ),
                                 );
                               },
                             ),
