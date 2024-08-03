@@ -569,7 +569,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text("Reorder POIs"),
+              title: Text("Reorder Points of Interest"),
               content: Container(
                 width: double.maxFinite,
                 height: MediaQuery.of(context).size.height * 0.6,
@@ -585,13 +585,13 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                           data: reorderedPOIData[index],
                           childWhenDragging: Container(
                             padding: const EdgeInsets.symmetric(vertical: 2.0),
-                            color: Colors.grey[200],
                             child: ListTile(
                               contentPadding: EdgeInsets.symmetric(
-                                  vertical: 0.0, horizontal: 4.0),
+                                  vertical: 0.0, horizontal: 1.0),
                               dense: true, // Makes ListTile compact
                               minVerticalPadding:
                                   0, // Reduces vertical space inside ListTile
+
                               leading: Text(
                                 '${index + 1}.',
                                 style: TextStyle(
@@ -611,11 +611,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                           feedback: Material(
                             child: Container(
                               width: MediaQuery.of(context).size.width - 20,
-                              padding: const EdgeInsets.all(8.0),
+                              padding: const EdgeInsets.all(1.0),
                               color: Colors.blueAccent,
                               child: ListTile(
-                                contentPadding: EdgeInsets.symmetric(
-                                    vertical: 0.0, horizontal: 4.0),
                                 dense: true,
                                 leading: Text(
                                   '${index + 1}.',
@@ -636,10 +634,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                           ),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 2.0),
-                            color: Colors.grey[200],
                             child: ListTile(
-                              contentPadding: EdgeInsets.symmetric(
-                                  vertical: 0.0, horizontal: 4.0),
                               dense: true,
                               minVerticalPadding: 0,
                               leading: Text(
@@ -999,9 +994,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       bottomNavigationBar: BottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
-        onLogoutTapped: () {
-          print('logout');
-        },
+        onLogoutTapped: () {},
       ),
     );
   }
@@ -1086,11 +1079,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
               );
             });
           }
-        } else {
-          print("No predictions found.");
-        }
+        } else {}
       } catch (e) {
-        print("Error in place picker: $e");
         setState(() {
           _error = e.toString();
         });
