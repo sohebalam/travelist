@@ -10,11 +10,11 @@ import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:redacted/redacted.dart';
 import 'package:travelist/services/styles.dart';
 import 'package:travelist/services/location/place_service.dart';
-import 'package:travelist/services/location/poi_service.dart'; // Import the new POIService
+import 'package:travelist/services/location/poi_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places;
-// Ensure you import the HomePage
+import 'package:drag_and_drop_lists/drag_and_drop_lists.dart';
 
 class ListDetailsPage extends StatefulWidget {
   final String listId;
@@ -59,11 +59,10 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   final bool _locationRestrictionEnabled = false;
 
   late final PlacesService _placesService;
-  late final POIService _poiService; // Add the POIService instance
+  late final POIService _poiService;
   places.LatLngBounds? _locationBias;
 
-  int _selectedIndex =
-      1; // Set the default selected index to 1 for ListDetailsPage
+  int _selectedIndex = 1;
 
   @override
   void initState() {
@@ -71,7 +70,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     _googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'];
     gmd.GoogleMapsDirections.init(googleAPIKey: _googleMapsApiKey!);
     _placesService = PlacesService(_googleMapsApiKey!, _locationBias);
-    _poiService = POIService(); // Initialize the POIService
+    _poiService = POIService();
     _fetchPlaces();
     _getCurrentLocation();
   }
@@ -87,8 +86,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       _selectedIndex = index;
     });
     if (index == 0) {
-      Navigator.pop(
-          context, 0); // Navigate back to MainPage with HomePage selected
+      Navigator.pop(context, 0);
     } else if (index == 1) {
       // Already on the ListsPage, no need to navigate
     }
@@ -522,7 +520,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
   Future<gmd.DurationValue> _durationWalking(
       gmd.DurationValue drivingDuration) async {
-    // Simulate walking duration (typically 1/5th the speed of driving)
     int walkingDurationSeconds = (drivingDuration.seconds * 5).toInt();
     return gmd.DurationValue(
       text: _formatDuration(walkingDurationSeconds),
@@ -532,7 +529,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
   Future<gmd.DurationValue> _durationBicycling(
       gmd.DurationValue drivingDuration) async {
-    // Simulate bicycling duration (typically 1/2 the speed of driving)
     int bicyclingDurationSeconds = (drivingDuration.seconds * 2).toInt();
     return gmd.DurationValue(
       text: _formatDuration(bicyclingDurationSeconds),
@@ -565,11 +561,162 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
+  void _showReorderDialog() {
+    List<Map<String, dynamic>> reorderedPOIData = List.from(_poiData);
+    int _draggingIndex = -1;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text("Reorder POIs"),
+              content: Container(
+                width: double.maxFinite,
+                height: 400,
+                child: ListView.builder(
+                  itemCount: reorderedPOIData.length,
+                  itemBuilder: (context, index) {
+                    return DragTarget<Map<String, dynamic>>(
+                      builder: (context, candidateData, rejectedData) {
+                        return Draggable<Map<String, dynamic>>(
+                          data: reorderedPOIData[index],
+                          childWhenDragging: Container(
+                            padding: const EdgeInsets.all(8.0),
+                            color: Colors.grey[200],
+                            child: ListTile(
+                              title: Text(
+                                reorderedPOIData[index]['name'],
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          ),
+                          feedback: Material(
+                            child: Container(
+                              width: MediaQuery.of(context).size.width - 20,
+                              padding: const EdgeInsets.all(8.0),
+                              color: Colors.blueAccent,
+                              child: ListTile(
+                                title: Text(
+                                  reorderedPOIData[index]['name'],
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(8.0),
+                            color: Colors.grey[200],
+                            child: ListTile(
+                              title: Text(reorderedPOIData[index]['name']),
+                            ),
+                          ),
+                          onDragStarted: () {
+                            setState(() {
+                              _draggingIndex = index;
+                            });
+                          },
+                          onDragEnd: (details) {
+                            setState(() {
+                              _draggingIndex = -1;
+                            });
+                          },
+                        );
+                      },
+                      onWillAcceptWithDetails:
+                          (DragTargetDetails<Map<String, dynamic>> details) {
+                        // Prevents dragging item into itself
+                        return details.data != reorderedPOIData[index];
+                      },
+                      onAcceptWithDetails:
+                          (DragTargetDetails<Map<String, dynamic>> details) {
+                        // Find the old index and reorder the list
+                        final oldIndex = reorderedPOIData.indexOf(details.data);
+                        setState(() {
+                          if (oldIndex != index) {
+                            var movedItem = reorderedPOIData.removeAt(oldIndex);
+                            reorderedPOIData.insert(index, movedItem);
+                            print('Reordered item from $oldIndex to $index');
+                            print('Reordered list: $reorderedPOIData');
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _poiData = reorderedPOIData;
+                    });
+                    _updatePOIOrderInFirestore();
+                    Navigator.of(context).pop();
+                  },
+                  child: Text("Save"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  List<DragAndDropList> _buildDragAndDropLists(
+      List<Map<String, dynamic>> poiData) {
+    return [
+      DragAndDropList(
+        header: Container(),
+        children: poiData
+            .map(
+              (poi) => DragAndDropItem(
+                child: ListTile(
+                  key: ValueKey(poi['id']),
+                  title: Text(poi['name']),
+                  subtitle: Text(poi['address']),
+                  trailing: Icon(Icons.drag_handle),
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    ];
+  }
+
+  void _updatePOIOrderInFirestore() async {
+    final batch = FirebaseFirestore.instance.batch();
+    for (int i = 0; i < _poiData.length; i++) {
+      final poi = _poiData[i];
+      final docRef = FirebaseFirestore.instance
+          .collection('lists')
+          .doc(widget.listId)
+          .collection('pois')
+          .doc(poi['id']);
+      batch.update(docRef, {'order': i});
+    }
+    await batch.commit();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.listName),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.reorder),
+            onPressed: _showReorderDialog,
+          ),
+        ],
       ),
       body: _isLoading
           ? _buildLoadingSkeleton(context)
@@ -712,10 +859,10 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                           children: [
                             const Text('Route Points:'),
                             ListView.builder(
-                              controller: scrollController,
                               shrinkWrap: true,
+                              physics: NeverScrollableScrollPhysics(),
                               itemCount: _poiData.length,
-                              itemBuilder: (BuildContext context, int index) {
+                              itemBuilder: (context, index) {
                                 return ListTile(
                                   title: Text(
                                       '${index + 1}. ${_poiData[index]['name']}'),
@@ -813,13 +960,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                 ),
               ],
             ),
-      // bottomNavigationBar: BottomNavBar(
-      //   selectedIndex: _selectedIndex,
-      //   onItemTapped: _onItemTapped,
-      //   onLogoutTapped: () {
-      //     print('logout');
-      //   },
-      // ),
     );
   }
 
@@ -845,7 +985,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       delegate: PlaceSearchDelegate(_placesService),
     );
 
-    if (query != null && query.isNotEmpty) {
+    if (query != null && query is String && query.isNotEmpty) {
       try {
         final result = await _placesService.findAutocompletePredictions(
           query,
