@@ -583,11 +583,10 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                         return Draggable<Map<String, dynamic>>(
                           data: reorderedPOIData[index],
                           childWhenDragging: Container(
-                            padding: const EdgeInsets.all(8.0),
                             color: Colors.grey[200],
                             child: ListTile(
                               title: Text(
-                                reorderedPOIData[index]['name'],
+                                '${index + 1}. ${reorderedPOIData[index]['name']}',
                                 style: TextStyle(color: Colors.grey),
                               ),
                             ),
@@ -595,21 +594,20 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                           feedback: Material(
                             child: Container(
                               width: MediaQuery.of(context).size.width - 20,
-                              padding: const EdgeInsets.all(8.0),
                               color: Colors.blueAccent,
                               child: ListTile(
                                 title: Text(
-                                  reorderedPOIData[index]['name'],
+                                  '${index + 1}. ${reorderedPOIData[index]['name']}',
                                   style: TextStyle(color: Colors.white),
                                 ),
                               ),
                             ),
                           ),
                           child: Container(
-                            padding: const EdgeInsets.all(8.0),
                             color: Colors.grey[200],
                             child: ListTile(
-                              title: Text(reorderedPOIData[index]['name']),
+                              title: Text(
+                                  '${index + 1}. ${reorderedPOIData[index]['name']}'),
                             ),
                           ),
                           onDragStarted: () {
