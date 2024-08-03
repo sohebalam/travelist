@@ -342,25 +342,36 @@ class _UserProfilePageState extends State<UserProfilePage> {
         builder:
             (BuildContext context, AsyncSnapshot<DocumentSnapshot> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
+            // Show loading indicator while data is being fetched
             return _buildSkeletonLoading();
           }
           if (snapshot.hasError) {
+            // Show error message if there's an error
             return Center(child: Text('Error: ${snapshot.error}'));
           }
           if (!snapshot.hasData || !snapshot.data!.exists) {
+            // Handle the case where the user data does not exist
             return Center(child: Text('User not found'));
           }
 
           Map<String, dynamic> data =
-              snapshot.data!.data() as Map<String, dynamic>;
+              snapshot.data!.data() as Map<String, dynamic>? ?? {};
+
+          // Safely accessing user data
+          String name = data['name'] ?? 'Unknown';
+          String email = data['email'] ?? 'No email provided';
+          String image = data['image'] ?? '';
 
           if (_nameController.text.isEmpty) {
-            _nameController.text = data['name'];
-            _emailController.text = data['email'];
-            _imageController.text = data['image'];
+            _nameController.text = name;
+            _emailController.text = email;
+            _imageController.text = image;
           }
 
-          List<String> interests = data['interests']?.cast<String>() ?? [];
+          List<String> interests = (data['interests'] as List<dynamic>?)
+                  ?.map((item) => item as String)
+                  .toList() ??
+              [];
 
           return SingleChildScrollView(
             child: Padding(
@@ -374,13 +385,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         radius: 50,
                         backgroundImage: _image != null
                             ? FileImage(_image!)
-                            : NetworkImage(_imageController.text)
-                                as ImageProvider,
-                        onBackgroundImageError: (_, __) {
-                          setState(() {
-                            _image = null;
-                          });
-                        },
+                            : (image.isNotEmpty)
+                                ? NetworkImage(image)
+                                : AssetImage('assets/person.png')
+                                    as ImageProvider,
                       ),
                       Positioned(
                         bottom: 0,
@@ -421,9 +429,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         if (isAdmin) ...[
                           Text(
                             'Manage',
-                            style: TextStyle(
-                                fontSize:
-                                    16), // Customize the text style if needed
+                            style: TextStyle(fontSize: 16),
                           ),
                           SizedBox(width: 8),
                           DropdownButton<String>(
@@ -483,8 +489,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       onPressed: _addInterest,
                       child: Text(
                         'Add Interest',
-                        style: TextStyle(
-                            color: Colors.white), // Set the text color to white
+                        style: TextStyle(color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryColor,

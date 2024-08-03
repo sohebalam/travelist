@@ -39,6 +39,13 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    if (_image == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please upload an image to register.')),
+      );
+      return;
+    }
+
     try {
       UserCredential result = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
