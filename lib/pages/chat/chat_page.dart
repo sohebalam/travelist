@@ -30,6 +30,9 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.primaryColor,
+        iconTheme: IconThemeData(
+          color: Colors.white,
+        ),
         title: Row(
           children: [
             ClipRRect(
@@ -65,7 +68,10 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ),
             const SizedBox(width: 10), // Spacing between image and text
-            Text(widget.userName),
+            Text(
+              widget.userName,
+              style: TextStyle(color: Colors.white),
+            ),
           ],
         ),
       ),

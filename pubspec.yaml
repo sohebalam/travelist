@@ -63,6 +63,7 @@ dependencies:
 
   equatable: any
 
+  intl: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

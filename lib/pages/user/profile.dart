@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:travelist/services/shared_functions.dart';
 import 'package:travelist/models/user_model.dart';
 import 'package:travelist/services/styles.dart';
@@ -74,7 +73,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         await FirebaseFirestore.instance.collection('lists').get();
     setState(() {
       allLists = querySnapshot.docs
-          .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
+          .map((doc) => {'id': doc.id, ...doc.data()})
           .toList();
     });
   }
@@ -331,7 +330,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'User Profile',
+          isAdmin
+              ? 'Admin Profile'
+              : 'User Profile', // Conditionally set the title
           style: TextStyle(color: Colors.white), // Set the text color to white
         ),
         backgroundColor: AppColors.primaryColor,
@@ -444,19 +445,19 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             },
                           ),
                           SizedBox(width: 16),
-                          ElevatedButton(
-                            onPressed: _updateProfile,
-                            child: Text(
-                              'Update Profile',
-                              style: TextStyle(
-                                color: Colors.white,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryColor,
+                        ],
+                        ElevatedButton(
+                          onPressed: _updateProfile,
+                          child: Text(
+                            'Update Profile',
+                            style: TextStyle(
+                              color: Colors.white,
                             ),
                           ),
-                        ],
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -468,6 +469,26 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       'Interests',
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    TextField(
+                      controller: _interestController,
+                      decoration: InputDecoration(
+                        labelText: 'Add Interest',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.add),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: _addInterest,
+                      child: Text(
+                        'Add Interest',
+                        style: TextStyle(
+                            color: Colors.white), // Set the text color to white
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                      ),
                     ),
                     SizedBox(height: 8),
                     ListView.builder(
@@ -517,26 +538,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       },
                     ),
                     SizedBox(height: 16),
-                    TextField(
-                      controller: _interestController,
-                      decoration: InputDecoration(
-                        labelText: 'Add Interest',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.add),
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: _addInterest,
-                      child: Text(
-                        'Add Interest',
-                        style: TextStyle(
-                            color: Colors.white), // Set the text color to white
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor,
-                      ),
-                    ),
                   ] else if (selectedView == 'Users') ...[
                     Text(
                       'Users',
@@ -617,12 +618,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                     },
                                   )
                                 : Text(listName),
-                            leading: Icon(Icons.list, color: Colors.teal),
+                            leading:
+                                Icon(Icons.list, color: AppColors.primaryColor),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.blue),
+                                  icon: Icon(Icons.edit,
+                                      color: AppColors.secondaryColor),
                                   onPressed: () {
                                     setState(() {
                                       editingList = listId;
@@ -631,7 +634,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                   },
                                 ),
                                 IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.red),
+                                  icon: Icon(Icons.delete,
+                                      color: AppColors.primaryColor),
                                   onPressed: () {
                                     _showDeleteListConfirmationDialog(listId);
                                   },

@@ -4,7 +4,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:travelist/models/user_model.dart';
 import 'package:travelist/services/auth/auth_service.dart';
 import 'package:travelist/services/location/location_service.dart';
 import 'package:travelist/services/location/place_service.dart';

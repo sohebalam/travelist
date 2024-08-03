@@ -53,7 +53,6 @@ class _MainPageState extends State<MainPage> {
           ListsPage(key: PageStorageKey<String>('ListsPage')),
           ChatList(key: PageStorageKey<String>('ChatList')),
           UserProfilePage(key: PageStorageKey<String>('UserProfilePage')),
-          // Include ListDetailsPage here if you want to navigate back to it
         ],
       ),
       bottomNavigationBar: BottomNavBar(
