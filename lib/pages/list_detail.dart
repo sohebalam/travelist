@@ -9,12 +9,12 @@ import 'dart:math' show cos, sqrt, asin;
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:redacted/redacted.dart';
 import 'package:travelist/services/styles.dart';
+import 'package:travelist/services/widgets/bottom_navbar.dart';
 import 'package:travelist/services/location/place_service.dart';
 import 'package:travelist/services/location/poi_service.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places;
-import 'package:drag_and_drop_lists/drag_and_drop_lists.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ListDetailsPage extends StatefulWidget {
   final String listId;
@@ -575,73 +575,82 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
               content: Container(
                 width: double.maxFinite,
                 height: 400,
-                child: ListView.builder(
-                  itemCount: reorderedPOIData.length,
-                  itemBuilder: (context, index) {
-                    return DragTarget<Map<String, dynamic>>(
-                      builder: (context, candidateData, rejectedData) {
-                        return Draggable<Map<String, dynamic>>(
-                          data: reorderedPOIData[index],
-                          childWhenDragging: Container(
-                            color: Colors.grey[200],
-                            child: ListTile(
-                              title: Text(
-                                '${index + 1}. ${reorderedPOIData[index]['name']}',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ),
-                          ),
-                          feedback: Material(
-                            child: Container(
-                              width: MediaQuery.of(context).size.width - 20,
-                              color: Colors.blueAccent,
+                child: Scrollbar(
+                  child: ListView.builder(
+                    itemCount: reorderedPOIData.length,
+                    itemBuilder: (context, index) {
+                      return DragTarget<Map<String, dynamic>>(
+                        builder: (context, candidateData, rejectedData) {
+                          return Draggable<Map<String, dynamic>>(
+                            data: reorderedPOIData[index],
+                            childWhenDragging: Container(
+                              padding: const EdgeInsets.all(8.0),
+                              color: Colors.grey[200],
                               child: ListTile(
                                 title: Text(
                                   '${index + 1}. ${reorderedPOIData[index]['name']}',
-                                  style: TextStyle(color: Colors.white),
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                                trailing: Icon(Icons.drag_handle),
+                              ),
+                            ),
+                            feedback: Material(
+                              child: Container(
+                                width: MediaQuery.of(context).size.width - 20,
+                                padding: const EdgeInsets.all(8.0),
+                                color: Colors.blueAccent,
+                                child: ListTile(
+                                  title: Text(
+                                    '${index + 1}. ${reorderedPOIData[index]['name']}',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  trailing: Icon(Icons.drag_handle,
+                                      color: Colors.white),
                                 ),
                               ),
                             ),
-                          ),
-                          child: Container(
-                            color: Colors.grey[200],
-                            child: ListTile(
-                              title: Text(
-                                  '${index + 1}. ${reorderedPOIData[index]['name']}'),
+                            child: Container(
+                              padding: const EdgeInsets.all(8.0),
+                              color: Colors.grey[200],
+                              child: ListTile(
+                                title: Text(
+                                    '${index + 1}. ${reorderedPOIData[index]['name']}'),
+                                trailing: Icon(Icons.drag_handle),
+                              ),
                             ),
-                          ),
-                          onDragStarted: () {
-                            setState(() {
-                              _draggingIndex = index;
-                            });
-                          },
-                          onDragEnd: (details) {
-                            setState(() {
-                              _draggingIndex = -1;
-                            });
-                          },
-                        );
-                      },
-                      onWillAcceptWithDetails:
-                          (DragTargetDetails<Map<String, dynamic>> details) {
-                        // Prevents dragging item into itself
-                        return details.data != reorderedPOIData[index];
-                      },
-                      onAcceptWithDetails:
-                          (DragTargetDetails<Map<String, dynamic>> details) {
-                        // Find the old index and reorder the list
-                        final oldIndex = reorderedPOIData.indexOf(details.data);
-                        setState(() {
-                          if (oldIndex != index) {
-                            var movedItem = reorderedPOIData.removeAt(oldIndex);
-                            reorderedPOIData.insert(index, movedItem);
-                            print('Reordered item from $oldIndex to $index');
-                            print('Reordered list: $reorderedPOIData');
-                          }
-                        });
-                      },
-                    );
-                  },
+                            onDragStarted: () {
+                              setState(() {
+                                _draggingIndex = index;
+                              });
+                            },
+                            onDragEnd: (details) {
+                              setState(() {
+                                _draggingIndex = -1;
+                              });
+                            },
+                          );
+                        },
+                        onWillAcceptWithDetails:
+                            (DragTargetDetails<Map<String, dynamic>> details) {
+                          return details.data != reorderedPOIData[index];
+                        },
+                        onAcceptWithDetails:
+                            (DragTargetDetails<Map<String, dynamic>> details) {
+                          final oldIndex =
+                              reorderedPOIData.indexOf(details.data);
+                          setState(() {
+                            if (oldIndex != index) {
+                              var movedItem =
+                                  reorderedPOIData.removeAt(oldIndex);
+                              reorderedPOIData.insert(index, movedItem);
+                              print('Reordered item from $oldIndex to $index');
+                              print('Reordered list: $reorderedPOIData');
+                            }
+                          });
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
               actions: [
@@ -669,27 +678,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
-  List<DragAndDropList> _buildDragAndDropLists(
-      List<Map<String, dynamic>> poiData) {
-    return [
-      DragAndDropList(
-        header: Container(),
-        children: poiData
-            .map(
-              (poi) => DragAndDropItem(
-                child: ListTile(
-                  key: ValueKey(poi['id']),
-                  title: Text(poi['name']),
-                  subtitle: Text(poi['address']),
-                  trailing: Icon(Icons.drag_handle),
-                ),
-              ),
-            )
-            .toList(),
-      ),
-    ];
-  }
-
   void _updatePOIOrderInFirestore() async {
     final batch = FirebaseFirestore.instance.batch();
     for (int i = 0; i < _poiData.length; i++) {
@@ -709,12 +697,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.listName),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.reorder),
-            onPressed: _showReorderDialog,
-          ),
-        ],
       ),
       body: _isLoading
           ? _buildLoadingSkeleton(context)
@@ -857,17 +839,18 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                           children: [
                             const Text('Route Points:'),
                             ListView.builder(
+                              controller: scrollController,
                               shrinkWrap: true,
-                              physics: NeverScrollableScrollPhysics(),
                               itemCount: _poiData.length,
-                              itemBuilder: (context, index) {
+                              itemBuilder: (BuildContext context, int index) {
                                 return ListTile(
                                   title: Text(
                                       '${index + 1}. ${_poiData[index]['name']}'),
                                   subtitle: Text(_poiData[index]['address']),
                                   onTap: () {
-                                    _calculateAndDisplayDistanceDuration(index);
+                                    _showReorderDialog();
                                   },
+                                  trailing: Icon(Icons.drag_handle),
                                 );
                               },
                             ),
@@ -958,6 +941,13 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                 ),
               ],
             ),
+      bottomNavigationBar: BottomNavBar(
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onItemTapped,
+        onLogoutTapped: () {
+          print('logout');
+        },
+      ),
     );
   }
 
@@ -983,7 +973,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       delegate: PlaceSearchDelegate(_placesService),
     );
 
-    if (query != null && query is String && query.isNotEmpty) {
+    if (query != null && query.isNotEmpty) {
       try {
         final result = await _placesService.findAutocompletePredictions(
           query,
