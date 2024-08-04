@@ -1,3 +1,4 @@
+// Importing necessary packages for Flutter, Google Maps, Firebase, and other services, and components and shared functions.
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -14,17 +15,22 @@ import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
 import 'package:travelist/services/location/poi_service.dart';
 import 'package:travelist/services/widgets/place_search_delegate.dart';
 
+// HomePage is a stateful widget that displays the main screen of the app
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key}); // Constructor for HomePage
 
   @override
-  _HomePageState createState() => _HomePageState();
+  _HomePageState createState() => _HomePageState(); // Create state for HomePage
 }
 
+// State class for HomePage
 class _HomePageState extends State<HomePage> {
+  // Controllers for handling input fields
   TextEditingController locationController = TextEditingController();
   TextEditingController interestsController = TextEditingController();
   TextEditingController newListController = TextEditingController();
+
+  // Variables to manage various states in the UI
   bool useCurrentLocation = false;
   bool customSearch = false;
   List<Marker> _markers = [];
@@ -37,18 +43,22 @@ class _HomePageState extends State<HomePage> {
   String? _error;
   List<String> userInterests = [];
 
+  // Firebase Firestore collection reference for storing lists
   final CollectionReference _listsCollection =
       FirebaseFirestore.instance.collection('lists');
-  PlacesService? _placesService;
-  final POIService _poiService = POIService();
+  PlacesService?
+      _placesService; // Service for handling place-related operations
+  final POIService _poiService = POIService(); // Service for handling POIs
 
+  // Initialize state and load necessary data
   @override
   void initState() {
     super.initState();
-    _loadEnv();
-    _loadUserInterests(); // Ensure user interests are loaded after initialization
+    _loadEnv(); // Load environment variables
+    _loadUserInterests(); // Load user interests from Firestore
   }
 
+  // Load environment variables, including API keys
   Future<void> _loadEnv() async {
     await dotenv.load();
     String? apiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
@@ -61,6 +71,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  // Load user interests from Firestore
   Future<void> _loadUserInterests() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -74,16 +85,17 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Generate POIs based on user's location or custom input
   void _generatePOIs({List<String>? interests}) async {
     setState(() {
-      _isLoading = true;
+      _isLoading = true; // Show loading indicator
     });
 
     // Check if a location is provided or the user's current location is available
     if (!useCurrentLocation && locationController.text.isEmpty) {
       _showErrorSnackBar('Please enter a location');
       setState(() {
-        _isLoading = false;
+        _isLoading = false; // Hide loading indicator
       });
       return;
     }
@@ -92,7 +104,7 @@ class _HomePageState extends State<HomePage> {
 
     if (useCurrentLocation) {
       try {
-        position = await _determinePosition();
+        position = await _determinePosition(); // Get user's current position
         if (_mapController != null) {
           _mapController!.animateCamera(CameraUpdate.newLatLng(
             LatLng(position.latitude, position.longitude),
@@ -101,7 +113,7 @@ class _HomePageState extends State<HomePage> {
       } catch (e) {
         print('Error determining position: $e');
         setState(() {
-          _isLoading = false;
+          _isLoading = false; // Hide loading indicator
         });
         _showErrorSnackBar('Error determining position');
         return;
@@ -120,6 +132,7 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
+    // Determine the location string to be used in POI search
     String location = useCurrentLocation && position != null
         ? '${position.latitude}, ${position.longitude}'
         : locationController.text;
@@ -129,20 +142,19 @@ class _HomePageState extends State<HomePage> {
       await updateUserInterests(interests);
     }
 
-    print('Generating POIs for location: $location with interests: $interests');
-
     List<Map<String, dynamic>> pois = [];
     try {
       pois = await fetchPOIs(
-          location, interests?.join(',') ?? ''); // Use the new function
+          location,
+          interests?.join(',') ??
+              ''); // Fetch POIs based on location and interests
     } catch (e) {
       print('Error fetching POIs: $e');
       _showErrorSnackBar('Locations not found, please try again');
     }
 
-    print('POIs fetched: ${pois.length}');
-
     setState(() {
+      // Convert POIs to markers for displaying on the map
       _markers = pois.map((poi) {
         return Marker(
           markerId: MarkerId('${poi['latitude']},${poi['longitude']}'),
@@ -152,19 +164,20 @@ class _HomePageState extends State<HomePage> {
             snippet: poi['description'],
             onTap: () {
               print('Marker tapped: ${poi['name']}');
-              _showAddToListDialog(poi);
+              _showAddToListDialog(poi); // Show dialog to add POI to list
             },
           ),
         );
       }).toList();
 
-      _poiList = pois;
-      _isLoading = false;
+      _poiList = pois; // Store the list of POIs
+      _isLoading = false; // Hide loading indicator
     });
 
-    _updateCameraPosition();
+    _updateCameraPosition(); // Update the camera position on the map
   }
 
+  // Show a dialog to add a POI to a list
   void _showAddToListDialog(Map<String, dynamic> poi) {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -192,7 +205,8 @@ class _HomePageState extends State<HomePage> {
                           value: _showNewListFields,
                           onChanged: (value) {
                             setState(() {
-                              _showNewListFields = value;
+                              _showNewListFields =
+                                  value; // Toggle new list fields visibility
                             });
                           },
                         ),
@@ -209,7 +223,7 @@ class _HomePageState extends State<HomePage> {
                           onPressed: () async {
                             await createList(
                                 newListController.text, _listsCollection);
-                            newListController.clear();
+                            newListController.clear(); // Clear input field
                           },
                           child: const Text('Create New List'),
                         ),
@@ -238,10 +252,10 @@ class _HomePageState extends State<HomePage> {
                         ),
                     ],
                   ),
-                  actions: [
+                  actions: <Widget>[
                     TextButton(
                       onPressed: () {
-                        Navigator.of(context).pop();
+                        Navigator.of(context).pop(); // Close the dialog
                       },
                       child: const Text('Cancel'),
                     ),
@@ -260,8 +274,9 @@ class _HomePageState extends State<HomePage> {
                             _showErrorSnackBar(
                                 'This list already has 10 POIs.');
                           } else {
-                            _savePOIToList(poi);
-                            Navigator.of(context).pop();
+                            _savePOIToList(
+                                poi); // Save the POI to the selected list
+                            Navigator.of(context).pop(); // Close the dialog
                           }
                         }
                       },
@@ -277,6 +292,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Save a POI to the selected list
   void _savePOIToList(Map<String, dynamic> poi) async {
     if (_selectedListId != null) {
       try {
@@ -294,26 +310,31 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Show a success message using a Snackbar
   void _showSuccessSnackBar(String message) {
     final snackBar = SnackBar(content: Text(message));
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
+  // Select a list to add POIs to
   void _selectList(String listId) {
     setState(() {
-      _selectedListId = listId;
+      _selectedListId = listId; // Set the selected list ID
     });
   }
 
+  // Determine the user's current position using Geolocator
   Future<Position> _determinePosition() async {
     bool serviceEnabled;
     LocationPermission permission;
 
+    // Check if location services are enabled
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       return Future.error('Location services are disabled.');
     }
 
+    // Check for location permissions
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -327,19 +348,22 @@ class _HomePageState extends State<HomePage> {
           'Location permissions are permanently denied, we cannot request permissions.');
     }
 
-    return await Geolocator.getCurrentPosition();
+    return await Geolocator.getCurrentPosition(); // Get the current position
   }
 
+  // Update the camera position to show all markers on the map
   void _updateCameraPosition() {
     if (_markers.isEmpty || _mapController == null) return;
 
-    LatLngBounds bounds = _calculateBounds(_markers);
+    LatLngBounds bounds = _calculateBounds(_markers); // Calculate map bounds
 
     _mapController!.animateCamera(
-      CameraUpdate.newLatLngBounds(bounds, 50),
+      CameraUpdate.newLatLngBounds(
+          bounds, 50), // Animate the camera to show all markers
     );
   }
 
+  // Calculate the bounds of the map to fit all markers
   LatLngBounds _calculateBounds(List<Marker> markers) {
     double southWestLat = markers.first.position.latitude;
     double southWestLng = markers.first.position.longitude;
@@ -367,11 +391,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Show an error message using a Snackbar
   void _showErrorSnackBar(String message) {
     final snackBar = SnackBar(content: Text(message));
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
+  // Show the place search dialog
   void _showSearch(BuildContext context) async {
     final query = await showSearch<String>(
       context: context,
@@ -399,6 +425,7 @@ class _HomePageState extends State<HomePage> {
             final address = place.address ?? 'No address available';
 
             setState(() {
+              // Add a marker for the selected place
               _markers.add(
                 Marker(
                   markerId: MarkerId(placeId),
@@ -433,6 +460,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Confirm adding a place to the list
   void _confirmAddPlace(
       String name, double lat, double lng, String description) {
     final poi = {
@@ -441,9 +469,10 @@ class _HomePageState extends State<HomePage> {
       'longitude': lng,
       'description': description,
     };
-    _showAddToListDialog(poi);
+    _showAddToListDialog(poi); // Show dialog to add the place to a list
   }
 
+  // Build method to create the UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -482,7 +511,8 @@ class _HomePageState extends State<HomePage> {
                             value: useCurrentLocation,
                             onChanged: (value) {
                               setState(() {
-                                useCurrentLocation = value;
+                                useCurrentLocation =
+                                    value; // Toggle use current location
                               });
                             },
                           ),
@@ -549,7 +579,7 @@ class _HomePageState extends State<HomePage> {
                               value: customSearch,
                               onChanged: (value) {
                                 setState(() {
-                                  customSearch = value;
+                                  customSearch = value; // Toggle custom search
                                 });
                               },
                             ),
@@ -594,16 +624,17 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
 
+                // Google Map widget to display the map and markers
                 Expanded(
                   child: GoogleMap(
                     initialCameraPosition: const CameraPosition(
                       target: LatLng(51.509865, -0.118092), // Default location
                       zoom: 13,
                     ),
-                    markers: Set.from(_markers),
+                    markers: Set.from(_markers), // Set of markers on the map
                     onMapCreated: (controller) {
                       setState(() {
-                        _mapController = controller;
+                        _mapController = controller; // Set the map controller
                       });
                     },
                   ),
@@ -612,7 +643,7 @@ class _HomePageState extends State<HomePage> {
             ),
             if (_isLoading)
               const Center(
-                child: CircularProgressIndicator(),
+                child: CircularProgressIndicator(), // Show loading indicator
               ),
             _poiList.isNotEmpty
                 ? DraggableScrollableSheet(
@@ -648,7 +679,7 @@ class _HomePageState extends State<HomePage> {
                 width: 150, // Adjust the width as needed
                 child: ElevatedButton(
                   onPressed: () {
-                    _showSearch(context);
+                    _showSearch(context); // Show the place search dialog
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryColor,
