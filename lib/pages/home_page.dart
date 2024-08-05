@@ -17,7 +17,7 @@ import 'package:travelist/services/widgets/place_search_delegate.dart';
 
 // HomePage is a stateful widget that displays the main screen of the app
 class HomePage extends StatefulWidget {
-  const HomePage({super.key}); // Constructor for HomePage
+  const HomePage({super.key});
 
   @override
   _HomePageState createState() => _HomePageState(); // Create state for HomePage

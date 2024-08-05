@@ -6,6 +6,9 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 // Importing Dart's math library to use mathematical functions and constants
 import 'dart:math';
+import 'package:logging/logging.dart';
+
+final Logger _logger = Logger('HomePageLogger');
 
 // Function to calculate the distance between two geographical coordinates using the Haversine formula
 double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
@@ -38,8 +41,6 @@ Future<Map<String, String>> reverseGeocode(double lat, double lon) async {
   try {
     // Perform the HTTP GET request
     final response = await http.get(url);
-
-    print('Google Places reverse geocode response: ${response.body}');
 
     // Check if the response was successful
     if (response.statusCode == 200) {
@@ -88,7 +89,6 @@ Future<Map<String, String>> reverseGeocode(double lat, double lon) async {
     throw Exception('Failed to get human-readable address');
   } catch (e) {
     // Handle any errors that occur during the request
-    print('Error in reverse geocoding: $e');
     throw Exception('Error in reverse geocoding');
   }
 }
@@ -101,7 +101,6 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
 
   // If the location is invalid, attempt to refine it
   if (!isValidLocation) {
-    print('Invalid location: $location. Requesting refinement from OpenAI.');
     location = await refineLocation(location, interests);
     isValidLocation = await validateLocation(location);
     if (!isValidLocation) {
@@ -169,9 +168,6 @@ Name - Latitude, Longitude - Description.
       // Send the request to OpenAI
       final response = await http.post(url, headers: headers, body: body);
 
-      print('Response Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-
       if (response.statusCode == 200) {
         // Parse the response data
         Map<String, dynamic> data = json.decode(response.body);
@@ -179,7 +175,7 @@ Name - Latitude, Longitude - Description.
         // Replace "**" with a space in the response data if present
         data = data.toString().replaceAll('**', ' ') as Map<String, dynamic>;
 
-        print('Data received: $data');
+        _logger.info('Data received: $data');
         List<Map<String, dynamic>> pois =
             parsePOIs(data['choices'][0]['message']['content']);
 
@@ -189,8 +185,9 @@ Name - Latitude, Longitude - Description.
               poi['name'], poi['latitude'], poi['longitude'], location);
           double distance = calculateDistance(
               originalLat, originalLon, poi['latitude'], poi['longitude']);
-          print(
+          _logger.info(
               'POI validation result for ${poi['name']}: $isValidPoi, Distance: $distance miles');
+
           if (isValidPoi && distance <= 15) {
             if (!validPois
                 .any((existingPoi) => existingPoi['name'] == poi['name'])) {
@@ -200,14 +197,12 @@ Name - Latitude, Longitude - Description.
             }
           }
         }
-
-        print('Valid POIs: ${validPois.length}');
       } else {
-        print('Failed to load POIs: ${response.body}');
+        _logger.warning('Failed to load POIs: ${response.body}');
       }
     } catch (e) {
       // Handle any errors that occur during the request
-      print('Error: $e');
+      _logger.severe('Error: $e');
     }
 
     attempts++;
@@ -236,7 +231,7 @@ Future<bool> validateLocation(String location) async {
     // Send the HTTP GET request
     final response = await http.get(url);
 
-    print('Google Places response: ${response.body}');
+    _logger.info('Google Places response: ${response.body}');
 
     // Replace "**" with a space in the response data if present
     final bodyString = response.body.replaceAll('**', ' ');
@@ -251,7 +246,7 @@ Future<bool> validateLocation(String location) async {
     return false; // Return false if no valid data found
   } catch (e) {
     // Handle any errors that occur during the request
-    print('Error validating location: $e');
+    _logger.severe('Error validating location:: $e');
     return false;
   }
 }
@@ -272,9 +267,7 @@ Future<bool> validatePoi(
   try {
     // Send the HTTP GET request
     final response = await http.get(url);
-
-    print('Google Places POI response: ${response.body}');
-
+    _logger.info('Google Places POI response: ${response.body}');
     // Replace "**" with a space in the response data if present
     final bodyString = response.body.replaceAll('**', ' ');
 
@@ -289,7 +282,8 @@ Future<bool> validatePoi(
             'https://maps.googleapis.com/maps/api/place/textsearch/json?query=$name in $location&key=$googlePlacesApiKey');
         final responseTextSearch = await http.get(urlTextSearch);
 
-        print('Google Places Text Search response: ${responseTextSearch.body}');
+        _logger.info(
+            'Google Places Text Search response: ${responseTextSearch.body}');
 
         // Replace "**" with a space in the response data if present
         final bodyTextSearchString =
@@ -308,7 +302,7 @@ Future<bool> validatePoi(
     return false; // Return false if no valid data found
   } catch (e) {
     // Handle any errors that occur during the request
-    print('Error validating POI: $e');
+    _logger.severe('Error validating POI: $e');
     return false;
   }
 }
@@ -348,7 +342,7 @@ The location "$location" could not be validated. Suggest an alternative or corre
     // Send the request to OpenAI
     final response = await http.post(url, headers: headers, body: body);
 
-    print('OpenAI refine response: ${response.body}');
+    _logger.info('OpenAI refine response: ${response.body}');
 
     // Replace "**" with a space in the response data if present
     final responseBodyString = response.body.replaceAll('**', ' ');
@@ -358,12 +352,10 @@ The location "$location" could not be validated. Suggest an alternative or corre
       Map<String, dynamic> data = json.decode(responseBodyString);
       return data['choices'][0]['message']['content'].trim();
     } else {
-      print('Failed to refine location: ${response.body}');
       throw Exception('Failed to refine location');
     }
   } catch (e) {
     // Handle any errors that occur during the request
-    print('Error: $e');
     throw Exception('Failed to refine location');
   }
 }
@@ -384,7 +376,7 @@ Future<Map<String, double>> getCoordinates(String location) async {
     // Send the HTTP GET request
     final response = await http.get(url);
 
-    print('Google Places coordinates response: ${response.body}');
+    _logger.info('Google Places coordinates response: ${response.body}');
 
     // Replace "**" with a space in the response data if present
     final bodyString = response.body.replaceAll('**', ' ');
@@ -401,7 +393,6 @@ Future<Map<String, double>> getCoordinates(String location) async {
     throw Exception('Failed to get coordinates for location');
   } catch (e) {
     // Handle any errors that occur during the request
-    print('Error getting coordinates: $e');
     throw Exception('Error getting coordinates');
   }
 }
@@ -434,6 +425,6 @@ List<Map<String, dynamic>> parsePOIs(String responseText) {
       }
     }
   }
-  print('Parsed POIs: $pois');
+  _logger.info('Parsed POIs: $pois');
   return pois; // Return the list of parsed POIs
 }

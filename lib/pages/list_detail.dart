@@ -29,68 +29,83 @@ class ListDetailsPage extends StatefulWidget {
 }
 
 class _ListDetailsPageState extends State<ListDetailsPage> {
-  gmaps.GoogleMapController? _mapController;
-  List<gmaps.Marker> _markers = [];
-  List<Map<String, dynamic>> _poiData = [];
-  List<gmaps.LatLng> _polylinePoints = [];
-  final List<gmaps.LatLng> _routePoints = [];
-  final Set<gmaps.Polyline> _polylines = {};
-  PolylinePoints polylinePoints = PolylinePoints();
+  gmaps.GoogleMapController? _mapController; // Controller for Google Map
+  List<gmaps.Marker> _markers =
+      []; // List of markers to be displayed on the map
+  List<Map<String, dynamic>> _poiData =
+      []; // List of Points of Interest (POI) data
+  List<gmaps.LatLng> _polylinePoints =
+      []; // List of points for drawing polyline
+  final List<gmaps.LatLng> _routePoints =
+      []; // List of route points for navigation
+  final Set<gmaps.Polyline> _polylines = {}; // Set of polylines on the map
+  PolylinePoints polylinePoints =
+      PolylinePoints(); // PolylinePoints object for decoding polyline
   String? _googleMapsApiKey;
   bool _isLoading = false;
   String? _error;
-  gmaps.LatLng? _currentLocation;
-  final Completer<gmaps.GoogleMapController?> _controller = Completer();
-  Location location = Location();
-  LocationData? _currentPosition;
-  StreamSubscription<LocationData>? locationSubscription;
+  gmaps.LatLng? _currentLocation; // User's current location
+  final Completer<gmaps.GoogleMapController?> _controller =
+      Completer(); // Completer for map controller
+  Location location =
+      Location(); // Location object for accessing location services
+  LocationData? _currentPosition; // User's current position data
+  StreamSubscription<LocationData>?
+      locationSubscription; // Subscription for location updates
 
   bool _isNavigationView = false;
   gmaps.LatLng? _navigationDestination;
-  bool _userHasInteractedWithMap = false;
-  List<gmd.DirectionLegStep> _navigationSteps = [];
+  bool _userHasInteractedWithMap =
+      false; // Flag to indicate if user has interacted with the map
+  List<gmd.DirectionLegStep> _navigationSteps = []; // List of navigation steps
   int _currentStepIndex = 0;
   double _currentSliderValue = 0;
   String _distanceText = '';
   String _durationText = '';
-  String _transportMode = 'driving';
+  String _transportMode = 'driving'; // Transport mode for navigation
 
-  final bool _countriesEnabled = true;
+  final bool _countriesEnabled = true; // Flag to enable country filtering
   final bool _locationBiasEnabled = true;
-  final bool _locationRestrictionEnabled = false;
+  final bool _locationRestrictionEnabled =
+      false; // Flag to enable location restriction
 
-  late final PlacesService _placesService;
-  late final POIService _poiService;
-  places.LatLngBounds? _locationBias;
+  late final PlacesService
+      _placesService; // Service for place-related operations
+  late final POIService _poiService; // Service for POI-related operations
+  places.LatLngBounds? _locationBias; // Location bias for place searches
 
-  int _selectedIndex = 1;
+  int _selectedIndex = 1; // Selected index for bottom navigation bar
 
   @override
   void initState() {
     super.initState();
     _googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'];
-    gmd.GoogleMapsDirections.init(googleAPIKey: _googleMapsApiKey!);
-    _placesService = PlacesService(_googleMapsApiKey!, _locationBias);
-    _poiService = POIService();
+    gmd.GoogleMapsDirections.init(
+        googleAPIKey: _googleMapsApiKey!); // Initialize Google Maps Directions
+    _placesService = PlacesService(
+        _googleMapsApiKey!, _locationBias); // Initialize PlacesService
+    _poiService = POIService(); // Initialize POIService
     _fetchPlaces();
     _getCurrentLocation();
   }
 
   @override
   void dispose() {
-    locationSubscription?.cancel();
+    locationSubscription?.cancel(); // Cancel location subscription
     super.dispose();
   }
 
+  // Handle bottom navigation item tap
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
     if (index == 0) {
-      Navigator.pop(context, 0);
+      Navigator.pop(context, 0); // Navigate back to previous page
     }
   }
 
+  // Calculate centroid of a list of LatLng points
   gmaps.LatLng _calculateCentroid(List<gmaps.LatLng> points) {
     double latSum = 0;
     double lngSum = 0;
@@ -103,6 +118,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     return gmaps.LatLng(latSum / points.length, lngSum / points.length);
   }
 
+  // Fetch places data from Firestore
   Future<void> _fetchPlaces() async {
     setState(() {
       _isLoading = true;
@@ -114,7 +130,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           .collection('lists')
           .doc(widget.listId)
           .collection('pois')
-          .get();
+          .get(); // Get POIs from Firestore
 
       List<gmaps.Marker> markers = [];
       List<Map<String, dynamic>> poiData = [];
@@ -137,7 +153,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         });
       }
 
-      poiData.sort((a, b) => a['distance'].compareTo(b['distance']));
+      poiData.sort((a, b) =>
+          a['distance'].compareTo(b['distance'])); // Sort POIs by distance
 
       for (var poi in poiData) {
         var position = gmaps.LatLng(poi['latitude'], poi['longitude']);
@@ -160,10 +177,10 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       }
 
       setState(() {
-        _markers = markers;
-        _poiData = poiData;
-        _polylinePoints = points;
-        _isLoading = false;
+        _markers = markers; // Set markers
+        _poiData = poiData; // Set POI data
+        _polylinePoints = points; // Set polyline points
+        _isLoading = false; // Set loading state to false
       });
 
       if (points.isNotEmpty) {
@@ -188,8 +205,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       }
 
       if (_polylinePoints.isNotEmpty) {
-        _getRoutePolyline();
-        _setNearestDestination();
+        _getRoutePolyline(); // Get polyline route
+        _setNearestDestination(); // Set nearest destination
         if (!_userHasInteractedWithMap) {
           _mapController?.animateCamera(
             gmaps.CameraUpdate.newLatLngBounds(
@@ -201,17 +218,18 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       }
     } catch (e) {
       setState(() {
-        _error = e.toString();
-        _isLoading = false;
+        _error = e.toString(); // Set error message
+        _isLoading = false; // Set loading state to false
       });
     }
   }
 
+  // Get route polyline for the current list of points
   Future<void> _getRoutePolyline() async {
     if (_polylinePoints.length < 2) return;
 
-    _routePoints.clear();
-    _polylines.clear();
+    _routePoints.clear(); // Clear route points
+    _polylines.clear(); // Clear existing polylines
 
     for (int i = 0; i < _polylinePoints.length - 1; i++) {
       gmaps.LatLng start = _polylinePoints[i];
@@ -233,7 +251,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           .toList();
 
       setState(() {
-        _routePoints.addAll(points);
+        _routePoints.addAll(points); // Add route points
       });
     }
 
@@ -260,6 +278,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     _calculateAndDisplayDistanceDuration(_currentSliderValue.toInt());
   }
 
+  // Calculate bounds for a list of LatLng points
   gmaps.LatLngBounds _calculateBounds(List<gmaps.LatLng> points) {
     double southWestLat = points.first.latitude;
     double southWestLng = points.first.longitude;
@@ -287,6 +306,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
+  // Navigate to the selected location
   Future<void> _navigateToSelectedLocation(
       gmaps.LatLng selectedLocation) async {
     if (_currentPosition == null) return;
@@ -341,6 +361,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
+  // Update navigation based on the current location
   void _updateNavigation(LocationData currentLocation) {
     setState(() {
       _currentLocation =
@@ -378,6 +399,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
+  // Calculate distance between two LatLng points
   double _calculateDistance(gmaps.LatLng start, gmaps.LatLng end) {
     const double p = 0.017453292519943295;
     final double a = 0.5 -
@@ -390,6 +412,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     return 12742 * asin(sqrt(a));
   }
 
+  // Get the current location of the user
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
     PermissionStatus permissionGranted;
@@ -440,12 +463,14 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
+  // Toggle the navigation view state
   void _toggleNavigationView() {
     setState(() {
       _isNavigationView = !_isNavigationView;
     });
   }
 
+  // Set the nearest destination from the current location
   void _setNearestDestination() {
     if (_currentLocation == null || _polylinePoints.isEmpty) return;
 
@@ -465,6 +490,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
+  // Calculate and display distance and duration for the route
   Future<void> _calculateAndDisplayDistanceDuration(int index) async {
     if (index >= _polylinePoints.length - 1) return;
 
@@ -492,6 +518,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     });
   }
 
+  // Get duration based on transport mode
   Future<gmd.DurationValue> _getDuration(
       double startLat, double startLng, double endLat, double endLng) async {
     gmd.Directions directions = await gmd.getDirections(
@@ -517,6 +544,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
+  // Calculate duration for walking
   Future<gmd.DurationValue> _durationWalking(
       gmd.DurationValue drivingDuration) async {
     int walkingDurationSeconds = (drivingDuration.seconds * 5).toInt();
@@ -526,6 +554,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
+  // Calculate duration for bicycling
   Future<gmd.DurationValue> _durationBicycling(
       gmd.DurationValue drivingDuration) async {
     int bicyclingDurationSeconds = (drivingDuration.seconds * 2).toInt();
@@ -535,6 +564,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
+  // Format duration in hours and minutes
   String _formatDuration(int totalSeconds) {
     int hours = totalSeconds ~/ 3600;
     int minutes = (totalSeconds % 3600) ~/ 60;
@@ -545,6 +575,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
+  // Confirm adding a place to the list
   Future<void> _confirmAddPlace(
       String name, double latitude, double longitude, String address) async {
     await _poiService.addNearbyPlace(
@@ -560,6 +591,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
+  // Show a dialog to reorder points of interest
   void _showReorderDialog() {
     List<Map<String, dynamic>> reorderedPOIData = List.from(_poiData);
     int _draggingIndex = -1;
@@ -697,8 +729,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                     setState(() {
                       _poiData = reorderedPOIData;
                     });
-                    _updatePOIOrderInFirestore();
-                    Navigator.of(context).pop();
+                    _updatePOIOrderInFirestore(); // Update the order of POIs in Firestore
+                    Navigator.of(context).pop(); // Close the dialog
                   },
                   child: Text("Save"),
                 ),
@@ -710,6 +742,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
+  // Update the order of POIs in Firestore
   void _updatePOIOrderInFirestore() async {
     final batch = FirebaseFirestore.instance.batch();
     for (int i = 0; i < _poiData.length; i++) {
@@ -768,7 +801,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                     foregroundColor: Colors.white,
                     onPressed: () async {
                       if (_navigationDestination == null) {
-                        _setNearestDestination();
+                        _setNearestDestination(); // Set the nearest destination
                       }
                       final url =
                           'google.navigation:q=${_navigationDestination!.latitude},${_navigationDestination!.longitude}&key=$_googleMapsApiKey';
@@ -790,7 +823,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                     backgroundColor: AppColors.primaryColor,
                     foregroundColor: Colors.white,
                     onPressed: () {
-                      _showSearch(context);
+                      _showSearch(context); // Show search dialog
                     },
                     tooltip: 'Search for places',
                     child: const Icon(Icons.add),
@@ -877,16 +910,14 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                               itemBuilder: (BuildContext context, int index) {
                                 double textSize = _poiData.length > 7 ? 14 : 16;
                                 return Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 0), // No vertical padding
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 0),
                                   child: ListTile(
-                                    dense: true, // Makes the ListTile smaller
+                                    dense: true,
                                     contentPadding: EdgeInsets.symmetric(
                                         vertical: 0, horizontal: 4.0),
-                                    visualDensity: VisualDensity
-                                        .compact, // Further reduces height
-                                    minVerticalPadding:
-                                        0, // Minimizes padding within the ListTile
+                                    visualDensity: VisualDensity.compact,
+                                    minVerticalPadding: 0,
                                     title: Text(
                                       '${index + 1}. ${_poiData[index]['name']}',
                                       style: TextStyle(
@@ -899,7 +930,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                     ),
                                     trailing: const Icon(Icons.drag_handle),
                                     onTap: () {
-                                      _showReorderDialog();
+                                      _showReorderDialog(); // Show reorder dialog
                                     },
                                   ),
                                 );
@@ -921,8 +952,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       onChanged: (double value) {
                                         setState(() {
                                           _currentSliderValue = value;
-                                          _calculateAndDisplayDistanceDuration(
-                                              value.toInt());
+                                          _calculateAndDisplayDistanceDuration(value
+                                              .toInt()); // Update distance and duration display
                                         });
                                       },
                                     ),
@@ -946,7 +977,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       onPressed: () {
                                         setState(() {
                                           _transportMode = 'driving';
-                                          _getRoutePolyline();
+                                          _getRoutePolyline(); // Get route polyline for driving
                                         });
                                       },
                                       color: _transportMode == 'driving'
@@ -959,7 +990,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       onPressed: () {
                                         setState(() {
                                           _transportMode = 'walking';
-                                          _getRoutePolyline();
+                                          _getRoutePolyline(); // Get route polyline for walking
                                         });
                                       },
                                       color: _transportMode == 'walking'
@@ -972,7 +1003,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       onPressed: () {
                                         setState(() {
                                           _transportMode = 'bicycling';
-                                          _getRoutePolyline();
+                                          _getRoutePolyline(); // Get route polyline for bicycling
                                         });
                                       },
                                       color: _transportMode == 'bicycling'
@@ -1000,6 +1031,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
+  // Build loading skeleton while data is being fetched
   Widget _buildLoadingSkeleton(BuildContext context) {
     return Column(
       children: [
@@ -1016,6 +1048,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
+  // Show search dialog for searching places
   void _showSearch(BuildContext context) async {
     final query = await showSearch<String>(
       context: context,

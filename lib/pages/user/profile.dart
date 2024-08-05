@@ -66,6 +66,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
           .map((doc) => UserModel.fromJson(doc.data()))
           .toList();
     });
+    print("All users loaded: $allUsers");
   }
 
   Future<void> _loadAllLists() async {
@@ -647,35 +648,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                 ),
                               ],
                             ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      ViewPoisPage(listId: listId),
-                                ),
-                              );
-                            },
                           ),
                         );
                       },
-                    ),
-                    SizedBox(height: 16),
-                    TextField(
-                      controller: _listController,
-                      decoration: InputDecoration(
-                        labelText: 'Add List',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.add),
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: _addList,
-                      child: Text('Add List'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                      ),
                     ),
                   ],
                 ],
