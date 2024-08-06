@@ -8,7 +8,7 @@ import 'package:travelist/models/user_model.dart';
 import 'package:travelist/services/styles.dart';
 import 'package:travelist/services/widgets/image_picker.dart'; // Adjust the import according to your project structure
 import 'view_profile.dart'; // Import the new profile viewing page
-import 'view_pois_page.dart'; // Import the page to view POIs
+// Import the page to view POIs
 
 class UserProfilePage extends StatefulWidget {
   final Key? key;
