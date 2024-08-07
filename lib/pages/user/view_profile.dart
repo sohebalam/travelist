@@ -2,8 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:travelist/services/styles.dart'; // For current user information
+import 'package:travelist/services/shared_functions.dart';
+import 'package:travelist/services/styles.dart';
+import 'package:travelist/services/widgets/image_picker.dart';
 
 class ViewUserProfilePage extends StatefulWidget {
   final String userId;
@@ -41,10 +42,62 @@ class _ViewUserProfilePageState extends State<ViewUserProfilePage> {
     });
   }
 
-  void _updateProfile() {
-    print("Update profile button pressed");
-    // Add your update profile logic here
-    setState(() {});
+  Future<void> _updateProfile() async {
+    try {
+      String? imageUrl;
+      if (_image != null) {
+        imageUrl = await _uploadImageToFirebase(widget.userId);
+      }
+
+      final userRef =
+          FirebaseFirestore.instance.collection('users').doc(widget.userId);
+      await userRef.update({
+        'name': _nameController.text,
+        'email': _emailController.text,
+        'image': imageUrl ?? _imageController.text,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Profile updated successfully')),
+      );
+    } catch (e) {
+      print('Error updating profile: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update profile')),
+      );
+    }
+  }
+
+  Future<String> _uploadImageToFirebase(String userId) async {
+    final storageRef = FirebaseStorage.instance
+        .ref()
+        .child('user_images')
+        .child('$userId.jpg');
+    UploadTask uploadTask = storageRef.putFile(_image!);
+    TaskSnapshot taskSnapshot = await uploadTask;
+    return await taskSnapshot.ref.getDownloadURL();
+  }
+
+  Future<void> _addInterest() async {
+    if (_interestController.text.trim().isEmpty) return;
+    try {
+      await updateUserInterests(
+          [_interestController.text.trim().toLowerCase()]);
+      _interestController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Interest added')),
+      );
+      setState(() {
+        _userFuture = FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.userId)
+            .get();
+      });
+    } catch (e) {
+      print('Error adding interest: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add interest')),
+      );
+    }
   }
 
   void _confirmDeleteProfile() {
@@ -76,7 +129,6 @@ class _ViewUserProfilePageState extends State<ViewUserProfilePage> {
   }
 
   void _deleteProfile() async {
-    print("Delete profile button pressed");
     try {
       await FirebaseFirestore.instance
           .collection('users')
@@ -93,12 +145,27 @@ class _ViewUserProfilePageState extends State<ViewUserProfilePage> {
     setState(() {});
   }
 
+  Future<void> _pickImage() async {
+    final pickedImage = await pickImage(context);
+    if (pickedImage != null) {
+      setState(() {
+        _image = pickedImage;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    print("Building ViewUserProfilePage widget");
     return Scaffold(
       appBar: AppBar(
-        title: Text('View Profile'),
+        title: Text(
+          'View Profile',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: AppColors.primaryColor,
+        iconTheme: IconThemeData(
+          color: Colors.white, // Change this to the desired color
+        ),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.0),
@@ -116,27 +183,71 @@ class _ViewUserProfilePageState extends State<ViewUserProfilePage> {
             }
 
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundImage: _imageController.text.isEmpty
-                      ? AssetImage('assets/default_profile.png')
-                      : NetworkImage(_imageController.text) as ImageProvider,
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundImage: _image != null
+                          ? FileImage(_image!)
+                          : (_imageController.text.isNotEmpty
+                                  ? NetworkImage(_imageController.text)
+                                  : AssetImage('assets/default_profile.png'))
+                              as ImageProvider,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: InkWell(
+                        onTap: _pickImage,
+                        child: CircleAvatar(
+                          backgroundColor: AppColors.primaryColor,
+                          child: Icon(Icons.edit, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 SizedBox(height: 16),
                 TextField(
                   controller: _nameController,
-                  decoration: InputDecoration(labelText: 'Name'),
+                  decoration: InputDecoration(
+                    labelText: 'Name',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person),
+                  ),
                 ),
                 SizedBox(height: 16),
                 TextField(
                   controller: _emailController,
-                  decoration: InputDecoration(labelText: 'Email'),
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.email),
+                  ),
                 ),
                 SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: _updateProfile,
-                  child: Text('Update Profile'),
+                  child: Text(
+                    'Update Profile',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.secondaryColor,
+                  ),
+                ),
+                SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _confirmDeleteProfile,
+                  child: Text(
+                    'Delete Profile',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                  ),
                 ),
               ],
             );
