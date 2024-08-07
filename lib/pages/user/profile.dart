@@ -326,6 +326,54 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
+  Future<void> _showDeleteProfileConfirmationDialog() async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Delete Profile'),
+          content: Text(
+              'Are you sure you want to delete your profile? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _deleteProfile();
+                Navigator.of(context).pop();
+              },
+              child: Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteProfile() async {
+    try {
+      final userRef =
+          FirebaseFirestore.instance.collection('users').doc(user!.uid);
+      await userRef.delete();
+      // Add additional deletion logic if needed (e.g., deleting user-related data from other collections)
+      await FirebaseAuth.instance.currentUser?.delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Profile deleted')),
+      );
+      Navigator.of(context).pushReplacementNamed(
+          '/login'); // Navigate back to login or home after deletion
+    } catch (e) {
+      print('Error deleting profile: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete profile')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -462,10 +510,21 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryColor,
+                            backgroundColor: AppColors.secondaryColor,
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _showDeleteProfileConfirmationDialog,
+                    child: Text(
+                      'Delete Profile',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryColor,
                     ),
                   ),
                   SizedBox(height: 16),
@@ -754,10 +813,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 return Card(
                   child: ListTile(
                     title: Container(
-                      width: double.infinity,
-                      height: 20,
-                      color: Colors.grey[300],
-                    ),
+                        width: double.infinity,
+                        height: 20,
+                        color: Colors.grey[300]),
                     leading: Icon(Icons.star, color: Colors.grey[300]),
                   ),
                 );
