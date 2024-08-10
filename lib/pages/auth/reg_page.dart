@@ -132,6 +132,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final textScaleFactor = MediaQuery.maybeTextScalerOf(context)?.scale(1);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -191,7 +193,13 @@ class _RegisterPageState extends State<RegisterPage> {
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
                                   hintText: "Name",
-                                  hintStyle: TextStyle(color: Colors.grey[700]),
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 14 * (textScaleFactor ?? 1.0),
+                                  ),
+                                ),
+                                style: TextStyle(
+                                  fontSize: 14 * (textScaleFactor ?? 1.0),
                                 ),
                               ),
                             ),
@@ -209,7 +217,13 @@ class _RegisterPageState extends State<RegisterPage> {
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
                                   hintText: "Email",
-                                  hintStyle: TextStyle(color: Colors.grey[700]),
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 14 * (textScaleFactor ?? 1.0),
+                                  ),
+                                ),
+                                style: TextStyle(
+                                  fontSize: 14 * (textScaleFactor ?? 1.0),
                                 ),
                               ),
                             ),
@@ -221,7 +235,10 @@ class _RegisterPageState extends State<RegisterPage> {
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
                                   hintText: "Password",
-                                  hintStyle: TextStyle(color: Colors.grey[700]),
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 14 * (textScaleFactor ?? 1.0),
+                                  ),
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscureText
@@ -237,6 +254,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                       });
                                     },
                                   ),
+                                ),
+                                style: TextStyle(
+                                  fontSize: 14 * (textScaleFactor ?? 1.0),
                                 ),
                               ),
                             ),
@@ -272,12 +292,13 @@ class _RegisterPageState extends State<RegisterPage> {
                               ],
                             ),
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Text(
                               "Register",
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
+                                fontSize: 16 * (textScaleFactor ?? 1.0),
                               ),
                             ),
                           ),
@@ -302,12 +323,13 @@ class _RegisterPageState extends State<RegisterPage> {
                               ],
                             ),
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Text(
                               "Upload Image",
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
+                                fontSize: 16 * (textScaleFactor ?? 1.0),
                               ),
                             ),
                           ),
@@ -321,10 +343,11 @@ class _RegisterPageState extends State<RegisterPage> {
                       duration: const Duration(milliseconds: 2000),
                       child: TextButton(
                         onPressed: () => _login(context),
-                        child: const Text(
+                        child: Text(
                           "Login",
                           style: TextStyle(
                             color: AppColors.secondaryColor,
+                            fontSize: 16 * (textScaleFactor ?? 1.0),
                           ),
                         ),
                       ),

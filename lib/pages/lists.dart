@@ -1,4 +1,3 @@
-// Importing necessary Flutter and Firebase packages for UI components and database functionalities.
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,7 +5,6 @@ import 'package:travelist/pages/list_detail.dart';
 import 'package:travelist/services/shared_functions.dart';
 import 'package:travelist/services/styles.dart';
 
-// ListsPage is a stateful widget that displays a list of user-created lists.
 class ListsPage extends StatefulWidget {
   const ListsPage({super.key});
 
@@ -14,103 +12,128 @@ class ListsPage extends StatefulWidget {
   _ListsPageState createState() => _ListsPageState();
 }
 
-// State class for ListsPage
 class _ListsPageState extends State<ListsPage> {
-  // Reference to the Firestore collection for storing lists
   final CollectionReference _listsCollection =
       FirebaseFirestore.instance.collection('lists');
 
-  // Variables to manage the state of the UI
   int _selectedIndex = 1;
   User? _currentUser;
 
-  // Initialize the state and retrieve the current user
   @override
   void initState() {
     super.initState();
-    _currentUser = FirebaseAuth.instance.currentUser; // Get the current user
+    _currentUser = FirebaseAuth.instance.currentUser;
   }
 
-  // Handle bottom navigation bar item taps
   void _onItemTapped(int index) {
     setState(() {
-      _selectedIndex = index; // Update the selected index
+      _selectedIndex = index;
     });
     if (index == 0) {
-      Navigator.pushNamed(context, '/'); // Navigate to HomePage if index is 0
+      Navigator.pushNamed(context, '/');
     }
   }
 
-  // Build method to create the UI for ListsPage
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // App bar with title
       appBar: AppBar(
         title: Text(
           'Lists',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize:
+                MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ?? 18.0,
+          ),
         ),
         backgroundColor: AppColors.primaryColor,
       ),
-      // Body of the page with a list of user-created lists
       body: StreamBuilder<QuerySnapshot>(
         stream: _listsCollection
             .where('userId', isEqualTo: _currentUser?.uid)
-            .snapshots(), // Stream of lists filtered by user ID
+            .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(
-                child:
-                    CircularProgressIndicator()); // Show loading indicator if no data
+              child: CircularProgressIndicator(),
+            );
           }
 
-          // Retrieve the list of documents from the snapshot
           var lists = snapshot.data!.docs;
 
-          // ListView builder to create a list of ListTiles for each list
           return ListView.builder(
-            itemCount: lists.length, // Number of items in the list
+            itemCount: lists.length,
             itemBuilder: (context, index) {
-              // Retrieve the data for each list
               var listData = lists[index].data() as Map<String, dynamic>;
               return FutureBuilder<QuerySnapshot>(
                 future: _listsCollection
                     .doc(lists[index].id)
                     .collection('pois')
-                    .get(), // Future to get the list of POIs for the list
+                    .get(),
                 builder: (context, poiSnapshot) {
                   if (!poiSnapshot.hasData) {
-                    return ListTile(
-                      title: Text(listData.containsKey('list')
-                          ? listData['list']
-                          : 'Unnamed List'), // Show the list name
-                      subtitle: const Text('Loading...'), // Show loading text
+                    return Semantics(
+                      label:
+                          'List: ${listData.containsKey('list') ? listData['list'] : 'Unnamed List'}, loading places',
+                      child: ListTile(
+                        title: Text(
+                          listData.containsKey('list')
+                              ? listData['list']
+                              : 'Unnamed List',
+                          style: TextStyle(
+                            fontSize: MediaQuery.maybeTextScalerOf(context)
+                                    ?.scale(16.0) ??
+                                16.0,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Loading...',
+                          style: TextStyle(
+                            fontSize: MediaQuery.maybeTextScalerOf(context)
+                                    ?.scale(14.0) ??
+                                14.0,
+                          ),
+                        ),
+                      ),
                     );
                   }
 
-                  // Retrieve the list of POIs
                   var pois = poiSnapshot.data!.docs;
 
-                  // Create a ListTile for each list with the number of POIs
-                  return ListTile(
-                    title: Text(listData.containsKey('list')
-                        ? listData['list']
-                        : 'Unnamed List'), // Show the list name
-                    subtitle: Text(
-                        '${pois.length} places'), // Show the number of POIs
-                    onTap: () {
-                      // Navigate to ListDetailsPage when the ListTile is tapped
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ListDetailsPage(
-                            listId: lists[index].id,
-                            listName: listData['list'],
-                          ),
+                  return Semantics(
+                    label:
+                        'List: ${listData.containsKey('list') ? listData['list'] : 'Unnamed List'}, ${pois.length} places',
+                    child: ListTile(
+                      title: Text(
+                        listData.containsKey('list')
+                            ? listData['list']
+                            : 'Unnamed List',
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0,
                         ),
-                      );
-                    },
+                      ),
+                      subtitle: Text(
+                        '${pois.length} places',
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(14.0) ??
+                              14.0,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ListDetailsPage(
+                              listId: lists[index].id,
+                              listName: listData['list'],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   );
                 },
               );
@@ -118,60 +141,87 @@ class _ListsPageState extends State<ListsPage> {
           );
         },
       ),
-      // Floating action button to add a new list
       floatingActionButton: FloatingActionButton(
-        onPressed: () =>
-            _showAddListDialog(context), // Show dialog to add a new list
+        onPressed: () => _showAddListDialog(context),
         tooltip: 'Add New List',
         backgroundColor: AppColors.primaryColor,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8.0),
+        ),
       ),
     );
   }
 
-  // Show a dialog to add a new list
   void _showAddListDialog(BuildContext context) {
-    final formKey = GlobalKey<FormState>(); // Key to validate the form
-    final listNameController =
-        TextEditingController(); // Controller for the list name input field
+    final formKey = GlobalKey<FormState>();
+    final listNameController = TextEditingController();
 
     showDialog(
-      context: context, // Context of the current widget
+      context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Add New List'), // Title of the dialog
+          title: Text(
+            'Add New List',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ?? 18.0,
+            ),
+          ),
           content: Form(
-            key: formKey, // Form key for validation
+            key: formKey,
             child: TextFormField(
-              controller: listNameController, // Controller for the input field
+              controller: listNameController,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Please enter a list name'; // Validation error message
+                  return 'Please enter a list name';
                 }
                 return null;
               },
-              decoration: const InputDecoration(
-                  hintText: 'List Name'), // Input field decoration
+              decoration: InputDecoration(
+                hintText: 'List Name',
+                hintStyle: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
+              style: TextStyle(
+                fontSize:
+                    MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ?? 16.0,
+              ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog without saving
+                Navigator.of(context).pop();
               },
-              child: const Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () async {
                 if (formKey.currentState!.validate()) {
-                  // Check if the form input is valid
-                  await createList(listNameController.text,
-                      _listsCollection); // Create a new list
-                  Navigator.of(context).pop(); // Close the dialog after saving
+                  await createList(listNameController.text, _listsCollection);
+                  Navigator.of(context).pop();
                 }
               },
-              child: const Text('Add'),
+              child: Text(
+                'Add',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
             ),
           ],
         );

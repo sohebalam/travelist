@@ -6,9 +6,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:travelist/services/shared_functions.dart';
 import 'package:travelist/models/user_model.dart';
 import 'package:travelist/services/styles.dart';
-import 'package:travelist/services/widgets/image_picker.dart'; // Adjust the import according to your project structure
-import 'view_profile.dart'; // Import the new profile viewing page
-// Import the page to view POIs
+import 'package:travelist/services/widgets/image_picker.dart';
+import 'view_profile.dart';
 
 class UserProfilePage extends StatefulWidget {
   final Key? key;
@@ -30,9 +29,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
   bool isAdmin = false;
   List<UserModel> allUsers = [];
   List<Map<String, dynamic>> allLists = [];
-  String selectedView = 'Interests'; // Default view
-  String? editingInterest; // To keep track of the interest being edited
-  String? editingList; // To keep track of the list being edited
+  String selectedView = 'Interests';
+  String? editingInterest;
+  String? editingList;
 
   @override
   void initState() {
@@ -94,12 +93,28 @@ class _UserProfilePageState extends State<UserProfilePage> {
         'image': imageUrl ?? _imageController.text,
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Profile updated successfully')),
+        SnackBar(
+          content: Text(
+            'Profile updated successfully',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
     } catch (e) {
       print('Error updating profile: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update profile')),
+        SnackBar(
+          content: Text(
+            'Failed to update profile',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
     }
   }
@@ -121,7 +136,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
           [_interestController.text.trim().toLowerCase()]);
       _interestController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Interest added')),
+        SnackBar(
+          content: Text(
+            'Interest added',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
       setState(() {
         _userFuture =
@@ -130,7 +153,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
     } catch (e) {
       print('Error adding interest: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add interest')),
+        SnackBar(
+          content: Text(
+            'Failed to add interest',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
     }
   }
@@ -146,7 +177,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
           newInterest.trim().toLowerCase();
       await userRef.update({'interests': interests});
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Interest updated')),
+        SnackBar(
+          content: Text(
+            'Interest updated',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
       setState(() {
         editingInterest = null;
@@ -155,7 +194,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
     } catch (e) {
       print('Error editing interest: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to edit interest')),
+        SnackBar(
+          content: Text(
+            'Failed to edit interest',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
     }
   }
@@ -169,7 +216,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
       interests.remove(interest);
       await userRef.update({'interests': interests});
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Interest deleted')),
+        SnackBar(
+          content: Text(
+            'Interest deleted',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
       setState(() {
         _userFuture = userRef.get();
@@ -177,7 +232,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
     } catch (e) {
       print('Error deleting interest: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete interest')),
+        SnackBar(
+          content: Text(
+            'Failed to delete interest',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
     }
   }
@@ -191,7 +254,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
       });
       _listController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('List added')),
+        SnackBar(
+          content: Text(
+            'List added',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
       setState(() {
         _loadAllLists();
@@ -199,7 +270,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
     } catch (e) {
       print('Error adding list: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add list')),
+        SnackBar(
+          content: Text(
+            'Failed to add list',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
     }
   }
@@ -211,7 +290,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
           FirebaseFirestore.instance.collection('lists').doc(listId);
       await listRef.update({'list': newListName.trim()});
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('List updated')),
+        SnackBar(
+          content: Text(
+            'List updated',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
       setState(() {
         editingList = null;
@@ -220,7 +307,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
     } catch (e) {
       print('Error editing list: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to edit list')),
+        SnackBar(
+          content: Text(
+            'Failed to edit list',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
     }
   }
@@ -231,7 +326,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
           FirebaseFirestore.instance.collection('lists').doc(listId);
       await listRef.delete();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('List deleted')),
+        SnackBar(
+          content: Text(
+            'List deleted',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
       setState(() {
         _loadAllLists();
@@ -239,7 +342,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
     } catch (e) {
       print('Error deleting list: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete list')),
+        SnackBar(
+          content: Text(
+            'Failed to delete list',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
     }
   }
@@ -259,7 +370,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
           FirebaseFirestore.instance.collection('users').doc(userId);
       await userRef.delete();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User deleted')),
+        SnackBar(
+          content: Text(
+            'User deleted',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
       setState(() {
         _loadAllUsers();
@@ -267,7 +386,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
     } catch (e) {
       print('Error deleting user: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete user')),
+        SnackBar(
+          content: Text(
+            'Failed to delete user',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
     }
   }
@@ -277,21 +404,47 @@ class _UserProfilePageState extends State<UserProfilePage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Delete User'),
-          content: Text('Are you sure you want to delete this user?'),
+          title: Text(
+            'Delete User',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ?? 18.0,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete this user?',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ?? 16.0,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () {
                 _deleteUser(userId);
                 Navigator.of(context).pop();
               },
-              child: Text('Delete'),
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
             ),
           ],
         );
@@ -304,21 +457,47 @@ class _UserProfilePageState extends State<UserProfilePage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Delete List'),
-          content: Text('Are you sure you want to delete this list?'),
+          title: Text(
+            'Delete List',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ?? 18.0,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete this list?',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ?? 16.0,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () {
                 _deleteList(listId);
                 Navigator.of(context).pop();
               },
-              child: Text('Delete'),
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
             ),
           ],
         );
@@ -331,22 +510,47 @@ class _UserProfilePageState extends State<UserProfilePage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Delete Profile'),
+          title: Text(
+            'Delete Profile',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ?? 18.0,
+            ),
+          ),
           content: Text(
-              'Are you sure you want to delete your profile? This action cannot be undone.'),
+            'Are you sure you want to delete your profile? This action cannot be undone.',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ?? 16.0,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () {
                 _deleteProfile();
                 Navigator.of(context).pop();
               },
-              child: Text('Delete'),
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
             ),
           ],
         );
@@ -359,17 +563,31 @@ class _UserProfilePageState extends State<UserProfilePage> {
       final userRef =
           FirebaseFirestore.instance.collection('users').doc(user!.uid);
       await userRef.delete();
-      // Add additional deletion logic if needed (e.g., deleting user-related data from other collections)
       await FirebaseAuth.instance.currentUser?.delete();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Profile deleted')),
+        SnackBar(
+          content: Text(
+            'Profile deleted',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
-      Navigator.of(context).pushReplacementNamed(
-          '/login'); // Navigate back to login or home after deletion
+      Navigator.of(context).pushReplacementNamed('/login');
     } catch (e) {
       print('Error deleting profile: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete profile')),
+        SnackBar(
+          content: Text(
+            'Failed to delete profile',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
       );
     }
   }
@@ -379,10 +597,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          isAdmin
-              ? 'Admin Profile'
-              : 'User Profile', // Conditionally set the title
-          style: TextStyle(color: Colors.white), // Set the text color to white
+          isAdmin ? 'Admin Profile' : 'User Profile',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize:
+                MediaQuery.maybeTextScalerOf(context)?.scale(20.0) ?? 20.0,
+          ),
         ),
         backgroundColor: AppColors.primaryColor,
       ),
@@ -391,22 +611,36 @@ class _UserProfilePageState extends State<UserProfilePage> {
         builder:
             (BuildContext context, AsyncSnapshot<DocumentSnapshot> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            // Show loading indicator while data is being fetched
             return _buildSkeletonLoading();
           }
           if (snapshot.hasError) {
-            // Show error message if there's an error
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(
+              child: Text(
+                'Error: ${snapshot.error}',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
+            );
           }
           if (!snapshot.hasData || !snapshot.data!.exists) {
-            // Handle the case where the user data does not exist
-            return Center(child: Text('User not found'));
+            return Center(
+              child: Text(
+                'User not found',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
+            );
           }
 
           Map<String, dynamic> data =
               snapshot.data!.data() as Map<String, dynamic>? ?? {};
 
-          // Safely accessing user data
           String name = data['name'] ?? 'Unknown';
           String email = data['email'] ?? 'No email provided';
           String image = data['image'] ?? '';
@@ -430,44 +664,76 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 children: [
                   Stack(
                     children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundImage: _image != null
-                            ? FileImage(_image!)
-                            : (image.isNotEmpty)
-                                ? NetworkImage(image)
-                                : AssetImage('assets/person.png')
-                                    as ImageProvider,
+                      Semantics(
+                        label: "Profile picture",
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundImage: _image != null
+                              ? FileImage(_image!)
+                              : (image.isNotEmpty)
+                                  ? NetworkImage(image)
+                                  : AssetImage('assets/person.png')
+                                      as ImageProvider,
+                        ),
                       ),
                       Positioned(
                         bottom: 0,
                         right: 0,
-                        child: InkWell(
-                          onTap: _pickImage,
-                          child: CircleAvatar(
-                            backgroundColor: AppColors.primaryColor,
-                            child: Icon(Icons.edit, color: Colors.white),
+                        child: Semantics(
+                          label: "Edit profile picture",
+                          child: InkWell(
+                            onTap: _pickImage,
+                            child: CircleAvatar(
+                              backgroundColor: AppColors.primaryColor,
+                              child: Icon(Icons.edit, color: Colors.white),
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
                   SizedBox(height: 16),
-                  TextField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Name',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.person),
+                  Semantics(
+                    label: "Name input field",
+                    child: TextField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Name',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person),
+                        labelStyle: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0,
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontSize: MediaQuery.maybeTextScalerOf(context)
+                                ?.scale(16.0) ??
+                            16.0,
+                      ),
                     ),
                   ),
                   SizedBox(height: 16),
-                  TextField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.email),
+                  Semantics(
+                    label: "Email input field",
+                    child: TextField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.email),
+                        labelStyle: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0,
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontSize: MediaQuery.maybeTextScalerOf(context)
+                                ?.scale(16.0) ??
+                            16.0,
+                      ),
                     ),
                   ),
                   SizedBox(height: 16),
@@ -476,240 +742,372 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (isAdmin) ...[
-                          Text(
-                            'Manage',
-                            style: TextStyle(fontSize: 16),
+                          Semantics(
+                            label: "Manage selection",
+                            child: Text(
+                              'Manage',
+                              style: TextStyle(
+                                fontSize: MediaQuery.maybeTextScalerOf(context)
+                                        ?.scale(16.0) ??
+                                    16.0,
+                              ),
+                            ),
                           ),
                           SizedBox(width: 8),
-                          DropdownButton<String>(
-                            value: selectedView,
-                            items: ['Interests', 'Users', 'Lists']
-                                .map((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                selectedView = newValue!;
-                                if (selectedView == 'Lists') {
-                                  _loadAllLists(); // Call the function to load all lists
-                                }
-                              });
-                            },
+                          Semantics(
+                            label: "Manage dropdown",
+                            child: DropdownButton<String>(
+                              value: selectedView,
+                              items: ['Interests', 'Users', 'Lists']
+                                  .map((String value) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(
+                                    value,
+                                    style: TextStyle(
+                                      fontSize:
+                                          MediaQuery.maybeTextScalerOf(context)
+                                                  ?.scale(16.0) ??
+                                              16.0,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  selectedView = newValue!;
+                                  if (selectedView == 'Lists') {
+                                    _loadAllLists();
+                                  }
+                                });
+                              },
+                            ),
                           ),
                           SizedBox(width: 16),
                         ],
-                        ElevatedButton(
-                          onPressed: _updateProfile,
-                          child: Text(
-                            'Update Profile',
-                            style: TextStyle(
-                              color: Colors.white,
+                        Semantics(
+                          label: "Update Profile button",
+                          child: ElevatedButton(
+                            onPressed: _updateProfile,
+                            child: Text(
+                              'Update Profile',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: MediaQuery.maybeTextScalerOf(context)
+                                        ?.scale(16.0) ??
+                                    16.0,
+                              ),
                             ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.secondaryColor,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.secondaryColor,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                   SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _showDeleteProfileConfirmationDialog,
-                    child: Text(
-                      'Delete Profile',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryColor,
+                  Semantics(
+                    label: "Delete Profile button",
+                    child: ElevatedButton(
+                      onPressed: _showDeleteProfileConfirmationDialog,
+                      child: Text(
+                        'Delete Profile',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                      ),
                     ),
                   ),
                   SizedBox(height: 16),
                   Divider(),
                   SizedBox(height: 16),
                   if (selectedView == 'Interests') ...[
-                    Text(
-                      'Interests',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    TextField(
-                      controller: _interestController,
-                      decoration: InputDecoration(
-                        labelText: 'Add Interest',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.add),
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: _addInterest,
+                    Semantics(
+                      label: "Interests section",
                       child: Text(
-                        'Add Interest',
-                        style: TextStyle(color: Colors.white),
+                        'Interests',
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(18.0) ??
+                              18.0,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor,
+                    ),
+                    Semantics(
+                      label: "Add Interest input field",
+                      child: TextField(
+                        controller: _interestController,
+                        decoration: InputDecoration(
+                          labelText: 'Add Interest',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.add),
+                          labelStyle: TextStyle(
+                            fontSize: MediaQuery.maybeTextScalerOf(context)
+                                    ?.scale(16.0) ??
+                                16.0,
+                          ),
+                        ),
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0,
+                        ),
                       ),
                     ),
                     SizedBox(height: 8),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      itemCount: interests.length,
-                      itemBuilder: (context, index) {
-                        return Card(
-                          child: ListTile(
-                            title: editingInterest == interests[index]
-                                ? TextField(
-                                    controller: _interestController
-                                      ..text = interests[index],
-                                    onSubmitted: (newValue) {
-                                      _editInterest(interests[index], newValue);
-                                    },
-                                  )
-                                : Text(interests[index]),
-                            leading:
-                                Icon(Icons.star, color: AppColors.primaryColor),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(Icons.edit,
-                                      color: AppColors.secondaryColor),
-                                  onPressed: () {
-                                    setState(() {
-                                      editingInterest = interests[index];
-                                      _interestController.text =
-                                          interests[index];
-                                    });
-                                  },
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.delete,
-                                      color: AppColors.primaryColor),
-                                  onPressed: () {
-                                    _showDeleteConfirmationDialog(
-                                        interests[index]);
-                                  },
-                                ),
-                              ],
-                            ),
+                    Semantics(
+                      label: "Add Interest button",
+                      child: ElevatedButton(
+                        onPressed: _addInterest,
+                        child: Text(
+                          'Add Interest',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: MediaQuery.maybeTextScalerOf(context)
+                                    ?.scale(16.0) ??
+                                16.0,
                           ),
-                        );
-                      },
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Semantics(
+                      label: "List of interests",
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: interests.length,
+                        itemBuilder: (context, index) {
+                          return Card(
+                            child: ListTile(
+                              title: editingInterest == interests[index]
+                                  ? Semantics(
+                                      label: "Edit interest input field",
+                                      child: TextField(
+                                        controller: _interestController
+                                          ..text = interests[index],
+                                        onSubmitted: (newValue) {
+                                          _editInterest(
+                                              interests[index], newValue);
+                                        },
+                                        style: TextStyle(
+                                          fontSize:
+                                              MediaQuery.maybeTextScalerOf(
+                                                          context)
+                                                      ?.scale(16.0) ??
+                                                  16.0,
+                                        ),
+                                      ),
+                                    )
+                                  : Text(
+                                      interests[index],
+                                      style: TextStyle(
+                                        fontSize: MediaQuery.maybeTextScalerOf(
+                                                    context)
+                                                ?.scale(16.0) ??
+                                            16.0,
+                                      ),
+                                    ),
+                              leading: Icon(Icons.star,
+                                  color: AppColors.primaryColor),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.edit,
+                                        color: AppColors.secondaryColor),
+                                    onPressed: () {
+                                      setState(() {
+                                        editingInterest = interests[index];
+                                        _interestController.text =
+                                            interests[index];
+                                      });
+                                    },
+                                    tooltip: "Edit interest",
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.delete,
+                                        color: AppColors.primaryColor),
+                                    onPressed: () {
+                                      _showDeleteConfirmationDialog(
+                                          interests[index]);
+                                    },
+                                    tooltip: "Delete interest",
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                     SizedBox(height: 16),
                   ] else if (selectedView == 'Users') ...[
-                    Text(
-                      'Users',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Semantics(
+                      label: "Users section",
+                      child: Text(
+                        'Users',
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(18.0) ??
+                              18.0,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                     SizedBox(height: 8),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      itemCount: allUsers.length,
-                      itemBuilder: (context, index) {
-                        return Card(
-                          child: ListTile(
-                            title: Flexible(
-                              child: Text(
-                                allUsers[index].email,
-                                overflow: TextOverflow.ellipsis,
+                    Semantics(
+                      label: "List of users",
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: allUsers.length,
+                        itemBuilder: (context, index) {
+                          return Card(
+                            child: ListTile(
+                              title: Flexible(
+                                child: Text(
+                                  allUsers[index].email,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize:
+                                        MediaQuery.maybeTextScalerOf(context)
+                                                ?.scale(16.0) ??
+                                            16.0,
+                                  ),
+                                ),
+                              ),
+                              leading: Icon(Icons.person,
+                                  color: AppColors.primaryColor),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.edit,
+                                        color: AppColors.secondaryColor),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              ViewUserProfilePage(
+                                            userId: allUsers[index].uid,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    tooltip: "View user profile",
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.delete,
+                                        color: AppColors.primaryColor),
+                                    onPressed: () {
+                                      _showDeleteUserConfirmationDialog(
+                                          allUsers[index].uid);
+                                    },
+                                    tooltip: "Delete user",
+                                  ),
+                                ],
                               ),
                             ),
-                            leading: Icon(Icons.person,
-                                color: AppColors.primaryColor),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(Icons.edit,
-                                      color: AppColors.secondaryColor),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            ViewUserProfilePage(
-                                          userId: allUsers[index].uid,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.delete,
-                                      color: AppColors.primaryColor),
-                                  onPressed: () {
-                                    _showDeleteUserConfirmationDialog(
-                                        allUsers[index].uid);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
                   ] else if (selectedView == 'Lists') ...[
-                    Text(
-                      'Lists',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Semantics(
+                      label: "Lists section",
+                      child: Text(
+                        'Lists',
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(18.0) ??
+                              18.0,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                     SizedBox(height: 8),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      itemCount: allLists.length,
-                      itemBuilder: (context, index) {
-                        var listId = allLists[index]['id'];
-                        var listName =
-                            allLists[index]['list'] ?? 'Unnamed List';
-                        return Card(
-                          child: ListTile(
-                            title: editingList == listId
-                                ? TextField(
-                                    controller: _listController
-                                      ..text = listName,
-                                    onSubmitted: (newValue) {
-                                      _editList(listId, newValue);
+                    Semantics(
+                      label: "List of all lists",
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: allLists.length,
+                        itemBuilder: (context, index) {
+                          var listId = allLists[index]['id'];
+                          var listName =
+                              allLists[index]['list'] ?? 'Unnamed List';
+                          return Card(
+                            child: ListTile(
+                              title: editingList == listId
+                                  ? Semantics(
+                                      label: "Edit list input field",
+                                      child: TextField(
+                                        controller: _listController
+                                          ..text = listName,
+                                        onSubmitted: (newValue) {
+                                          _editList(listId, newValue);
+                                        },
+                                        style: TextStyle(
+                                          fontSize:
+                                              MediaQuery.maybeTextScalerOf(
+                                                          context)
+                                                      ?.scale(16.0) ??
+                                                  16.0,
+                                        ),
+                                      ),
+                                    )
+                                  : Text(
+                                      listName,
+                                      style: TextStyle(
+                                        fontSize: MediaQuery.maybeTextScalerOf(
+                                                    context)
+                                                ?.scale(16.0) ??
+                                            16.0,
+                                      ),
+                                    ),
+                              leading: Icon(Icons.list,
+                                  color: AppColors.primaryColor),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.edit,
+                                        color: AppColors.secondaryColor),
+                                    onPressed: () {
+                                      setState(() {
+                                        editingList = listId;
+                                        _listController.text = listName;
+                                      });
                                     },
-                                  )
-                                : Text(listName),
-                            leading:
-                                Icon(Icons.list, color: AppColors.primaryColor),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(Icons.edit,
-                                      color: AppColors.secondaryColor),
-                                  onPressed: () {
-                                    setState(() {
-                                      editingList = listId;
-                                      _listController.text = listName;
-                                    });
-                                  },
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.delete,
-                                      color: AppColors.primaryColor),
-                                  onPressed: () {
-                                    _showDeleteListConfirmationDialog(listId);
-                                  },
-                                ),
-                              ],
+                                    tooltip: "Edit list",
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.delete,
+                                        color: AppColors.primaryColor),
+                                    onPressed: () {
+                                      _showDeleteListConfirmationDialog(listId);
+                                    },
+                                    tooltip: "Delete list",
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ],
@@ -726,21 +1124,47 @@ class _UserProfilePageState extends State<UserProfilePage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Delete Interest'),
-          content: Text('Are you sure you want to delete this interest?'),
+          title: Text(
+            'Delete Interest',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ?? 18.0,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete this interest?',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ?? 16.0,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () {
                 _deleteInterest(interest);
                 Navigator.of(context).pop();
               },
-              child: Text('Delete'),
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
             ),
           ],
         );

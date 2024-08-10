@@ -113,29 +113,47 @@ class _ChatListState extends State<ChatList> {
                   var friendName = friendData['name'] ?? 'Unknown';
                   var friendImage = friendData['image'] ?? '';
 
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundImage: friendImage.isNotEmpty
-                          ? NetworkImage(friendImage)
-                          : const AssetImage('assets/person.png')
-                              as ImageProvider,
-                    ),
-                    title: Text(friendName),
-                    subtitle: Text(lastMessage),
-                    onTap: () {
-                      // Navigate to the chat page when a chat item is tapped
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatPage(
-                            u_id: friendId,
-                            currentUserId: currentUser!.uid,
-                            userName: friendName,
-                            userImage: friendImage,
-                          ),
+                  return Semantics(
+                    label: 'Chat with $friendName',
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: friendImage.isNotEmpty
+                            ? NetworkImage(friendImage)
+                            : const AssetImage('assets/person.png')
+                                as ImageProvider,
+                        radius: 24, // Ensuring touch target is appropriate
+                      ),
+                      title: Text(
+                        friendName,
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0, // Adjustable text size
                         ),
-                      );
-                    },
+                      ),
+                      subtitle: Text(
+                        lastMessage,
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(14.0) ??
+                              14.0, // Adjustable text size
+                        ),
+                      ),
+                      onTap: () {
+                        // Navigate to the chat page when a chat item is tapped
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatPage(
+                              u_id: friendId,
+                              currentUserId: currentUser!.uid,
+                              userName: friendName,
+                              userImage: friendImage,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   );
                 },
               );
@@ -150,9 +168,13 @@ class _ChatListState extends State<ChatList> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Chats',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: MediaQuery.maybeTextScalerOf(context)?.scale(20.0) ??
+                20.0, // Adjustable text size
+          ),
         ),
         backgroundColor: AppColors.primaryColor,
         actions: [

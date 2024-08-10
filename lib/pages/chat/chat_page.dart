@@ -33,7 +33,7 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.primaryColor,
-        iconTheme: IconThemeData(
+        iconTheme: const IconThemeData(
           color: Colors.white,
         ),
         title: Row(
@@ -42,41 +42,37 @@ class _ChatPageState extends State<ChatPage> {
             ClipRRect(
               borderRadius: BorderRadius.circular(80),
               child: widget.userImage.isNotEmpty
-                  ? Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        image: DecorationImage(
-                          fit: BoxFit.cover,
-                          image: CachedNetworkImageProvider(widget.userImage),
+                  ? Semantics(
+                      label: "Profile picture of ${widget.userName}",
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          image: DecorationImage(
+                            fit: BoxFit.cover,
+                            image: CachedNetworkImageProvider(widget.userImage),
+                          ),
                         ),
                       ),
                     )
-                  : Image.asset(
-                      'assets/person.png', // Local default image path
-                      height: 30,
+                  : Semantics(
+                      label: "Default profile picture",
+                      child: Image.asset(
+                        'assets/person.png', // Local default image path
+                        height: 30,
+                      ),
                     ),
             ),
-            // Placeholder for when no profile image is available
-            if (widget.userImage.isEmpty)
-              Container(
-                height: 30,
-                width: 30,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(80),
-                ),
-                child: Icon(
-                  Icons.person,
-                  color: Colors.grey[500],
-                ),
-              ),
             const SizedBox(width: 10), // Spacing between image and text
             // Display user's name
             Text(
               widget.userName,
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ??
+                    18.0, // Adjustable text size
+              ),
             ),
           ],
         ),
@@ -121,47 +117,59 @@ class _ChatPageState extends State<ChatPage> {
                           'Sending...'; // Display if timestamp is not available
                     }
 
-                    return Align(
-                      alignment: isSentByCurrentUser
-                          ? Alignment.centerRight
-                          : Alignment
-                              .centerLeft, // Align messages based on sender
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(
-                            vertical: 5, horizontal: 10),
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: isSentByCurrentUser
-                              ? Colors.blue
-                              : Colors.grey.shade300, // Message bubble color
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: isSentByCurrentUser
-                              ? CrossAxisAlignment.end
-                              : CrossAxisAlignment.start, // Text alignment
-                          children: [
-                            // Display message text
-                            Text(
-                              message['text'],
-                              style: TextStyle(
-                                color: isSentByCurrentUser
-                                    ? Colors.white
-                                    : Colors.black,
+                    return Semantics(
+                      label: isSentByCurrentUser
+                          ? "Sent message at $formattedDate: ${message['text']}"
+                          : "Received message at $formattedDate: ${message['text']}",
+                      child: Align(
+                        alignment: isSentByCurrentUser
+                            ? Alignment.centerRight
+                            : Alignment
+                                .centerLeft, // Align messages based on sender
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 5, horizontal: 10),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isSentByCurrentUser
+                                ? Colors.blue
+                                : Colors.grey.shade300, // Message bubble color
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: isSentByCurrentUser
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start, // Text alignment
+                            children: [
+                              // Display message text
+                              Text(
+                                message['text'],
+                                style: TextStyle(
+                                  color: isSentByCurrentUser
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontSize:
+                                      MediaQuery.maybeTextScalerOf(context)
+                                              ?.scale(16.0) ??
+                                          16.0, // Adjustable text size
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 5),
-                            // Display formatted timestamp
-                            Text(
-                              formattedDate,
-                              style: TextStyle(
-                                color: isSentByCurrentUser
-                                    ? Colors.white70
-                                    : Colors.black54,
-                                fontSize: 10,
+                              const SizedBox(height: 5),
+                              // Display formatted timestamp
+                              Text(
+                                formattedDate,
+                                style: TextStyle(
+                                  color: isSentByCurrentUser
+                                      ? Colors.white70
+                                      : Colors.black54,
+                                  fontSize:
+                                      MediaQuery.maybeTextScalerOf(context)
+                                              ?.scale(10.0) ??
+                                          10.0, // Adjustable text size
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -177,26 +185,38 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 // Text input field
                 Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Type a message',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
+                  child: Semantics(
+                    label: "Type a message",
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: 'Type a message',
+                        hintStyle: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0, // Adjustable text size
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                       ),
+                      // Send message when Enter key is pressed
+                      onSubmitted: (text) {
+                        sendMessage(text);
+                      },
                     ),
-                    // Send message when Enter key is pressed
-                    onSubmitted: (text) {
-                      sendMessage(text);
-                    },
                   ),
                 ),
                 // Send button
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: () {
-                    sendMessage(_messageController.text);
-                  },
+                Semantics(
+                  label: "Send message",
+                  child: IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: () {
+                      sendMessage(_messageController.text);
+                    },
+                    tooltip: "Send message",
+                  ),
                 ),
               ],
             ),

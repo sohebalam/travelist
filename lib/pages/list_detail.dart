@@ -602,7 +602,14 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text("Reorder Points of Interest"),
+              title: Text(
+                "Reorder Points of Interest",
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ??
+                          18.0, // Adjustable text
+                ),
+              ),
               content: Container(
                 width: double.maxFinite,
                 height: MediaQuery.of(context).size.height * 0.6,
@@ -610,7 +617,11 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                   padding: EdgeInsets.zero,
                   itemCount: reorderedPOIData.length,
                   itemBuilder: (context, index) {
-                    double textSize = reorderedPOIData.length > 5 ? 14 : 16;
+                    double textSize = reorderedPOIData.length > 5
+                        ? MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ??
+                            14.0
+                        : MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                            16.0;
 
                     return DragTarget<Map<String, dynamic>>(
                       builder: (context, candidateData, rejectedData) {
@@ -624,7 +635,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                               dense: true, // Makes ListTile compact
                               minVerticalPadding:
                                   0, // Reduces vertical space inside ListTile
-
                               leading: Text(
                                 '${index + 1}.',
                                 style: TextStyle(
@@ -722,7 +732,14 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
-                  child: Text("Cancel"),
+                  child: Text(
+                    "Cancel",
+                    style: TextStyle(
+                      fontSize:
+                          MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                              16.0, // Adjustable text
+                    ),
+                  ),
                 ),
                 TextButton(
                   onPressed: () {
@@ -732,7 +749,14 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                     _updatePOIOrderInFirestore(); // Update the order of POIs in Firestore
                     Navigator.of(context).pop(); // Close the dialog
                   },
-                  child: Text("Save"),
+                  child: Text(
+                    "Save",
+                    style: TextStyle(
+                      fontSize:
+                          MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                              16.0, // Adjustable text
+                    ),
+                  ),
                 ),
               ],
             );
@@ -761,272 +785,395 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.listName),
+        title: Text(
+          widget.listName,
+          style: TextStyle(
+            fontSize: MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ??
+                18.0, // Adjustable text
+          ),
+        ),
       ),
-      body: _isLoading
-          ? _buildLoadingSkeleton(context)
-          : Stack(
-              children: [
-                gmaps.GoogleMap(
-                    initialCameraPosition: const gmaps.CameraPosition(
-                      target: gmaps.LatLng(51.509865, -0.118092),
-                      zoom: 13,
-                    ),
-                    markers: Set.from(_markers),
-                    polylines: _polylines,
-                    onMapCreated: (controller) {
-                      _mapController = controller;
-                      _controller.complete(controller);
-                      if (_polylinePoints.isNotEmpty &&
-                          !_userHasInteractedWithMap) {
-                        _mapController?.animateCamera(
-                          gmaps.CameraUpdate.newLatLngBounds(
-                            _calculateBounds(_polylinePoints),
-                            50,
-                          ),
-                        );
-                      }
-                    },
-                    myLocationEnabled: true,
-                    onCameraMove: (gmaps.CameraPosition position) {
-                      _userHasInteractedWithMap = true;
-                    },
-                    zoomControlsEnabled: false),
-                if (_error != null) Center(child: Text('Error: $_error')),
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: FloatingActionButton(
-                    backgroundColor: AppColors.primaryColor,
-                    foregroundColor: Colors.white,
-                    onPressed: () async {
-                      if (_navigationDestination == null) {
-                        _setNearestDestination(); // Set the nearest destination
-                      }
-                      final url =
-                          'google.navigation:q=${_navigationDestination!.latitude},${_navigationDestination!.longitude}&key=$_googleMapsApiKey';
-                      final uri = Uri.parse(url);
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri);
-                      } else {
-                        throw 'Could not launch $url';
-                      }
-                    },
-                    tooltip: 'Navigate to the nearest location',
-                    child: const Icon(Icons.navigation_outlined),
-                  ),
-                ),
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: FloatingActionButton(
-                    backgroundColor: AppColors.primaryColor,
-                    foregroundColor: Colors.white,
-                    onPressed: () {
-                      _showSearch(context); // Show search dialog
-                    },
-                    tooltip: 'Search for places',
-                    child: const Icon(Icons.add),
-                  ),
-                ),
-                Positioned(
-                  top: 80,
-                  right: 10,
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.tertiryColor,
-                          borderRadius: BorderRadius.circular(4),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 5,
-                              spreadRadius: 0,
-                            ),
-                          ],
+      body: Semantics(
+        label: 'List Details Page',
+        child: _isLoading
+            ? _buildLoadingSkeleton(context)
+            : Stack(
+                children: [
+                  Semantics(
+                    label: 'Map displaying points of interest',
+                    child: gmaps.GoogleMap(
+                        initialCameraPosition: const gmaps.CameraPosition(
+                          target: gmaps.LatLng(51.509865, -0.118092),
+                          zoom: 13,
                         ),
-                        child: IconButton(
-                          icon: const Icon(Icons.add),
-                          iconSize: 20,
-                          color: Colors.black87,
-                          onPressed: () {
-                            _mapController
-                                ?.animateCamera(gmaps.CameraUpdate.zoomIn());
-                          },
-                          tooltip: 'Zoom in',
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.tertiryColor,
-                          borderRadius: BorderRadius.circular(4),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 5,
-                              spreadRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.remove),
-                          iconSize: 20,
-                          color: Colors.black87,
-                          onPressed: () {
-                            _mapController
-                                ?.animateCamera(gmaps.CameraUpdate.zoomOut());
-                          },
-                          tooltip: 'Zoom out',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                DraggableScrollableSheet(
-                  initialChildSize: 0.3,
-                  minChildSize: 0.1,
-                  maxChildSize: 0.8,
-                  builder: (BuildContext context,
-                      ScrollController scrollController) {
-                    return SingleChildScrollView(
-                      controller: scrollController,
-                      child: Container(
-                        color: Colors.white,
-                        padding: const EdgeInsets.all(4.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Route Points:'),
-                            ListView.builder(
-                              shrinkWrap: true,
-                              controller: scrollController,
-                              itemCount: _poiData.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                double textSize = _poiData.length > 7 ? 14 : 16;
-                                return Container(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 0),
-                                  child: ListTile(
-                                    dense: true,
-                                    contentPadding: EdgeInsets.symmetric(
-                                        vertical: 0, horizontal: 4.0),
-                                    visualDensity: VisualDensity.compact,
-                                    minVerticalPadding: 0,
-                                    title: Text(
-                                      '${index + 1}. ${_poiData[index]['name']}',
-                                      style: TextStyle(
-                                        fontSize: textSize,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      _poiData[index]['address'],
-                                      style: TextStyle(fontSize: textSize - 2),
-                                    ),
-                                    trailing: const Icon(Icons.drag_handle),
-                                    onTap: () {
-                                      _showReorderDialog(); // Show reorder dialog
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                            if (_polylinePoints.length > 1)
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Slider(
-                                      value: _currentSliderValue,
-                                      min: 0,
-                                      max: (_polylinePoints.length - 1)
-                                          .toDouble(),
-                                      divisions: _polylinePoints.length - 1,
-                                      label: (_currentSliderValue + 1)
-                                          .round()
-                                          .toString(),
-                                      onChanged: (double value) {
-                                        setState(() {
-                                          _currentSliderValue = value;
-                                          _calculateAndDisplayDistanceDuration(value
-                                              .toInt()); // Update distance and duration display
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ],
+                        markers: Set.from(_markers),
+                        polylines: _polylines,
+                        onMapCreated: (controller) {
+                          _mapController = controller;
+                          _controller.complete(controller);
+                          if (_polylinePoints.isNotEmpty &&
+                              !_userHasInteractedWithMap) {
+                            _mapController?.animateCamera(
+                              gmaps.CameraUpdate.newLatLngBounds(
+                                _calculateBounds(_polylinePoints),
+                                50,
                               ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Distance: $_distanceText'),
-                                    Text('Duration: $_durationText'),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.directions_car),
-                                      onPressed: () {
-                                        setState(() {
-                                          _transportMode = 'driving';
-                                          _getRoutePolyline(); // Get route polyline for driving
-                                        });
-                                      },
-                                      color: _transportMode == 'driving'
-                                          ? Colors.blue
-                                          : Colors.grey,
-                                      iconSize: 20,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.directions_walk),
-                                      onPressed: () {
-                                        setState(() {
-                                          _transportMode = 'walking';
-                                          _getRoutePolyline(); // Get route polyline for walking
-                                        });
-                                      },
-                                      color: _transportMode == 'walking'
-                                          ? Colors.blue
-                                          : Colors.grey,
-                                      iconSize: 20,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.directions_bike),
-                                      onPressed: () {
-                                        setState(() {
-                                          _transportMode = 'bicycling';
-                                          _getRoutePolyline(); // Get route polyline for bicycling
-                                        });
-                                      },
-                                      color: _transportMode == 'bicycling'
-                                          ? Colors.blue
-                                          : Colors.grey,
-                                      iconSize: 20,
-                                    ),
-                                  ],
+                            );
+                          }
+                        },
+                        myLocationEnabled: true,
+                        onCameraMove: (gmaps.CameraPosition position) {
+                          _userHasInteractedWithMap = true;
+                        },
+                        zoomControlsEnabled: false),
+                  ),
+                  if (_error != null)
+                    Center(
+                      child: Semantics(
+                        label: 'Error message',
+                        child: Text(
+                          'Error: $_error',
+                          style: TextStyle(
+                            fontSize: MediaQuery.maybeTextScalerOf(context)
+                                    ?.scale(14.0) ??
+                                14.0, // Adjustable text
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Semantics(
+                      label: 'Navigate to nearest location button',
+                      child: FloatingActionButton(
+                        backgroundColor: AppColors.primaryColor,
+                        foregroundColor: Colors.white,
+                        onPressed: () async {
+                          if (_navigationDestination == null) {
+                            _setNearestDestination(); // Set the nearest destination
+                          }
+                          final url =
+                              'google.navigation:q=${_navigationDestination!.latitude},${_navigationDestination!.longitude}&key=$_googleMapsApiKey';
+                          final uri = Uri.parse(url);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri);
+                          } else {
+                            throw 'Could not launch $url';
+                          }
+                        },
+                        tooltip: 'Navigate to the nearest location',
+                        child: const Icon(Icons.navigation_outlined),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Semantics(
+                      label: 'Search for places button',
+                      child: FloatingActionButton(
+                        backgroundColor: AppColors.primaryColor,
+                        foregroundColor: Colors.white,
+                        onPressed: () {
+                          _showSearch(context); // Show search dialog
+                        },
+                        tooltip: 'Search for places',
+                        child: const Icon(Icons.add),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 80,
+                    right: 10,
+                    child: Column(
+                      children: [
+                        Semantics(
+                          label: 'Zoom in button',
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.tertiryColor,
+                              borderRadius: BorderRadius.circular(4),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 5,
+                                  spreadRadius: 0,
                                 ),
                               ],
                             ),
-                          ],
+                            child: IconButton(
+                              icon: const Icon(Icons.add),
+                              iconSize: MediaQuery.maybeTextScalerOf(context)
+                                      ?.scale(20.0) ??
+                                  20.0, // Adjustable icon size
+                              color: Colors.black87,
+                              onPressed: () {
+                                _mapController?.animateCamera(
+                                    gmaps.CameraUpdate.zoomIn());
+                              },
+                              tooltip: 'Zoom in',
+                            ),
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-      bottomNavigationBar: BottomNavBar(
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-        onLogoutTapped: () {},
+                        const SizedBox(height: 3),
+                        Semantics(
+                          label: 'Zoom out button',
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.tertiryColor,
+                              borderRadius: BorderRadius.circular(4),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 5,
+                                  spreadRadius: 0,
+                                ),
+                              ],
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.remove),
+                              iconSize: MediaQuery.maybeTextScalerOf(context)
+                                      ?.scale(20.0) ??
+                                  20.0, // Adjustable icon size
+                              color: Colors.black87,
+                              onPressed: () {
+                                _mapController?.animateCamera(
+                                    gmaps.CameraUpdate.zoomOut());
+                              },
+                              tooltip: 'Zoom out',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  DraggableScrollableSheet(
+                    initialChildSize: 0.3,
+                    minChildSize: 0.1,
+                    maxChildSize: 0.8,
+                    builder: (BuildContext context,
+                        ScrollController scrollController) {
+                      return SingleChildScrollView(
+                        controller: scrollController,
+                        child: Container(
+                          color: Colors.white,
+                          padding: const EdgeInsets.all(4.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Semantics(
+                                label: 'List of route points',
+                                child: Text(
+                                  'Route Points:',
+                                  style: TextStyle(
+                                    fontSize:
+                                        MediaQuery.maybeTextScalerOf(context)
+                                                ?.scale(16.0) ??
+                                            16.0, // Adjustable text
+                                  ),
+                                ),
+                              ),
+                              ListView.builder(
+                                shrinkWrap: true,
+                                controller: scrollController,
+                                itemCount: _poiData.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  double textSize = _poiData.length > 7
+                                      ? MediaQuery.maybeTextScalerOf(context)
+                                              ?.scale(14.0) ??
+                                          14.0
+                                      : MediaQuery.maybeTextScalerOf(context)
+                                              ?.scale(16.0) ??
+                                          16.0;
+                                  return Container(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 0),
+                                    child: ListTile(
+                                      dense: true,
+                                      contentPadding: EdgeInsets.symmetric(
+                                          vertical: 0, horizontal: 4.0),
+                                      visualDensity: VisualDensity.compact,
+                                      minVerticalPadding: 0,
+                                      title: Semantics(
+                                        label: 'Route point name',
+                                        child: Text(
+                                          '${index + 1}. ${_poiData[index]['name']}',
+                                          style: TextStyle(
+                                            fontSize: textSize,
+                                          ),
+                                        ),
+                                      ),
+                                      subtitle: Semantics(
+                                        label: 'Route point address',
+                                        child: Text(
+                                          _poiData[index]['address'],
+                                          style:
+                                              TextStyle(fontSize: textSize - 2),
+                                        ),
+                                      ),
+                                      trailing: const Icon(Icons.drag_handle),
+                                      onTap: () {
+                                        _showReorderDialog(); // Show reorder dialog
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                              if (_polylinePoints.length > 1)
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Semantics(
+                                        label:
+                                            'Slider to adjust route point display',
+                                        child: Slider(
+                                          value: _currentSliderValue,
+                                          min: 0,
+                                          max: (_polylinePoints.length - 1)
+                                              .toDouble(),
+                                          divisions: _polylinePoints.length - 1,
+                                          label: (_currentSliderValue + 1)
+                                              .round()
+                                              .toString(),
+                                          onChanged: (double value) {
+                                            setState(() {
+                                              _currentSliderValue = value;
+                                              _calculateAndDisplayDistanceDuration(
+                                                  value
+                                                      .toInt()); // Update distance and duration display
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Semantics(
+                                        label: 'Distance to next point',
+                                        child: Text(
+                                          'Distance: $_distanceText',
+                                          style: TextStyle(
+                                            fontSize:
+                                                MediaQuery.maybeTextScalerOf(
+                                                            context)
+                                                        ?.scale(14.0) ??
+                                                    14.0, // Adjustable text
+                                          ),
+                                        ),
+                                      ),
+                                      Semantics(
+                                        label: 'Duration to next point',
+                                        child: Text(
+                                          'Duration: $_durationText',
+                                          style: TextStyle(
+                                            fontSize:
+                                                MediaQuery.maybeTextScalerOf(
+                                                            context)
+                                                        ?.scale(14.0) ??
+                                                    14.0, // Adjustable text
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Semantics(
+                                        label: 'Driving mode button',
+                                        child: IconButton(
+                                          icon:
+                                              const Icon(Icons.directions_car),
+                                          onPressed: () {
+                                            setState(() {
+                                              _transportMode = 'driving';
+                                              _getRoutePolyline(); // Get route polyline for driving
+                                            });
+                                          },
+                                          color: _transportMode == 'driving'
+                                              ? Colors.blue
+                                              : Colors.grey,
+                                          iconSize:
+                                              MediaQuery.maybeTextScalerOf(
+                                                          context)
+                                                      ?.scale(20.0) ??
+                                                  20.0, // Adjustable icon size
+                                        ),
+                                      ),
+                                      Semantics(
+                                        label: 'Walking mode button',
+                                        child: IconButton(
+                                          icon:
+                                              const Icon(Icons.directions_walk),
+                                          onPressed: () {
+                                            setState(() {
+                                              _transportMode = 'walking';
+                                              _getRoutePolyline(); // Get route polyline for walking
+                                            });
+                                          },
+                                          color: _transportMode == 'walking'
+                                              ? Colors.blue
+                                              : Colors.grey,
+                                          iconSize:
+                                              MediaQuery.maybeTextScalerOf(
+                                                          context)
+                                                      ?.scale(20.0) ??
+                                                  20.0, // Adjustable icon size
+                                        ),
+                                      ),
+                                      Semantics(
+                                        label: 'Bicycling mode button',
+                                        child: IconButton(
+                                          icon:
+                                              const Icon(Icons.directions_bike),
+                                          onPressed: () {
+                                            setState(() {
+                                              _transportMode = 'bicycling';
+                                              _getRoutePolyline(); // Get route polyline for bicycling
+                                            });
+                                          },
+                                          color: _transportMode == 'bicycling'
+                                              ? Colors.blue
+                                              : Colors.grey,
+                                          iconSize:
+                                              MediaQuery.maybeTextScalerOf(
+                                                          context)
+                                                      ?.scale(20.0) ??
+                                                  20.0, // Adjustable icon size
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+      ),
+      bottomNavigationBar: Semantics(
+        label: 'Bottom navigation bar',
+        child: BottomNavBar(
+          selectedIndex: _selectedIndex,
+          onItemTapped: _onItemTapped,
+          onLogoutTapped: () {},
+        ),
       ),
     );
   }
@@ -1036,11 +1183,14 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     return Column(
       children: [
         Expanded(
-          child: Container().redacted(
-            context: context,
-            redact: true,
-            configuration: RedactedConfiguration(
-              animationDuration: const Duration(milliseconds: 800),
+          child: Semantics(
+            label: 'Loading skeleton',
+            child: Container().redacted(
+              context: context,
+              redact: true,
+              configuration: RedactedConfiguration(
+                animationDuration: const Duration(milliseconds: 800),
+              ),
             ),
           ),
         ),
@@ -1107,13 +1257,22 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
               ));
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(
-                      'Tap on the pin to add ${place.name ?? 'Unknown'} to your list.'),
+                  content: Semantics(
+                    label: 'Snackbar message',
+                    child: Text(
+                      'Tap on the pin to add ${place.name ?? 'Unknown'} to your list.',
+                      style: TextStyle(
+                        fontSize: MediaQuery.maybeTextScalerOf(context)
+                                ?.scale(14.0) ??
+                            14.0, // Adjustable text
+                      ),
+                    ),
+                  ),
                 ),
               );
             });
           }
-        } else {}
+        }
       } catch (e) {
         setState(() {
           _error = e.toString();

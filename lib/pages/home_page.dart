@@ -1,4 +1,3 @@
-// Importing necessary packages for Flutter, Google Maps, Firebase, and other services, and components and shared functions.
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -15,22 +14,18 @@ import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
 import 'package:travelist/services/location/poi_service.dart';
 import 'package:travelist/services/widgets/place_search_delegate.dart';
 
-// HomePage is a stateful widget that displays the main screen of the app
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
-  _HomePageState createState() => _HomePageState(); // Create state for HomePage
+  _HomePageState createState() => _HomePageState();
 }
 
-// State class for HomePage
 class _HomePageState extends State<HomePage> {
-  // Controllers for handling input fields
   TextEditingController locationController = TextEditingController();
   TextEditingController interestsController = TextEditingController();
   TextEditingController newListController = TextEditingController();
 
-  // Variables to manage various states in the UI
   bool useCurrentLocation = false;
   bool customSearch = false;
   List<Marker> _markers = [];
@@ -43,22 +38,18 @@ class _HomePageState extends State<HomePage> {
   String? _error;
   List<String> userInterests = [];
 
-  // Firebase Firestore collection reference for storing lists
   final CollectionReference _listsCollection =
       FirebaseFirestore.instance.collection('lists');
-  PlacesService?
-      _placesService; // Service for handling place-related operations
-  final POIService _poiService = POIService(); // Service for handling POIs
+  PlacesService? _placesService;
+  final POIService _poiService = POIService();
 
-  // Initialize state and load necessary data
   @override
   void initState() {
     super.initState();
-    _loadEnv(); // Load environment variables
-    _loadUserInterests(); // Load user interests from Firestore
+    _loadEnv();
+    _loadUserInterests();
   }
 
-  // Load environment variables, including API keys
   Future<void> _loadEnv() async {
     await dotenv.load();
     String? apiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
@@ -71,7 +62,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // Load user interests from Firestore
   Future<void> _loadUserInterests() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -85,17 +75,15 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Generate POIs based on user's location or custom input
   void _generatePOIs({List<String>? interests}) async {
     setState(() {
-      _isLoading = true; // Show loading indicator
+      _isLoading = true;
     });
 
-    // Check if a location is provided or the user's current location is available
     if (!useCurrentLocation && locationController.text.isEmpty) {
       _showErrorSnackBar('Please enter a location');
       setState(() {
-        _isLoading = false; // Hide loading indicator
+        _isLoading = false;
       });
       return;
     }
@@ -104,7 +92,7 @@ class _HomePageState extends State<HomePage> {
 
     if (useCurrentLocation) {
       try {
-        position = await _determinePosition(); // Get user's current position
+        position = await _determinePosition();
         if (_mapController != null) {
           _mapController!.animateCamera(CameraUpdate.newLatLng(
             LatLng(position.latitude, position.longitude),
@@ -113,7 +101,7 @@ class _HomePageState extends State<HomePage> {
       } catch (e) {
         print('Error determining position: $e');
         setState(() {
-          _isLoading = false; // Hide loading indicator
+          _isLoading = false;
         });
         _showErrorSnackBar('Error determining position');
         return;
@@ -132,29 +120,23 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    // Determine the location string to be used in POI search
     String location = useCurrentLocation && position != null
         ? '${position.latitude}, ${position.longitude}'
         : locationController.text;
 
-    // Update user interests in Firestore only if it's from custom search
     if (customSearch && interests != null && interests.isNotEmpty) {
       await updateUserInterests(interests);
     }
 
     List<Map<String, dynamic>> pois = [];
     try {
-      pois = await fetchPOIs(
-          location,
-          interests?.join(',') ??
-              ''); // Fetch POIs based on location and interests
+      pois = await fetchPOIs(location, interests?.join(',') ?? '');
     } catch (e) {
       print('Error fetching POIs: $e');
       _showErrorSnackBar('Locations not found, please try again');
     }
 
     setState(() {
-      // Convert POIs to markers for displaying on the map
       _markers = pois.map((poi) {
         return Marker(
           markerId: MarkerId('${poi['latitude']},${poi['longitude']}'),
@@ -164,20 +146,19 @@ class _HomePageState extends State<HomePage> {
             snippet: poi['description'],
             onTap: () {
               print('Marker tapped: ${poi['name']}');
-              _showAddToListDialog(poi); // Show dialog to add POI to list
+              _showAddToListDialog(poi);
             },
           ),
         );
       }).toList();
 
-      _poiList = pois; // Store the list of POIs
-      _isLoading = false; // Hide loading indicator
+      _poiList = pois;
+      _isLoading = false;
     });
 
-    _updateCameraPosition(); // Update the camera position on the map
+    _updateCameraPosition();
   }
 
-  // Show a dialog to add a POI to a list
   void _showAddToListDialog(Map<String, dynamic> poi) {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -195,18 +176,31 @@ class _HomePageState extends State<HomePage> {
                 bool hasLists =
                     snapshot.hasData && snapshot.data!.docs.isNotEmpty;
                 return AlertDialog(
-                  title: const Text('Add POI to List'),
+                  title: Text(
+                    'Add POI to List',
+                    style: TextStyle(
+                      fontSize:
+                          MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ??
+                              18.0,
+                    ),
+                  ),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (hasLists) ...[
                         SwitchListTile(
-                          title: const Text('Create new list'),
+                          title: Text(
+                            'Create new list',
+                            style: TextStyle(
+                              fontSize: MediaQuery.maybeTextScalerOf(context)
+                                      ?.scale(16.0) ??
+                                  16.0,
+                            ),
+                          ),
                           value: _showNewListFields,
                           onChanged: (value) {
                             setState(() {
-                              _showNewListFields =
-                                  value; // Toggle new list fields visibility
+                              _showNewListFields = value;
                             });
                           },
                         ),
@@ -214,8 +208,13 @@ class _HomePageState extends State<HomePage> {
                       if (!hasLists || _showNewListFields) ...[
                         TextField(
                           controller: newListController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Enter new list name',
+                            labelStyle: TextStyle(
+                              fontSize: MediaQuery.maybeTextScalerOf(context)
+                                      ?.scale(16.0) ??
+                                  16.0,
+                            ),
                             border: OutlineInputBorder(),
                           ),
                         ),
@@ -223,22 +222,44 @@ class _HomePageState extends State<HomePage> {
                           onPressed: () async {
                             await createList(
                                 newListController.text, _listsCollection);
-                            newListController.clear(); // Clear input field
+                            newListController.clear();
                           },
-                          child: const Text('Create New List'),
+                          child: Text(
+                            'Create New List',
+                            style: TextStyle(
+                              fontSize: MediaQuery.maybeTextScalerOf(context)
+                                      ?.scale(16.0) ??
+                                  16.0,
+                            ),
+                          ),
                         ),
                       ],
                       if (hasLists && !_showNewListFields)
                         DropdownButton<String>(
-                          hint: const Text('Select List'),
+                          hint: Text(
+                            'Select List',
+                            style: TextStyle(
+                              fontSize: MediaQuery.maybeTextScalerOf(context)
+                                      ?.scale(16.0) ??
+                                  16.0,
+                            ),
+                          ),
                           value: _selectedListId,
                           items: snapshot.data!.docs.map((list) {
                             var listData = list.data() as Map<String, dynamic>;
                             return DropdownMenuItem<String>(
                               value: list.id,
-                              child: Text(listData.containsKey('list')
-                                  ? listData['list']
-                                  : 'Unnamed List'),
+                              child: Text(
+                                listData.containsKey('list')
+                                    ? listData['list']
+                                    : 'Unnamed List',
+                                style: TextStyle(
+                                  fontSize:
+                                      MediaQuery.maybeTextScalerOf(context)
+                                              ?.scale(16.0) ??
+                                          16.0,
+                                ),
+                              ),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -255,9 +276,16 @@ class _HomePageState extends State<HomePage> {
                   actions: <Widget>[
                     TextButton(
                       onPressed: () {
-                        Navigator.of(context).pop(); // Close the dialog
+                        Navigator.of(context).pop();
                       },
-                      child: const Text('Cancel'),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0,
+                        ),
+                      ),
                     ),
                     ElevatedButton(
                       onPressed: () async {
@@ -274,13 +302,19 @@ class _HomePageState extends State<HomePage> {
                             _showErrorSnackBar(
                                 'This list already has 10 POIs.');
                           } else {
-                            _savePOIToList(
-                                poi); // Save the POI to the selected list
-                            Navigator.of(context).pop(); // Close the dialog
+                            _savePOIToList(poi);
+                            Navigator.of(context).pop();
                           }
                         }
                       },
-                      child: const Text('Add to List'),
+                      child: Text(
+                        'Add to List',
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0,
+                        ),
+                      ),
                     ),
                   ],
                 );
@@ -292,14 +326,12 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Save a POI to the selected list
   void _savePOIToList(Map<String, dynamic> poi) async {
     if (_selectedListId != null) {
       try {
         final listDocRef = _listsCollection.doc(_selectedListId);
         final poiCollectionRef = listDocRef.collection('pois');
 
-        // Add the new POI to the pois subcollection
         await poiCollectionRef.add(poi);
 
         _showSuccessSnackBar('POI added to list successfully.');
@@ -310,31 +342,33 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Show a success message using a Snackbar
   void _showSuccessSnackBar(String message) {
-    final snackBar = SnackBar(content: Text(message));
+    final snackBar = SnackBar(
+      content: Text(
+        message,
+        style: TextStyle(
+          fontSize: MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+        ),
+      ),
+    );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  // Select a list to add POIs to
   void _selectList(String listId) {
     setState(() {
-      _selectedListId = listId; // Set the selected list ID
+      _selectedListId = listId;
     });
   }
 
-  // Determine the user's current position using Geolocator
   Future<Position> _determinePosition() async {
     bool serviceEnabled;
     LocationPermission permission;
 
-    // Check if location services are enabled
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       return Future.error('Location services are disabled.');
     }
 
-    // Check for location permissions
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -348,22 +382,19 @@ class _HomePageState extends State<HomePage> {
           'Location permissions are permanently denied, we cannot request permissions.');
     }
 
-    return await Geolocator.getCurrentPosition(); // Get the current position
+    return await Geolocator.getCurrentPosition();
   }
 
-  // Update the camera position to show all markers on the map
   void _updateCameraPosition() {
     if (_markers.isEmpty || _mapController == null) return;
 
-    LatLngBounds bounds = _calculateBounds(_markers); // Calculate map bounds
+    LatLngBounds bounds = _calculateBounds(_markers);
 
     _mapController!.animateCamera(
-      CameraUpdate.newLatLngBounds(
-          bounds, 50), // Animate the camera to show all markers
+      CameraUpdate.newLatLngBounds(bounds, 50),
     );
   }
 
-  // Calculate the bounds of the map to fit all markers
   LatLngBounds _calculateBounds(List<Marker> markers) {
     double southWestLat = markers.first.position.latitude;
     double southWestLng = markers.first.position.longitude;
@@ -391,13 +422,18 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Show an error message using a Snackbar
   void _showErrorSnackBar(String message) {
-    final snackBar = SnackBar(content: Text(message));
+    final snackBar = SnackBar(
+      content: Text(
+        message,
+        style: TextStyle(
+          fontSize: MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+        ),
+      ),
+    );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  // Show the place search dialog
   void _showSearch(BuildContext context) async {
     final query = await showSearch<String>(
       context: context,
@@ -425,7 +461,6 @@ class _HomePageState extends State<HomePage> {
             final address = place.address ?? 'No address available';
 
             setState(() {
-              // Add a marker for the selected place
               _markers.add(
                 Marker(
                   markerId: MarkerId(placeId),
@@ -460,7 +495,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Confirm adding a place to the list
   void _confirmAddPlace(
       String name, double lat, double lng, String description) {
     final poi = {
@@ -469,10 +503,9 @@ class _HomePageState extends State<HomePage> {
       'longitude': lng,
       'description': description,
     };
-    _showAddToListDialog(poi); // Show dialog to add the place to a list
+    _showAddToListDialog(poi);
   }
 
-  // Build method to create the UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -481,54 +514,62 @@ class _HomePageState extends State<HomePage> {
           children: [
             Column(
               children: [
-                // First row: Location input and "Use My Location" switch
                 Row(
                   children: [
                     Expanded(
                       flex: 6,
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: !useCurrentLocation
-                            ? TextField(
-                                controller: locationController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Enter location',
-                                  floatingLabelBehavior:
-                                      FloatingLabelBehavior.auto,
-                                  border: OutlineInputBorder(),
-                                ),
-                              )
-                            : Container(), // Empty container to maintain layout
+                        child: Semantics(
+                          label: "Enter location",
+                          child: !useCurrentLocation
+                              ? TextField(
+                                  controller: locationController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Enter location',
+                                    labelStyle: TextStyle(
+                                      fontSize:
+                                          MediaQuery.maybeTextScalerOf(context)
+                                                  ?.scale(16.0) ??
+                                              16.0,
+                                    ),
+                                    floatingLabelBehavior:
+                                        FloatingLabelBehavior.auto,
+                                    border: OutlineInputBorder(),
+                                  ),
+                                )
+                              : Container(),
+                        ),
                       ),
                     ),
                     Expanded(
                       flex: 2,
-                      child: Row(
-                        children: [
-                          Switch(
-                            activeTrackColor: AppColors.primaryColor,
-                            activeColor: Colors.white,
-                            value: useCurrentLocation,
-                            onChanged: (value) {
-                              setState(() {
-                                useCurrentLocation =
-                                    value; // Toggle use current location
-                              });
-                            },
-                          ),
-                          Icon(
-                            Icons.my_location,
-                            color: useCurrentLocation
-                                ? AppColors.secondaryColor
-                                : Colors.grey,
-                          ),
-                        ],
+                      child: Semantics(
+                        label: "Use current location",
+                        child: Row(
+                          children: [
+                            Switch(
+                              activeTrackColor: AppColors.primaryColor,
+                              activeColor: Colors.white,
+                              value: useCurrentLocation,
+                              onChanged: (value) {
+                                setState(() {
+                                  useCurrentLocation = value;
+                                });
+                              },
+                            ),
+                            Icon(
+                              Icons.my_location,
+                              color: useCurrentLocation
+                                  ? AppColors.secondaryColor
+                                  : Colors.grey,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-
-                // Second row: "Search by My Interests" button and "Custom Search" switch
                 if (userInterests.isNotEmpty)
                   Row(
                     children: [
@@ -540,24 +581,33 @@ class _HomePageState extends State<HomePage> {
                             onPressed: () =>
                                 _generatePOIs(interests: userInterests),
                             style: ElevatedButton.styleFrom(
-                              padding:
-                                  EdgeInsets.zero, // Remove default padding
+                              padding: EdgeInsets.zero,
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 0.0), // Add custom padding
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 0.0),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.search,
-                                      color: AppColors.secondaryColor),
-                                  const SizedBox(
-                                      width:
-                                          5.0), // Space between icon and text
-                                  const Text(
+                                  Icon(
+                                    Icons.search,
+                                    color: AppColors.secondaryColor,
+                                    size: MediaQuery.maybeTextScalerOf(context)
+                                            ?.scale(16.0) ??
+                                        16.0,
+                                  ),
+                                  SizedBox(
+                                    width: 5.0,
+                                  ),
+                                  Text(
                                     'Points of interest',
                                     style: TextStyle(
-                                        color: AppColors.secondaryColor),
+                                      fontSize:
+                                          MediaQuery.maybeTextScalerOf(context)
+                                                  ?.scale(16.0) ??
+                                              16.0,
+                                      color: AppColors.secondaryColor,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -569,7 +619,14 @@ class _HomePageState extends State<HomePage> {
                         flex: 4,
                         child: Row(
                           children: [
-                            const Text('Custom Search'),
+                            Text(
+                              'Custom Search',
+                              style: TextStyle(
+                                fontSize: MediaQuery.maybeTextScalerOf(context)
+                                        ?.scale(14.0) ??
+                                    14.0,
+                              ),
+                            ),
                             SizedBox(
                               width: 5,
                             ),
@@ -579,7 +636,7 @@ class _HomePageState extends State<HomePage> {
                               value: customSearch,
                               onChanged: (value) {
                                 setState(() {
-                                  customSearch = value; // Toggle custom search
+                                  customSearch = value;
                                 });
                               },
                             ),
@@ -588,8 +645,6 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ),
-
-                // Third row: Custom search field and search button
                 if (customSearch)
                   Row(
                     children: [
@@ -597,12 +652,22 @@ class _HomePageState extends State<HomePage> {
                         flex: 6,
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: TextField(
-                            controller: interestsController,
-                            decoration: const InputDecoration(
-                              labelText: 'Enter interests',
-                              floatingLabelBehavior: FloatingLabelBehavior.auto,
-                              border: OutlineInputBorder(),
+                          child: Semantics(
+                            label: "Enter interests",
+                            child: TextField(
+                              controller: interestsController,
+                              decoration: InputDecoration(
+                                labelText: 'Enter interests',
+                                labelStyle: TextStyle(
+                                  fontSize:
+                                      MediaQuery.maybeTextScalerOf(context)
+                                              ?.scale(16.0) ??
+                                          16.0,
+                                ),
+                                floatingLabelBehavior:
+                                    FloatingLabelBehavior.auto,
+                                border: OutlineInputBorder(),
+                              ),
                             ),
                           ),
                         ),
@@ -615,26 +680,35 @@ class _HomePageState extends State<HomePage> {
                             ElevatedButton(
                               onPressed: () => _generatePOIs(
                                   interests: [interestsController.text.trim()]),
-                              child: const Icon(Icons.search,
-                                  color: AppColors.secondaryColor),
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: Size(48, 48),
+                              ),
+                              child: Semantics(
+                                label: "Search for interests",
+                                child: Icon(
+                                  Icons.search,
+                                  color: AppColors.secondaryColor,
+                                  size: MediaQuery.maybeTextScalerOf(context)
+                                          ?.scale(16.0) ??
+                                      16.0,
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-
-                // Google Map widget to display the map and markers
                 Expanded(
                   child: GoogleMap(
                     initialCameraPosition: const CameraPosition(
-                      target: LatLng(51.509865, -0.118092), // Default location
+                      target: LatLng(51.509865, -0.118092),
                       zoom: 13,
                     ),
-                    markers: Set.from(_markers), // Set of markers on the map
+                    markers: Set.from(_markers),
                     onMapCreated: (controller) {
                       setState(() {
-                        _mapController = controller; // Set the map controller
+                        _mapController = controller;
                       });
                     },
                   ),
@@ -643,7 +717,7 @@ class _HomePageState extends State<HomePage> {
             ),
             if (_isLoading)
               const Center(
-                child: CircularProgressIndicator(), // Show loading indicator
+                child: CircularProgressIndicator(),
               ),
             _poiList.isNotEmpty
                 ? DraggableScrollableSheet(
@@ -658,13 +732,33 @@ class _HomePageState extends State<HomePage> {
                           controller: scrollController,
                           itemCount: _poiList.length,
                           itemBuilder: (BuildContext context, int index) {
-                            return ListTile(
-                              title: Text(_poiList[index]['name']),
-                              subtitle: Text(_poiList[index]['description']),
-                              onTap: () {
-                                _showAddToListDialog(_poiList[index]);
-                                print('Tapped: ${_poiList[index]['name']}');
-                              },
+                            return Semantics(
+                              label:
+                                  "Point of Interest: ${_poiList[index]['name']}",
+                              child: ListTile(
+                                title: Text(
+                                  _poiList[index]['name'],
+                                  style: TextStyle(
+                                    fontSize:
+                                        MediaQuery.maybeTextScalerOf(context)
+                                                ?.scale(16.0) ??
+                                            16.0,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  _poiList[index]['description'],
+                                  style: TextStyle(
+                                    fontSize:
+                                        MediaQuery.maybeTextScalerOf(context)
+                                                ?.scale(14.0) ??
+                                            14.0,
+                                  ),
+                                ),
+                                onTap: () {
+                                  _showAddToListDialog(_poiList[index]);
+                                  print('Tapped: ${_poiList[index]['name']}');
+                                },
+                              ),
                             );
                           },
                         ),
@@ -676,33 +770,40 @@ class _HomePageState extends State<HomePage> {
               top: customSearch ? 210 : 140,
               left: 10,
               child: SizedBox(
-                width: 150, // Adjust the width as needed
-                child: ElevatedButton(
-                  onPressed: () {
-                    _showSearch(context); // Show the place search dialog
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryColor,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10.0,
-                        vertical: 4.0), // Adjust padding as needed
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.add,
-                        color: AppColors.tertiryColor,
-                      ),
-                      SizedBox(width: 3),
-                      Text(
-                        'Nearby Places',
-                        style: TextStyle(
-                          color:
-                              AppColors.tertiryColor, // Change text color here
+                width: 150,
+                child: Semantics(
+                  label: "Find nearby places",
+                  child: ElevatedButton(
+                    onPressed: () {
+                      _showSearch(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryColor,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10.0, vertical: 4.0),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add,
+                          color: AppColors.tertiryColor,
+                          size: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0,
                         ),
-                      ),
-                    ],
+                        SizedBox(width: 3),
+                        Text(
+                          'Nearby Places',
+                          style: TextStyle(
+                            fontSize: MediaQuery.maybeTextScalerOf(context)
+                                    ?.scale(16.0) ??
+                                16.0,
+                            color: AppColors.tertiryColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
