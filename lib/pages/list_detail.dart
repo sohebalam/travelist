@@ -8,6 +8,7 @@ import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:redacted/redacted.dart';
+import 'package:travelist/services/secure_storage.dart';
 import 'package:travelist/services/styles.dart';
 import 'package:travelist/services/widgets/bottom_navbar.dart';
 import 'package:travelist/services/location/place_service.dart';
@@ -79,20 +80,40 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   @override
   void initState() {
     super.initState();
-    _googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'];
-    gmd.GoogleMapsDirections.init(
-        googleAPIKey: _googleMapsApiKey!); // Initialize Google Maps Directions
-    _placesService = PlacesService(
-        _googleMapsApiKey!, _locationBias); // Initialize PlacesService
-    _poiService = POIService(); // Initialize POIService
-    _fetchPlaces();
-    _getCurrentLocation();
+    _initializeGoogleMapsApiKey().then((_) {
+      if (_googleMapsApiKey != null) {
+        _fetchPlaces();
+        _getCurrentLocation();
+      } else {
+        setState(() {
+          _error = 'Failed to initialize API key.';
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     locationSubscription?.cancel(); // Cancel location subscription
     super.dispose();
+  }
+
+  // Initialize Google Maps API key from secure storage
+  Future<void> _initializeGoogleMapsApiKey() async {
+    final storage = SecureStorage();
+    _googleMapsApiKey = await storage.getGoogleMapsKey();
+
+    if (_googleMapsApiKey == null) {
+      setState(() {
+        _error = 'Google Maps API key is missing';
+      });
+      return; // Exit the function early if the API key is null
+    }
+
+    gmd.GoogleMapsDirections.init(
+        googleAPIKey: _googleMapsApiKey!); // Initialize Google Maps Directions
+    _placesService = PlacesService(
+        _googleMapsApiKey!, _locationBias); // Initialize PlacesService
   }
 
   // Handle bottom navigation item tap
