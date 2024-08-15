@@ -179,105 +179,148 @@ class _HomePageState extends State<HomePage> {
                 bool hasLists =
                     snapshot.hasData && snapshot.data!.docs.isNotEmpty;
                 return AlertDialog(
-                    title: Text(
-                      'Add POI to List',
-                      style: TextStyle(
-                        fontSize: MediaQuery.maybeTextScalerOf(context)
-                                ?.scale(18.0) ??
-                            18.0,
+                  title: Text(
+                    'Add POI to List',
+                    style: TextStyle(
+                      fontSize:
+                          MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ??
+                              18.0,
+                    ),
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hasLists) ...[
+                        SwitchListTile(
+                          title: Text(
+                            'Create new list',
+                            style: TextStyle(
+                              fontSize: MediaQuery.maybeTextScalerOf(context)
+                                      ?.scale(16.0) ??
+                                  16.0,
+                            ),
+                          ),
+                          value: _showNewListFields,
+                          onChanged: (value) {
+                            setState(() {
+                              _showNewListFields = value;
+                            });
+                          },
+                        ),
+                      ],
+                      if (!hasLists || _showNewListFields) ...[
+                        TextField(
+                          controller: newListController,
+                          decoration: InputDecoration(
+                            labelText: 'Enter new list name',
+                            labelStyle: TextStyle(
+                              fontSize: MediaQuery.maybeTextScalerOf(context)
+                                      ?.scale(16.0) ??
+                                  16.0,
+                            ),
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            await createList(
+                                newListController.text, _listsCollection);
+                            newListController.clear();
+                          },
+                          child: Text(
+                            'Create New List',
+                            style: TextStyle(
+                              fontSize: MediaQuery.maybeTextScalerOf(context)
+                                      ?.scale(16.0) ??
+                                  16.0,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (hasLists && !_showNewListFields)
+                        DropdownButton<String>(
+                          hint: Text(
+                            'Select List',
+                            style: TextStyle(
+                              fontSize: MediaQuery.maybeTextScalerOf(context)
+                                      ?.scale(16.0) ??
+                                  16.0,
+                            ),
+                          ),
+                          value: _selectedListId,
+                          items: snapshot.data!.docs.map((list) {
+                            var listData = list.data() as Map<String, dynamic>;
+                            return DropdownMenuItem<String>(
+                              value: list.id,
+                              child: Text(
+                                listData.containsKey('list')
+                                    ? listData['list']
+                                    : 'Unnamed List',
+                                style: TextStyle(
+                                  fontSize:
+                                      MediaQuery.maybeTextScalerOf(context)
+                                              ?.scale(16.0) ??
+                                          16.0,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedListId = value!;
+                              _selectedListName = (snapshot.data!.docs
+                                  .firstWhere((element) => element.id == value)
+                                  .data() as Map<String, dynamic>)['list'];
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0,
+                        ),
                       ),
                     ),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (hasLists) ...[
-                          SwitchListTile(
-                            title: Text(
-                              'Create new list',
-                              style: TextStyle(
-                                fontSize: MediaQuery.maybeTextScalerOf(context)
-                                        ?.scale(16.0) ??
-                                    16.0,
-                              ),
-                            ),
-                            value: _showNewListFields,
-                            onChanged: (value) {
-                              setState(() {
-                                _showNewListFields = value;
-                              });
-                            },
-                          ),
-                        ],
-                        if (!hasLists || _showNewListFields) ...[
-                          TextField(
-                            controller: newListController,
-                            decoration: InputDecoration(
-                              labelText: 'Enter new list name',
-                              labelStyle: TextStyle(
-                                fontSize: MediaQuery.maybeTextScalerOf(context)
-                                        ?.scale(16.0) ??
-                                    16.0,
-                              ),
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed: () async {
-                              await createList(
-                                  newListController.text, _listsCollection);
-                              newListController.clear();
-                            },
-                            child: Text(
-                              'Create New List',
-                              style: TextStyle(
-                                fontSize: MediaQuery.maybeTextScalerOf(context)
-                                        ?.scale(16.0) ??
-                                    16.0,
-                              ),
-                            ),
-                          ),
-                        ],
-                        if (hasLists && !_showNewListFields)
-                          DropdownButton<String>(
-                            hint: Text(
-                              'Select List',
-                              style: TextStyle(
-                                fontSize: MediaQuery.maybeTextScalerOf(context)
-                                        ?.scale(16.0) ??
-                                    16.0,
-                              ),
-                            ),
-                            value: _selectedListId,
-                            items: snapshot.data!.docs.map((list) {
-                              var listData =
-                                  list.data() as Map<String, dynamic>;
-                              return DropdownMenuItem<String>(
-                                value: list.id,
-                                child: Text(
-                                  listData.containsKey('list')
-                                      ? listData['list']
-                                      : 'Unnamed List',
-                                  style: TextStyle(
-                                    fontSize:
-                                        MediaQuery.maybeTextScalerOf(context)
-                                                ?.scale(16.0) ??
-                                            16.0,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedListId = value!;
-                                _selectedListName = (snapshot.data!.docs
-                                    .firstWhere(
-                                        (element) => element.id == value)
-                                    .data() as Map<String, dynamic>)['list'];
-                              });
-                            },
-                          ),
-                      ],
-                    ));
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (_selectedListId != null) {
+                          final listDoc =
+                              await _listsCollection.doc(_selectedListId).get();
+                          final poiCollectionRef = _listsCollection
+                              .doc(_selectedListId)
+                              .collection('pois');
+                          final poiCount =
+                              (await poiCollectionRef.get()).docs.length;
+
+                          if (poiCount >= 10) {
+                            _showErrorSnackBar(
+                                'This list already has 10 POIs.');
+                          } else {
+                            _savePOIToList(poi);
+                            Navigator.of(context).pop();
+                          }
+                        }
+                      },
+                      child: Text(
+                        'Add to List',
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
               },
             );
           },
