@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:math';
 
+import 'package:travelist/services/secure_storage.dart';
+
 double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
   const R = 3958.8; // Radius of the Earth in miles
   var dLat = (lat2 - lat1) * (pi / 180);
@@ -17,7 +19,8 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
 }
 
 Future<Map<String, String>> reverseGeocode(double lat, double lon) async {
-  String? googlePlacesApiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
+  final storage = SecureStorage();
+  String? googlePlacesApiKey = await storage.getGooglePlacesKey();
   if (googlePlacesApiKey == null) {
     throw Exception('Google Places API key is missing');
   }
@@ -95,7 +98,8 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
   String locationDescription =
       '${humanReadableLocation['city']}, ${humanReadableLocation['borough']}, ${humanReadableLocation['neighborhood']}, ${humanReadableLocation['country']}, ${humanReadableLocation['latLong']}';
 
-  String? openAiApiKey = dotenv.env['OPENAI_API_KEY'];
+  final storage = SecureStorage();
+  String? openAiApiKey = await storage.getOpenAIKey();
   if (openAiApiKey == null) {
     throw Exception('OpenAI API key is missing');
   }
@@ -180,7 +184,8 @@ Name - Latitude, Longitude - Description.
 }
 
 Future<bool> validateLocation(String location) async {
-  String? googlePlacesApiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
+  final storage = SecureStorage();
+  String? googlePlacesApiKey = await storage.getGooglePlacesKey();
   if (googlePlacesApiKey == null) {
     throw Exception('Google Places API key is missing');
   }
@@ -208,7 +213,8 @@ Future<bool> validateLocation(String location) async {
 
 Future<bool> validatePoi(
     String name, double latitude, double longitude, String location) async {
-  String? googlePlacesApiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
+  final storage = SecureStorage();
+  String? googlePlacesApiKey = await storage.getGooglePlacesKey();
   if (googlePlacesApiKey == null) {
     throw Exception('Google Places API key is missing');
   }
@@ -251,7 +257,8 @@ Future<bool> validatePoi(
 }
 
 Future<String> refineLocation(String location, String interests) async {
-  String? openAiApiKey = dotenv.env['OPENAI_API_KEY'];
+  final storage = SecureStorage();
+  String? openAiApiKey = await storage.getOpenAIKey();
   if (openAiApiKey == null) {
     throw Exception('OpenAI API key is missing');
   }
@@ -295,7 +302,8 @@ The location "$location" could not be validated. Suggest an alternative or corre
 }
 
 Future<Map<String, double>> getCoordinates(String location) async {
-  String? googlePlacesApiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
+  final storage = SecureStorage();
+  String? googlePlacesApiKey = await storage.getGooglePlacesKey();
   if (googlePlacesApiKey == null) {
     throw Exception('Google Places API key is missing');
   }

@@ -11,7 +11,7 @@
 .env
 migrate_working_dir/
 AndroidManifest.xml
-
+api_key_setup.dart
 # IntelliJ related
 *.iml
 *.ipr

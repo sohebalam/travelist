@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travelist/services/auth/auth_service.dart';
@@ -42,23 +42,26 @@ class _HomePageState extends State<HomePage> {
       FirebaseFirestore.instance.collection('lists');
   PlacesService? _placesService;
   final POIService _poiService = POIService();
+  final _secureStorage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
-    _loadEnv();
+    _loadApiKeys();
     _loadUserInterests();
   }
 
-  Future<void> _loadEnv() async {
-    await dotenv.load();
-    String? apiKey = dotenv.env['GOOGLE_PLACES_API_KEY'];
-    if (apiKey == null || apiKey.isEmpty) {
-      print('Missing API keys in .env file');
+  Future<void> _loadApiKeys() async {
+    String? googlePlacesApiKey =
+        await _secureStorage.read(key: 'GOOGLE_PLACES_API_KEY');
+
+    if (googlePlacesApiKey == null || googlePlacesApiKey.isEmpty) {
+      print('Missing API keys in secure storage');
       return;
     }
+
     setState(() {
-      _placesService = PlacesService(apiKey, null);
+      _placesService = PlacesService(googlePlacesApiKey, null);
     });
   }
 
@@ -179,9 +182,8 @@ class _HomePageState extends State<HomePage> {
                   title: Text(
                     'Add POI to List',
                     style: TextStyle(
-                      fontSize:
-                          MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ??
-                              18.0,
+                      fontSize: MediaQuery.maybeOf(context)?.textScaleFactor ??
+                          1.0 * 18.0,
                     ),
                   ),
                   content: Column(
@@ -192,9 +194,9 @@ class _HomePageState extends State<HomePage> {
                           title: Text(
                             'Create new list',
                             style: TextStyle(
-                              fontSize: MediaQuery.maybeTextScalerOf(context)
-                                      ?.scale(16.0) ??
-                                  16.0,
+                              fontSize: MediaQuery.maybeOf(context)
+                                      ?.textScaleFactor ??
+                                  1.0 * 16.0,
                             ),
                           ),
                           value: _showNewListFields,
@@ -211,9 +213,9 @@ class _HomePageState extends State<HomePage> {
                           decoration: InputDecoration(
                             labelText: 'Enter new list name',
                             labelStyle: TextStyle(
-                              fontSize: MediaQuery.maybeTextScalerOf(context)
-                                      ?.scale(16.0) ??
-                                  16.0,
+                              fontSize: MediaQuery.maybeOf(context)
+                                      ?.textScaleFactor ??
+                                  1.0 * 16.0,
                             ),
                             border: OutlineInputBorder(),
                           ),
@@ -227,9 +229,9 @@ class _HomePageState extends State<HomePage> {
                           child: Text(
                             'Create New List',
                             style: TextStyle(
-                              fontSize: MediaQuery.maybeTextScalerOf(context)
-                                      ?.scale(16.0) ??
-                                  16.0,
+                              fontSize: MediaQuery.maybeOf(context)
+                                      ?.textScaleFactor ??
+                                  1.0 * 16.0,
                             ),
                           ),
                         ),
@@ -239,9 +241,9 @@ class _HomePageState extends State<HomePage> {
                           hint: Text(
                             'Select List',
                             style: TextStyle(
-                              fontSize: MediaQuery.maybeTextScalerOf(context)
-                                      ?.scale(16.0) ??
-                                  16.0,
+                              fontSize: MediaQuery.maybeOf(context)
+                                      ?.textScaleFactor ??
+                                  1.0 * 16.0,
                             ),
                           ),
                           value: _selectedListId,
@@ -254,10 +256,9 @@ class _HomePageState extends State<HomePage> {
                                     ? listData['list']
                                     : 'Unnamed List',
                                 style: TextStyle(
-                                  fontSize:
-                                      MediaQuery.maybeTextScalerOf(context)
-                                              ?.scale(16.0) ??
-                                          16.0,
+                                  fontSize: MediaQuery.maybeOf(context)
+                                          ?.textScaleFactor ??
+                                      1.0 * 16.0,
                                 ),
                               ),
                             );
@@ -281,9 +282,9 @@ class _HomePageState extends State<HomePage> {
                       child: Text(
                         'Cancel',
                         style: TextStyle(
-                          fontSize: MediaQuery.maybeTextScalerOf(context)
-                                  ?.scale(16.0) ??
-                              16.0,
+                          fontSize:
+                              MediaQuery.maybeOf(context)?.textScaleFactor ??
+                                  1.0 * 16.0,
                         ),
                       ),
                     ),
@@ -310,9 +311,9 @@ class _HomePageState extends State<HomePage> {
                       child: Text(
                         'Add to List',
                         style: TextStyle(
-                          fontSize: MediaQuery.maybeTextScalerOf(context)
-                                  ?.scale(16.0) ??
-                              16.0,
+                          fontSize:
+                              MediaQuery.maybeOf(context)?.textScaleFactor ??
+                                  1.0 * 16.0,
                         ),
                       ),
                     ),
@@ -592,21 +593,26 @@ class _HomePageState extends State<HomePage> {
                                   Icon(
                                     Icons.search,
                                     color: AppColors.secondaryColor,
-                                    size: MediaQuery.maybeTextScalerOf(context)
-                                            ?.scale(16.0) ??
-                                        16.0,
+                                    size:
+                                        MediaQuery.of(context).size.width < 360
+                                            ? 14.0
+                                            : 16.0,
                                   ),
                                   SizedBox(
                                     width: 5.0,
                                   ),
-                                  Text(
-                                    'Points of interest',
-                                    style: TextStyle(
-                                      fontSize:
-                                          MediaQuery.maybeTextScalerOf(context)
-                                                  ?.scale(16.0) ??
-                                              16.0,
-                                      color: AppColors.secondaryColor,
+                                  Flexible(
+                                    child: Text(
+                                      'Points of interest',
+                                      style: TextStyle(
+                                        fontSize:
+                                            MediaQuery.of(context).size.width <
+                                                    360
+                                                ? 14.0
+                                                : 16.0,
+                                        color: AppColors.secondaryColor,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -619,12 +625,16 @@ class _HomePageState extends State<HomePage> {
                         flex: 4,
                         child: Row(
                           children: [
-                            Text(
-                              'Custom Search',
-                              style: TextStyle(
-                                fontSize: MediaQuery.maybeTextScalerOf(context)
-                                        ?.scale(14.0) ??
-                                    14.0,
+                            Flexible(
+                              child: Text(
+                                'Custom Search',
+                                style: TextStyle(
+                                  fontSize:
+                                      MediaQuery.of(context).size.width < 360
+                                          ? 12.0
+                                          : 14.0,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ),
                             SizedBox(
