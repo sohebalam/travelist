@@ -30,44 +30,20 @@ Future<Map<String, String>> reverseGeocode(double lat, double lon) async {
 
   try {
     final response = await http.get(url);
-
     print('Google Places reverse geocode response: ${response.body}');
 
     if (response.statusCode == 200) {
       Map<String, dynamic> data = json.decode(response.body);
+
       if (data['results'] != null && data['results'].isNotEmpty) {
-        String city = '';
-        String borough = '';
-        String country = '';
-        String neighborhood = '';
-
-        for (var result in data['results']) {
-          var addressComponents = result['address_components'] as List;
-          for (var component in addressComponents) {
-            if ((component['types'] as List).contains('locality')) {
-              city = component['long_name'];
-            } else if ((component['types'] as List).contains('sublocality')) {
-              borough = component['long_name'];
-            } else if ((component['types'] as List).contains('country')) {
-              country = component['long_name'];
-            } else if ((component['types'] as List).contains('neighborhood')) {
-              neighborhood = component['long_name'];
-            }
-          }
-        }
-
-        String latLong = '$lat,$lon';
-
+        String formattedAddress = data['results'][0]['formatted_address'] ?? '';
+        print('Formatted Address: $formattedAddress');
         return {
-          'city': city,
-          'borough': borough,
-          'country': country,
-          'neighborhood': neighborhood,
-          'latLong': latLong,
+          'formattedAddress': formattedAddress,
         };
       }
     }
-    throw Exception('Failed to get human-readable address');
+    return {'formattedAddress': 'No address available'};
   } catch (e) {
     print('Error in reverse geocoding: $e');
     throw Exception('Error in reverse geocoding');
@@ -76,28 +52,6 @@ Future<Map<String, String>> reverseGeocode(double lat, double lon) async {
 
 Future<List<Map<String, dynamic>>> fetchPOIs(
     String location, String interests) async {
-  bool isValidLocation = await validateLocation(location);
-
-  if (!isValidLocation) {
-    print('Invalid location: $location. Requesting refinement from OpenAI.');
-    location = await refineLocation(location, interests);
-    isValidLocation = await validateLocation(location);
-    if (!isValidLocation) {
-      throw Exception('Invalid location provided and refinement failed.');
-    }
-  }
-
-  var originalLocationCoords = await getCoordinates(location);
-  double? originalLat = originalLocationCoords['lat'];
-  double? originalLon = originalLocationCoords['lon'];
-
-  // Reverse geocode the coordinates to get the human-readable address
-  Map<String, String> humanReadableLocation =
-      await reverseGeocode(originalLat!, originalLon!);
-
-  String locationDescription =
-      '${humanReadableLocation['city']}, ${humanReadableLocation['borough']}, ${humanReadableLocation['neighborhood']}, ${humanReadableLocation['country']}, ${humanReadableLocation['latLong']}';
-
   final storage = SecureStorage();
   String? openAiApiKey = await storage.getOpenAIKey();
   if (openAiApiKey == null) {
@@ -107,14 +61,8 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
   List<Map<String, dynamic>> validPois = [];
   int attempts = 0;
   const int maxAttempts = 5;
-  int poiCount = 0;
 
-  while (poiCount < 4 && attempts < maxAttempts) {
-    String additionalPrompt = '';
-    if (interests.toLowerCase().contains('food')) {
-      additionalPrompt = ' Include restaurants in the list.';
-    }
-
+  while (validPois.length < 4 && attempts < maxAttempts) {
     var url = Uri.parse('https://api.openai.com/v1/chat/completions');
     var headers = {
       'Content-Type': 'application/json',
@@ -122,10 +70,10 @@ Future<List<Map<String, dynamic>>> fetchPOIs(
     };
 
     var prompt = '''
-Generate a list of points of interest for location: $locationDescription (within 15 miles) with interests: $interests.$additionalPrompt
-For each point of interest, provide the name, latitude, longitude, and a short description in the following format:
+Generate a list of points of interest located within 15 miles of coordinates: $location. The POIs should be related to the following interests: $interests. 
+For each point of interest, provide the name, latitude, longitude, and a short description in the following format: 
 Name - Latitude, Longitude - Description.
-''';
+    ''';
 
     var body = jsonEncode({
       'model': 'gpt-3.5-turbo',
@@ -139,33 +87,19 @@ Name - Latitude, Longitude - Description.
     try {
       final response = await http.post(url, headers: headers, body: body);
 
-      print('Response Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-
       if (response.statusCode == 200) {
         Map<String, dynamic> data = json.decode(response.body);
-        print('Data received: $data');
         List<Map<String, dynamic>> pois =
             parsePOIs(data['choices'][0]['message']['content']);
 
         for (var poi in pois) {
           bool isValidPoi = await validatePoi(
               poi['name'], poi['latitude'], poi['longitude'], location);
-          double distance = calculateDistance(
-              originalLat, originalLon, poi['latitude'], poi['longitude']);
-          print(
-              'POI validation result for ${poi['name']}: $isValidPoi, Distance: $distance miles');
-          if (isValidPoi && distance <= 15) {
-            if (!validPois
-                .any((existingPoi) => existingPoi['name'] == poi['name'])) {
-              validPois.add(poi);
-              poiCount++;
-              if (poiCount >= 4) break;
-            }
+          if (isValidPoi) {
+            validPois.add(poi);
+            if (validPois.length >= 4) break;
           }
         }
-
-        print('Valid POIs: ${validPois.length}');
       } else {
         print('Failed to load POIs: ${response.body}');
       }
@@ -225,7 +159,7 @@ Future<bool> validatePoi(
   try {
     final response = await http.get(url);
 
-    print('Google Places POI response: ${response.body}');
+    // print('Google Places POI response: ${response.body}');
 
     if (response.statusCode == 200) {
       Map<String, dynamic> data = json.decode(response.body);
@@ -237,7 +171,7 @@ Future<bool> validatePoi(
             'https://maps.googleapis.com/maps/api/place/textsearch/json?query=$name in $location&key=$googlePlacesApiKey');
         final responseTextSearch = await http.get(urlTextSearch);
 
-        print('Google Places Text Search response: ${responseTextSearch.body}');
+        // print('Google Places Text Search response: ${responseTextSearch.body}');
 
         if (responseTextSearch.statusCode == 200) {
           Map<String, dynamic> dataTextSearch =
@@ -286,7 +220,7 @@ The location "$location" could not be validated. Suggest an alternative or corre
   try {
     final response = await http.post(url, headers: headers, body: body);
 
-    print('OpenAI refine response: ${response.body}');
+    // print('OpenAI refine response: ${response.body}');
 
     if (response.statusCode == 200) {
       Map<String, dynamic> data = json.decode(response.body);
@@ -314,7 +248,7 @@ Future<Map<String, double>> getCoordinates(String location) async {
   try {
     final response = await http.get(url);
 
-    print('Google Places coordinates response: ${response.body}');
+    // print('Google Places coordinates response: ${response.body}');
 
     if (response.statusCode == 200) {
       Map<String, dynamic> data = json.decode(response.body);
@@ -353,6 +287,6 @@ List<Map<String, dynamic>> parsePOIs(String responseText) {
       }
     }
   }
-  print('Parsed POIs: $pois');
+  // print('Parsed POIs: $pois');
   return pois;
 }

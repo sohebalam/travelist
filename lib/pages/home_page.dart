@@ -78,10 +78,97 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _generatePOIs({List<String>? interests}) async {
+  // void _generatePOIs({List<String>? interests}) async {
+  //   setState(() {
+  //     _isLoading = true;
+  //   });
+
+  //   if (!useCurrentLocation && locationController.text.isEmpty) {
+  //     _showErrorSnackBar('Please enter a location');
+  //     setState(() {
+  //       _isLoading = false;
+  //     });
+  //     return;
+  //   }
+
+  //   Position? position;
+
+  //   if (useCurrentLocation) {
+  //     try {
+  //       position = await _determinePosition();
+  //       if (_mapController != null) {
+  //         _mapController!.animateCamera(CameraUpdate.newLatLng(
+  //           LatLng(position.latitude, position.longitude),
+  //         ));
+  //       }
+  //     } catch (e) {
+  //       print('Error determining position: $e');
+  //       setState(() {
+  //         _isLoading = false;
+  //       });
+  //       _showErrorSnackBar('Error determining position');
+  //       return;
+  //     }
+  //   } else {
+  //     String location = locationController.text;
+  //     List<String> latLng = location.split(',');
+  //     if (latLng.length == 2) {
+  //       double latitude = double.tryParse(latLng[0].trim()) ?? 0.0;
+  //       double longitude = double.tryParse(latLng[1].trim()) ?? 0.0;
+  //       if (_mapController != null) {
+  //         _mapController!.animateCamera(CameraUpdate.newLatLng(
+  //           LatLng(latitude, longitude),
+  //         ));
+  //       }
+  //     }
+  //   }
+
+  //   String location = useCurrentLocation && position != null
+  //       ? '${position.latitude}, ${position.longitude}'
+  //       : locationController.text;
+
+  //   if (customSearch && interests != null && interests.isNotEmpty) {
+  //     await updateUserInterests(interests);
+  //   }
+
+  //   List<Map<String, dynamic>> pois = [];
+  //   try {
+  //     pois = await fetchPOIs(location, interests?.join(',') ?? '');
+  //   } catch (e) {
+  //     print('Error fetching POIs: $e');
+  //     _showErrorSnackBar('Locations not found, please try again');
+  //   }
+
+  //   setState(() {
+  //     _markers = pois.map((poi) {
+  //       return Marker(
+  //         markerId: MarkerId('${poi['latitude']},${poi['longitude']}'),
+  //         position: LatLng(poi['latitude'], poi['longitude']),
+  //         infoWindow: InfoWindow(
+  //           title: poi['name'],
+  //           snippet: poi['description'],
+  //           onTap: () {
+  //             print('Marker tapped: ${poi['name']}');
+  //             _showAddToListDialog(poi);
+  //           },
+  //         ),
+  //       );
+  //     }).toList();
+
+  //     _poiList = pois;
+  //     _isLoading = false;
+  //   });
+
+  //   _updateCameraPosition();
+  // }
+
+  Future<void> _generatePOIs({List<String>? interests}) async {
     setState(() {
       _isLoading = true;
     });
+
+    double? originalLat;
+    double? originalLon;
 
     if (!useCurrentLocation && locationController.text.isEmpty) {
       _showErrorSnackBar('Please enter a location');
@@ -91,52 +178,86 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    Position? position;
-
     if (useCurrentLocation) {
       try {
-        position = await _determinePosition();
+        Position position = await _determinePosition();
+        originalLat = position.latitude;
+        originalLon = position.longitude;
+
         if (_mapController != null) {
           _mapController!.animateCamera(CameraUpdate.newLatLng(
-            LatLng(position.latitude, position.longitude),
+            LatLng(originalLat, originalLon),
           ));
         }
       } catch (e) {
         print('Error determining position: $e');
+        _showErrorSnackBar('Error determining position');
         setState(() {
           _isLoading = false;
         });
-        _showErrorSnackBar('Error determining position');
         return;
       }
     } else {
       String location = locationController.text;
-      List<String> latLng = location.split(',');
-      if (latLng.length == 2) {
-        double latitude = double.tryParse(latLng[0].trim()) ?? 0.0;
-        double longitude = double.tryParse(latLng[1].trim()) ?? 0.0;
-        if (_mapController != null) {
+
+      try {
+        var locationCoords = await getCoordinates(location);
+        originalLat = locationCoords['lat'];
+        originalLon = locationCoords['lon'];
+
+        if (_mapController != null &&
+            originalLat != null &&
+            originalLon != null) {
           _mapController!.animateCamera(CameraUpdate.newLatLng(
-            LatLng(latitude, longitude),
+            LatLng(originalLat, originalLon),
           ));
         }
+      } catch (e) {
+        print('Error getting coordinates: $e');
+        _showErrorSnackBar('Invalid location');
+        setState(() {
+          _isLoading = false;
+        });
+        return;
       }
     }
 
-    String location = useCurrentLocation && position != null
-        ? '${position.latitude}, ${position.longitude}'
-        : locationController.text;
-
-    if (customSearch && interests != null && interests.isNotEmpty) {
-      await updateUserInterests(interests);
+    // Ensure coordinates are valid
+    if (originalLat == null || originalLon == null) {
+      print('Invalid coordinates, cannot proceed with POI generation');
+      setState(() {
+        _isLoading = false;
+      });
+      return;
     }
 
-    List<Map<String, dynamic>> pois = [];
+    // Generate POIs
+    List<Map<String, dynamic>> pois;
     try {
-      pois = await fetchPOIs(location, interests?.join(',') ?? '');
+      pois = await fetchPOIs(
+          '$originalLat,$originalLon', interests?.join(',') ?? '');
     } catch (e) {
       print('Error fetching POIs: $e');
       _showErrorSnackBar('Locations not found, please try again');
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Fetch address for each POI and save it
+    for (var poi in pois) {
+      try {
+        Map<String, String> geocodeResult =
+            await reverseGeocode(poi['latitude'], poi['longitude']);
+        poi['address'] =
+            geocodeResult['formattedAddress'] ?? 'No address available';
+
+        // Save POI with address
+        _savePOIToList(poi);
+      } catch (e) {
+        print('Error reverse geocoding POI: $e');
+      }
     }
 
     setState(() {
@@ -329,39 +450,24 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // void _savePOIToList(Map<String, dynamic> poi) async {
-  //   if (_selectedListId != null) {
-  //     try {
-  //       final listDocRef = _listsCollection.doc(_selectedListId);
-  //       final poiCollectionRef = listDocRef.collection('pois');
-
-  //       await poiCollectionRef.add(poi);
-
-  //       _showSuccessSnackBar('POI added to list successfully.');
-  //     } catch (e) {
-  //       print('Error saving POI to list: $e');
-  //       _showErrorSnackBar('Error saving POI to list.');
-  //     }
-  //   }
-  // }
   void _savePOIToList(Map<String, dynamic> poi) async {
     if (_selectedListId != null) {
       try {
         final listDocRef = _listsCollection.doc(_selectedListId);
         final poiCollectionRef = listDocRef.collection('pois');
 
-        // Debug: Print the POI details to ensure address is included
+        // Log POI details before saving
         print('Saving POI: $poi');
 
         await poiCollectionRef.add({
           'name': poi['name'],
           'latitude': poi['latitude'],
           'longitude': poi['longitude'],
-          'description': poi['description'], // Ensure the address is saved
+          'description': poi['description'], // Ensure the description is saved
           'address': poi['address'], // Ensure the address is saved
-          // Add any other fields as necessary
         });
 
+        print('POI Address saved: ${poi['address']}');
         _showSuccessSnackBar('POI added to list successfully.');
       } catch (e) {
         print('Error saving POI to list: $e');
@@ -523,14 +629,24 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _confirmAddPlace(
-      String name, double lat, double lng, String description) {
+  void _confirmAddPlace(String name, double lat, double lng, String address) {
+    if (lat.isNaN || lng.isNaN) {
+      print('Invalid coordinates for POI: $name');
+      return;
+    }
+
+    // Debug log to ensure address is correctly passed
+    print(
+        'Adding POI with Name: $name, Lat: $lat, Lng: $lng, Address: $address');
+
     final poi = {
       'name': name,
       'latitude': lat,
       'longitude': lng,
-      'description': description,
+      'address': address,
+      'description': address, // Use the address as the description if needed
     };
+
     _showAddToListDialog(poi);
   }
 
