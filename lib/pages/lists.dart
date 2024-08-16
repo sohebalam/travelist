@@ -82,7 +82,6 @@ class _ListsPageState extends State<ListsPage> {
                   fontSize:
                       MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
                           16.0,
-                  color: AppColors.quateraryColor,
                 ),
               ),
             ),
