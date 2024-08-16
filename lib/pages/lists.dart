@@ -34,6 +34,64 @@ class _ListsPageState extends State<ListsPage> {
     }
   }
 
+  Future<void> _deleteList(String listId) async {
+    await _listsCollection.doc(listId).delete();
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context, String listId) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            'Delete List',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ?? 18.0,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete this list?',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ?? 16.0,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                await _deleteList(listId);
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                  color: AppColors.quateraryColor,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -122,6 +180,13 @@ class _ListsPageState extends State<ListsPage> {
                               14.0,
                         ),
                       ),
+                      trailing: IconButton(
+                        icon: Icon(Icons.delete, color: AppColors.primaryColor),
+                        onPressed: () {
+                          _showDeleteConfirmationDialog(
+                              context, lists[index].id);
+                        },
+                      ),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -147,9 +212,6 @@ class _ListsPageState extends State<ListsPage> {
         backgroundColor: AppColors.primaryColor,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
       ),
     );
   }

@@ -5,7 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travelist/services/auth/auth_service.dart';
-import 'package:travelist/services/location/location_service.dart';
+import 'package:travelist/services/location/recomendations.dart';
 import 'package:travelist/services/location/place_service.dart';
 import 'package:travelist/services/shared_functions.dart';
 import 'package:travelist/services/styles.dart';
