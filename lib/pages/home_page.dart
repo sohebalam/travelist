@@ -329,13 +329,38 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // void _savePOIToList(Map<String, dynamic> poi) async {
+  //   if (_selectedListId != null) {
+  //     try {
+  //       final listDocRef = _listsCollection.doc(_selectedListId);
+  //       final poiCollectionRef = listDocRef.collection('pois');
+
+  //       await poiCollectionRef.add(poi);
+
+  //       _showSuccessSnackBar('POI added to list successfully.');
+  //     } catch (e) {
+  //       print('Error saving POI to list: $e');
+  //       _showErrorSnackBar('Error saving POI to list.');
+  //     }
+  //   }
+  // }
   void _savePOIToList(Map<String, dynamic> poi) async {
     if (_selectedListId != null) {
       try {
         final listDocRef = _listsCollection.doc(_selectedListId);
         final poiCollectionRef = listDocRef.collection('pois');
 
-        await poiCollectionRef.add(poi);
+        // Debug: Print the POI details to ensure address is included
+        print('Saving POI: $poi');
+
+        await poiCollectionRef.add({
+          'name': poi['name'],
+          'latitude': poi['latitude'],
+          'longitude': poi['longitude'],
+          'description': poi['description'], // Ensure the address is saved
+          'address': poi['address'], // Ensure the address is saved
+          // Add any other fields as necessary
+        });
 
         _showSuccessSnackBar('POI added to list successfully.');
       } catch (e) {

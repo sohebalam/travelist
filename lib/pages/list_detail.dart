@@ -420,6 +420,52 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
+  void _deletePOI(String poiId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('lists')
+          .doc(widget.listId)
+          .collection('pois')
+          .doc(poiId)
+          .delete();
+
+      setState(() {
+        _poiData.removeWhere((poi) => poi['id'] == poiId);
+        _markers.removeWhere((marker) => marker.markerId.value == poiId);
+        _polylinePoints.removeWhere((point) => point == poiId);
+      });
+
+      _getRoutePolyline(); // Update the route after deletion
+      _showSuccessSnackBar('POI deleted successfully.');
+    } catch (e) {
+      _showErrorSnackBar('Error deleting POI.');
+    }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    final snackBar = SnackBar(
+      content: Text(
+        message,
+        style: TextStyle(
+          fontSize: MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+        ),
+      ),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+  void _showErrorSnackBar(String message) {
+    final snackBar = SnackBar(
+      content: Text(
+        message,
+        style: TextStyle(
+          fontSize: MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+        ),
+      ),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
   // Calculate distance between two LatLng points
   double _calculateDistance(gmaps.LatLng start, gmaps.LatLng end) {
     const double p = 0.017453292519943295;
@@ -482,6 +528,33 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         }
       });
     }
+  }
+
+  void _confirmDeletePOI(String poiId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete POI'),
+          content: Text('Are you sure you want to delete this POI?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Dismiss the dialog
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _deletePOI(poiId);
+                Navigator.of(context).pop(); // Dismiss the dialog
+              },
+              child: Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // Toggle the navigation view state
@@ -1011,6 +1084,15 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       : MediaQuery.maybeTextScalerOf(context)
                                               ?.scale(16.0) ??
                                           16.0;
+
+                                  // Extract only the city and postal code
+                                  String shortAddress = _poiData[index]
+                                          ['address']
+                                      .split(',')
+                                      .reversed
+                                      .take(2)
+                                      .join(', ');
+
                                   return Container(
                                     padding:
                                         const EdgeInsets.symmetric(vertical: 0),
@@ -1032,14 +1114,27 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                       subtitle: Semantics(
                                         label: 'Route point address',
                                         child: Text(
-                                          _poiData[index]['address'],
+                                          shortAddress,
                                           style:
                                               TextStyle(fontSize: textSize - 2),
                                         ),
                                       ),
-                                      trailing: const Icon(Icons.drag_handle),
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.delete),
+                                            color: AppColors.primaryColor,
+                                            onPressed: () {
+                                              _confirmDeletePOI(
+                                                  _poiData[index]['id']);
+                                            },
+                                          ),
+                                          const Icon(Icons.drag_handle),
+                                        ],
+                                      ),
                                       onTap: () {
-                                        _showReorderDialog(); // Show reorder dialog
+                                        _showReorderDialog(); // Show reorder dialog when the list item is tapped
                                       },
                                     ),
                                   );
