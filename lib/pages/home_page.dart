@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travelist/services/auth/auth_service.dart';
 import 'package:travelist/services/location/recomendations.dart';
 import 'package:travelist/services/location/place_service.dart';
+import 'package:travelist/services/pages/home_service.dart';
 import 'package:travelist/services/shared_functions.dart';
 import 'package:travelist/services/styles.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
@@ -25,7 +26,7 @@ class _HomePageState extends State<HomePage> {
   TextEditingController locationController = TextEditingController();
   TextEditingController interestsController = TextEditingController();
   TextEditingController newListController = TextEditingController();
-
+  final HomePageService _homePageService = HomePageService();
   bool useCurrentLocation = false;
   bool customSearch = false;
   List<Marker> _markers = [];
@@ -66,129 +67,24 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadUserInterests() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      List<String> interests = await AuthService().getUserInterests(user);
-      setState(() {
-        userInterests = interests;
-        if (userInterests.isEmpty) {
-          customSearch = true;
-        }
-      });
-    }
+    List<String> interests = await _homePageService.loadUserInterests();
+    setState(() {
+      userInterests = interests;
+      if (userInterests.isEmpty) {
+        customSearch = true;
+      }
+    });
   }
-
-  // void _generatePOIs({List<String>? interests}) async {
-  //   setState(() {
-  //     _isLoading = true;
-  //   });
-
-  //   if (!useCurrentLocation && locationController.text.isEmpty) {
-  //     _showErrorSnackBar('Please enter a location');
-  //     setState(() {
-  //       _isLoading = false;
-  //     });
-  //     return;
-  //   }
-
-  //   Position? position;
-
-  //   if (useCurrentLocation) {
-  //     try {
-  //       position = await _determinePosition();
-  //       if (_mapController != null) {
-  //         _mapController!.animateCamera(CameraUpdate.newLatLng(
-  //           LatLng(position.latitude, position.longitude),
-  //         ));
-  //       }
-  //     } catch (e) {
-  //       print('Error determining position: $e');
-  //       setState(() {
-  //         _isLoading = false;
-  //       });
-  //       _showErrorSnackBar('Error determining position');
-  //       return;
-  //     }
-  //   } else {
-  //     String location = locationController.text;
-  //     List<String> latLng = location.split(',');
-  //     if (latLng.length == 2) {
-  //       double latitude = double.tryParse(latLng[0].trim()) ?? 0.0;
-  //       double longitude = double.tryParse(latLng[1].trim()) ?? 0.0;
-  //       if (_mapController != null) {
-  //         _mapController!.animateCamera(CameraUpdate.newLatLng(
-  //           LatLng(latitude, longitude),
-  //         ));
-  //       }
-  //     }
-  //   }
-
-  //   String location = useCurrentLocation && position != null
-  //       ? '${position.latitude}, ${position.longitude}'
-  //       : locationController.text;
-
-  //   if (customSearch && interests != null && interests.isNotEmpty) {
-  //     await updateUserInterests(interests);
-  //   }
-
-  //   List<Map<String, dynamic>> pois = [];
-  //   try {
-  //     pois = await fetchPOIs(location, interests?.join(',') ?? '');
-  //   } catch (e) {
-  //     print('Error fetching POIs: $e');
-  //     _showErrorSnackBar('Locations not found, please try again');
-  //   }
-
-  //   setState(() {
-  //     _markers = pois.map((poi) {
-  //       return Marker(
-  //         markerId: MarkerId('${poi['latitude']},${poi['longitude']}'),
-  //         position: LatLng(poi['latitude'], poi['longitude']),
-  //         infoWindow: InfoWindow(
-  //           title: poi['name'],
-  //           snippet: poi['description'],
-  //           onTap: () {
-  //             print('Marker tapped: ${poi['name']}');
-  //             _showAddToListDialog(poi);
-  //           },
-  //         ),
-  //       );
-  //     }).toList();
-
-  //     _poiList = pois;
-  //     _isLoading = false;
-  //   });
-
-  //   _updateCameraPosition();
-  // }
 
   Future<void> _generatePOIs({List<String>? interests}) async {
     setState(() {
       _isLoading = true;
     });
 
-    double? originalLat;
-    double? originalLon;
-
-    if (!useCurrentLocation && locationController.text.isEmpty) {
-      _showErrorSnackBar('Please enter a location');
-      setState(() {
-        _isLoading = false;
-      });
-      return;
-    }
-
+    Position? currentPosition;
     if (useCurrentLocation) {
       try {
-        Position position = await _determinePosition();
-        originalLat = position.latitude;
-        originalLon = position.longitude;
-
-        if (_mapController != null) {
-          _mapController!.animateCamera(CameraUpdate.newLatLng(
-            LatLng(originalLat, originalLon),
-          ));
-        }
+        currentPosition = await _homePageService.determinePosition();
       } catch (e) {
         print('Error determining position: $e');
         _showErrorSnackBar('Error determining position');
@@ -197,68 +93,16 @@ class _HomePageState extends State<HomePage> {
         });
         return;
       }
-    } else {
-      String location = locationController.text;
-
-      try {
-        var locationCoords = await getCoordinates(location);
-        originalLat = locationCoords['lat'];
-        originalLon = locationCoords['lon'];
-
-        if (_mapController != null &&
-            originalLat != null &&
-            originalLon != null) {
-          _mapController!.animateCamera(CameraUpdate.newLatLng(
-            LatLng(originalLat, originalLon),
-          ));
-        }
-      } catch (e) {
-        print('Error getting coordinates: $e');
-        _showErrorSnackBar('Invalid location');
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
     }
 
-    // Ensure coordinates are valid
-    if (originalLat == null || originalLon == null) {
-      print('Invalid coordinates, cannot proceed with POI generation');
-      setState(() {
-        _isLoading = false;
-      });
-      return;
-    }
-
-    // Generate POIs
-    List<Map<String, dynamic>> pois;
-    try {
-      pois = await fetchPOIs(
-          '$originalLat,$originalLon', interests?.join(',') ?? '');
-    } catch (e) {
-      print('Error fetching POIs: $e');
-      _showErrorSnackBar('Locations not found, please try again');
-      setState(() {
-        _isLoading = false;
-      });
-      return;
-    }
-
-    // Fetch address for each POI and save it
-    for (var poi in pois) {
-      try {
-        Map<String, String> geocodeResult =
-            await reverseGeocode(poi['latitude'], poi['longitude']);
-        poi['address'] =
-            geocodeResult['formattedAddress'] ?? 'No address available';
-
-        // Save POI with address
-        _savePOIToList(poi);
-      } catch (e) {
-        print('Error reverse geocoding POI: $e');
-      }
-    }
+    List<Map<String, dynamic>> pois = await _homePageService.generatePOIs(
+      useCurrentLocation: useCurrentLocation,
+      locationController: locationController,
+      mapController: _mapController,
+      interests: interests,
+      showErrorSnackBar: _showErrorSnackBar,
+      currentPosition: currentPosition,
+    );
 
     setState(() {
       _markers = pois.map((poi) {
@@ -283,6 +127,16 @@ class _HomePageState extends State<HomePage> {
     _updateCameraPosition();
   }
 
+  void _updateCameraPosition() {
+    if (_markers.isEmpty || _mapController == null) return;
+
+    LatLngBounds bounds = _homePageService.calculateBounds(_markers);
+
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 50),
+    );
+  }
+
   void _showAddToListDialog(Map<String, dynamic> poi) {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -300,27 +154,13 @@ class _HomePageState extends State<HomePage> {
                 bool hasLists =
                     snapshot.hasData && snapshot.data!.docs.isNotEmpty;
                 return AlertDialog(
-                  title: Text(
-                    'Add POI to List',
-                    style: TextStyle(
-                      fontSize:
-                          MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ??
-                              18.0,
-                    ),
-                  ),
+                  title: Text('Add POI to List'),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (hasLists) ...[
                         SwitchListTile(
-                          title: Text(
-                            'Create new list',
-                            style: TextStyle(
-                              fontSize: MediaQuery.maybeTextScalerOf(context)
-                                      ?.scale(16.0) ??
-                                  16.0,
-                            ),
-                          ),
+                          title: Text('Create new list'),
                           value: _showNewListFields,
                           onChanged: (value) {
                             setState(() {
@@ -334,11 +174,6 @@ class _HomePageState extends State<HomePage> {
                           controller: newListController,
                           decoration: InputDecoration(
                             labelText: 'Enter new list name',
-                            labelStyle: TextStyle(
-                              fontSize: MediaQuery.maybeTextScalerOf(context)
-                                      ?.scale(16.0) ??
-                                  16.0,
-                            ),
                             border: OutlineInputBorder(),
                           ),
                         ),
@@ -348,42 +183,20 @@ class _HomePageState extends State<HomePage> {
                                 newListController.text, _listsCollection);
                             newListController.clear();
                           },
-                          child: Text(
-                            'Create New List',
-                            style: TextStyle(
-                              fontSize: MediaQuery.maybeTextScalerOf(context)
-                                      ?.scale(16.0) ??
-                                  16.0,
-                            ),
-                          ),
+                          child: Text('Create New List'),
                         ),
                       ],
                       if (hasLists && !_showNewListFields)
                         DropdownButton<String>(
-                          hint: Text(
-                            'Select List',
-                            style: TextStyle(
-                              fontSize: MediaQuery.maybeTextScalerOf(context)
-                                      ?.scale(16.0) ??
-                                  16.0,
-                            ),
-                          ),
+                          hint: Text('Select List'),
                           value: _selectedListId,
                           items: snapshot.data!.docs.map((list) {
                             var listData = list.data() as Map<String, dynamic>;
                             return DropdownMenuItem<String>(
                               value: list.id,
-                              child: Text(
-                                listData.containsKey('list')
-                                    ? listData['list']
-                                    : 'Unnamed List',
-                                style: TextStyle(
-                                  fontSize:
-                                      MediaQuery.maybeTextScalerOf(context)
-                                              ?.scale(16.0) ??
-                                          16.0,
-                                ),
-                              ),
+                              child: Text(listData.containsKey('list')
+                                  ? listData['list']
+                                  : 'Unnamed List'),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -402,43 +215,23 @@ class _HomePageState extends State<HomePage> {
                       onPressed: () {
                         Navigator.of(context).pop();
                       },
-                      child: Text(
-                        'Cancel',
-                        style: TextStyle(
-                          fontSize: MediaQuery.maybeTextScalerOf(context)
-                                  ?.scale(16.0) ??
-                              16.0,
-                        ),
-                      ),
+                      child: Text('Cancel'),
                     ),
                     ElevatedButton(
                       onPressed: () async {
                         if (_selectedListId != null) {
-                          final listDoc =
-                              await _listsCollection.doc(_selectedListId).get();
-                          final poiCollectionRef = _listsCollection
-                              .doc(_selectedListId)
-                              .collection('pois');
-                          final poiCount =
-                              (await poiCollectionRef.get()).docs.length;
-
-                          if (poiCount >= 10) {
-                            _showErrorSnackBar(
-                                'This list already has 10 POIs.');
-                          } else {
-                            _savePOIToList(poi);
-                            Navigator.of(context).pop();
-                          }
+                          await _homePageService.savePOIToList(
+                            selectedListId: _selectedListId,
+                            poi: poi,
+                            showErrorSnackBar: _showErrorSnackBar,
+                            showSuccessSnackBar: _showSuccessSnackBar,
+                          );
+                          Navigator.of(context).pop();
+                        } else {
+                          _showErrorSnackBar('Please select a list first.');
                         }
                       },
-                      child: Text(
-                        'Add to List',
-                        style: TextStyle(
-                          fontSize: MediaQuery.maybeTextScalerOf(context)
-                                  ?.scale(16.0) ??
-                              16.0,
-                        ),
-                      ),
+                      child: Text('Add to List'),
                     ),
                   ],
                 );
@@ -451,27 +244,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _savePOIToList(Map<String, dynamic> poi) async {
-    if (_selectedListId != null) {
+    if (_selectedListId != null && !_isLoading) {
+      _isLoading = true; // Set loading to true to prevent multiple triggers
       try {
-        final listDocRef = _listsCollection.doc(_selectedListId);
-        final poiCollectionRef = listDocRef.collection('pois');
-
-        // Log POI details before saving
-        print('Saving POI: $poi');
-
-        await poiCollectionRef.add({
-          'name': poi['name'],
-          'latitude': poi['latitude'],
-          'longitude': poi['longitude'],
-          'description': poi['description'], // Ensure the description is saved
-          'address': poi['address'], // Ensure the address is saved
-        });
-
-        print('POI Address saved: ${poi['address']}');
-        _showSuccessSnackBar('POI added to list successfully.');
-      } catch (e) {
-        print('Error saving POI to list: $e');
-        _showErrorSnackBar('Error saving POI to list.');
+        await _homePageService.savePOIToList(
+          selectedListId: _selectedListId,
+          poi: poi,
+          showErrorSnackBar: _showErrorSnackBar,
+          showSuccessSnackBar: _showSuccessSnackBar,
+        );
+      } finally {
+        _isLoading = false; // Ensure loading is reset after the operation
       }
     }
   }
@@ -517,16 +300,6 @@ class _HomePageState extends State<HomePage> {
     }
 
     return await Geolocator.getCurrentPosition();
-  }
-
-  void _updateCameraPosition() {
-    if (_markers.isEmpty || _mapController == null) return;
-
-    LatLngBounds bounds = _calculateBounds(_markers);
-
-    _mapController!.animateCamera(
-      CameraUpdate.newLatLngBounds(bounds, 50),
-    );
   }
 
   LatLngBounds _calculateBounds(List<Marker> markers) {

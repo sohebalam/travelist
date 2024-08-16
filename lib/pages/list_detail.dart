@@ -8,6 +8,7 @@ import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:redacted/redacted.dart';
+import 'package:travelist/services/pages/list_detail_service.dart';
 import 'package:travelist/services/secure_storage.dart';
 import 'package:travelist/services/styles.dart';
 import 'package:travelist/services/widgets/bottom_navbar.dart';
@@ -69,6 +70,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   final bool _locationBiasEnabled = true;
   final bool _locationRestrictionEnabled =
       false; // Flag to enable location restriction
+  late ListDetailsService _listDetailsService;
 
   late final PlacesService
       _placesService; // Service for place-related operations
@@ -80,6 +82,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   @override
   void initState() {
     super.initState();
+    _listDetailsService = ListDetailsService(widget.listId);
     _initializeGoogleMapsApiKey().then((_) {
       if (_googleMapsApiKey != null) {
         _fetchPlaces();
@@ -146,102 +149,74 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       _error = null;
     });
 
-    try {
-      var placesSnapshot = await FirebaseFirestore.instance
-          .collection('lists')
-          .doc(widget.listId)
-          .collection('pois')
-          .get(); // Get POIs from Firestore
+    List<Map<String, dynamic>> poiData = await _listDetailsService.fetchPlaces(
+      _currentLocation,
+      _showErrorSnackBar,
+    );
 
-      List<gmaps.Marker> markers = [];
-      List<Map<String, dynamic>> poiData = [];
-      List<gmaps.LatLng> points = [];
+    List<gmaps.Marker> markers = [];
+    List<gmaps.LatLng> points = [];
 
-      for (var place in placesSnapshot.docs) {
-        var placeData = place.data();
-        var position =
-            gmaps.LatLng(placeData['latitude'], placeData['longitude']);
-        points.add(position);
-        poiData.add({
-          'id': place.id,
-          'name': placeData['name'],
-          'latitude': placeData['latitude'],
-          'longitude': placeData['longitude'],
-          'address': placeData['address'] ?? 'No address',
-          'distance': _currentLocation != null
-              ? _calculateDistance(_currentLocation!, position)
-              : double.infinity,
-        });
-      }
+    for (var poi in poiData) {
+      var position = gmaps.LatLng(poi['latitude'], poi['longitude']);
+      points.add(position);
+      markers.add(
+        gmaps.Marker(
+          markerId: gmaps.MarkerId(poi['id']),
+          position: position,
+          infoWindow: gmaps.InfoWindow(
+            title: poi['name'],
+            snippet: poi['address'],
+          ),
+          onTap: () => _confirmAddPlace(
+            poi['name'],
+            poi['latitude'],
+            poi['longitude'],
+            poi['address'],
+          ),
+        ),
+      );
+    }
 
-      poiData.sort((a, b) =>
-          a['distance'].compareTo(b['distance'])); // Sort POIs by distance
+    setState(() {
+      _markers = markers;
+      _poiData = poiData;
+      _polylinePoints = points;
+      _isLoading = false;
+    });
 
-      for (var poi in poiData) {
-        var position = gmaps.LatLng(poi['latitude'], poi['longitude']);
-        markers.add(
-          gmaps.Marker(
-            markerId: gmaps.MarkerId(poi['id']),
-            position: position,
-            infoWindow: gmaps.InfoWindow(
-              title: poi['name'],
-              snippet: poi['address'],
-            ),
-            onTap: () => _confirmAddPlace(
-              poi['name'],
-              poi['latitude'],
-              poi['longitude'],
-              poi['address'],
-            ),
+    if (points.isNotEmpty) {
+      final centralLocation = _calculateCentroid(points);
+      _locationBias = places.LatLngBounds(
+        southwest: places.LatLng(
+            lat: centralLocation.latitude - 0.01,
+            lng: centralLocation.longitude - 0.01),
+        northeast: places.LatLng(
+            lat: centralLocation.latitude + 0.01,
+            lng: centralLocation.longitude + 0.01),
+      );
+    } else if (_currentLocation != null) {
+      _locationBias = places.LatLngBounds(
+        southwest: places.LatLng(
+            lat: _currentLocation!.latitude - 0.01,
+            lng: _currentLocation!.longitude - 0.01),
+        northeast: places.LatLng(
+            lat: _currentLocation!.latitude + 0.01,
+            lng: _currentLocation!.longitude + 0.01),
+      );
+    }
+
+    if (_polylinePoints.isNotEmpty) {
+      _getRoutePolyline();
+      _setNearestDestination();
+      if (!_userHasInteractedWithMap) {
+        _mapController?.animateCamera(
+          gmaps.CameraUpdate.newLatLngBounds(
+            _calculateBounds(_polylinePoints),
+            50,
           ),
         );
       }
-
-      setState(() {
-        _markers = markers; // Set markers
-        _poiData = poiData; // Set POI data
-        _polylinePoints = points; // Set polyline points
-        _isLoading = false; // Set loading state to false
-      });
-
-      if (points.isNotEmpty) {
-        final centralLocation = _calculateCentroid(points);
-        _locationBias = places.LatLngBounds(
-          southwest: places.LatLng(
-              lat: centralLocation.latitude - 0.01,
-              lng: centralLocation.longitude - 0.01),
-          northeast: places.LatLng(
-              lat: centralLocation.latitude + 0.01,
-              lng: centralLocation.longitude + 0.01),
-        );
-      } else if (_currentLocation != null) {
-        _locationBias = places.LatLngBounds(
-          southwest: places.LatLng(
-              lat: _currentLocation!.latitude - 0.01,
-              lng: _currentLocation!.longitude - 0.01),
-          northeast: places.LatLng(
-              lat: _currentLocation!.latitude + 0.01,
-              lng: _currentLocation!.longitude + 0.01),
-        );
-      }
-
-      if (_polylinePoints.isNotEmpty) {
-        _getRoutePolyline(); // Get polyline route
-        _setNearestDestination(); // Set nearest destination
-        if (!_userHasInteractedWithMap) {
-          _mapController?.animateCamera(
-            gmaps.CameraUpdate.newLatLngBounds(
-              _calculateBounds(_polylinePoints),
-              50,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      setState(() {
-        _error = e.toString(); // Set error message
-        _isLoading = false; // Set loading state to false
-      });
     }
   }
 

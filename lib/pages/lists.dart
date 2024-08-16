@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travelist/pages/list_detail.dart';
+import 'package:travelist/services/pages/list_service.dart';
 import 'package:travelist/services/shared_functions.dart';
 import 'package:travelist/services/styles.dart';
 
@@ -13,17 +14,8 @@ class ListsPage extends StatefulWidget {
 }
 
 class _ListsPageState extends State<ListsPage> {
-  final CollectionReference _listsCollection =
-      FirebaseFirestore.instance.collection('lists');
-
+  final ListService _listService = ListService(); // Initialize the service
   int _selectedIndex = 1;
-  User? _currentUser;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentUser = FirebaseAuth.instance.currentUser;
-  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -32,10 +24,6 @@ class _ListsPageState extends State<ListsPage> {
     if (index == 0) {
       Navigator.pushNamed(context, '/');
     }
-  }
-
-  Future<void> _deleteList(String listId) async {
-    await _listsCollection.doc(listId).delete();
   }
 
   void _showDeleteConfirmationDialog(BuildContext context, String listId) {
@@ -73,7 +61,7 @@ class _ListsPageState extends State<ListsPage> {
             ),
             TextButton(
               onPressed: () async {
-                await _deleteList(listId);
+                await _listService.deleteList(listId);
                 Navigator.of(context).pop();
               },
               child: Text(
@@ -106,9 +94,8 @@ class _ListsPageState extends State<ListsPage> {
         backgroundColor: AppColors.primaryColor,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _listsCollection
-            .where('userId', isEqualTo: _currentUser?.uid)
-            .snapshots(),
+        stream:
+            _listService.streamUserLists(), // Use the service to stream lists
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(
@@ -123,10 +110,8 @@ class _ListsPageState extends State<ListsPage> {
             itemBuilder: (context, index) {
               var listData = lists[index].data() as Map<String, dynamic>;
               return FutureBuilder<QuerySnapshot>(
-                future: _listsCollection
-                    .doc(lists[index].id)
-                    .collection('pois')
-                    .get(),
+                future: _listService.getPOIsForList(
+                    lists[index].id), // Use the service to fetch POIs
                 builder: (context, poiSnapshot) {
                   if (!poiSnapshot.hasData) {
                     return Semantics(
@@ -271,7 +256,8 @@ class _ListsPageState extends State<ListsPage> {
             TextButton(
               onPressed: () async {
                 if (formKey.currentState!.validate()) {
-                  await createList(listNameController.text, _listsCollection);
+                  await _listService.createList(listNameController
+                      .text); // Use the service to create a list
                   Navigator.of(context).pop();
                 }
               },
