@@ -120,28 +120,59 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
   Future<void> _confirmAddPlace(
       String name, double latitude, double longitude, String address) async {
-    await _poiService.addNearbyPlace(
-      context,
-      widget.listId,
-      name,
-      latitude,
-      longitude,
-      address,
-      _poiData,
-      _currentLocation,
-      _fetchPlaces,
-    );
+    bool shouldAdd = await _showAddPlaceDialog(name, address);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '$name has been added to your list.',
-          style: TextStyle(
-              fontSize:
-                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0),
+    if (shouldAdd) {
+      await _poiService.addNearbyPlace(
+        context,
+        widget.listId,
+        name,
+        latitude,
+        longitude,
+        address,
+        _poiData,
+        _currentLocation,
+        _fetchPlaces,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$name has been added to your list.',
+            style: TextStyle(
+                fontSize:
+                    MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0),
+          ),
         ),
-      ),
-    );
+      );
+    }
+  }
+
+  Future<bool> _showAddPlaceDialog(String name, String address) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Add POI'),
+              content: Text('Do you want to add "$name" to your list?'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child: Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  child: Text('Add'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false; // Return false if the dialog is dismissed without choosing an option
   }
 
   Future<void> _fetchPlaces() async {
@@ -174,6 +205,15 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
             infoWindow: gmaps.InfoWindow(
               title: placeData['name'],
               snippet: placeData['address'] ?? 'No address',
+              // Open dialog only when the info window is tapped
+              onTap: () {
+                _confirmAddPlace(
+                  placeData['name'],
+                  placeData['latitude'],
+                  placeData['longitude'],
+                  placeData['address'] ?? 'No address',
+                );
+              },
             ),
           ),
         );
@@ -557,6 +597,37 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                             );
                           }
                         },
+                        onTap: (gmaps.LatLng position) async {
+                          final String name = 'New POI';
+                          final String address = 'No address available';
+
+                          setState(() {
+                            final marker = gmaps.Marker(
+                              markerId: gmaps.MarkerId(
+                                  '${position.latitude},${position.longitude}'),
+                              position: position,
+                              infoWindow: gmaps.InfoWindow(
+                                title: name,
+                                snippet: address,
+                                onTap: () {
+                                  _confirmAddPlace(
+                                    name,
+                                    position.latitude,
+                                    position.longitude,
+                                    address,
+                                  );
+                                },
+                              ),
+                            );
+
+                            _markers.add(marker);
+                          });
+
+                          await _mapController?.showMarkerInfoWindow(
+                            gmaps.MarkerId(
+                                '${position.latitude},${position.longitude}'),
+                          );
+                        },
                         myLocationEnabled: true,
                         onCameraMove: (gmaps.CameraPosition position) {
                           _userHasInteractedWithMap = true;
@@ -585,19 +656,27 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                       mapController: _mapController,
                       onPlaceSelected: (gmaps.Marker marker) {
                         setState(() {
-                          _markers.add(marker);
-                          _poiService.addNearbyPlace(
-                            context,
-                            widget.listId,
-                            marker.infoWindow.title ?? 'Unknown',
-                            marker.position.latitude,
-                            marker.position.longitude,
-                            marker.infoWindow.snippet ?? 'No address',
-                            _poiData,
-                            _currentLocation,
-                            _fetchPlaces,
+                          final newMarker = gmaps.Marker(
+                            markerId: marker.markerId,
+                            position: marker.position,
+                            infoWindow: gmaps.InfoWindow(
+                              title: marker.infoWindow.title,
+                              snippet: marker.infoWindow.snippet,
+                              onTap: () {
+                                _confirmAddPlace(
+                                  marker.infoWindow.title ?? 'Unknown',
+                                  marker.position.latitude,
+                                  marker.position.longitude,
+                                  marker.infoWindow.snippet ?? 'No address',
+                                );
+                              },
+                            ),
                           );
+
+                          _markers.add(newMarker);
                         });
+
+                        _mapController?.showMarkerInfoWindow(marker.markerId);
                       },
                       onError: (String error) {
                         _showErrorSnackBar('Error: $error');
