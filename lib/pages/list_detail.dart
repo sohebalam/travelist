@@ -66,6 +66,9 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
   DurationService? _durationService;
 
+  final UtilsService _utilsService =
+      UtilsService(); // Create an instance of UtilsService
+
   @override
   void initState() {
     super.initState();
@@ -179,7 +182,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           'longitude': placeData['longitude'],
           'address': placeData['address'] ?? 'No address',
           'distance': _currentLocation != null
-              ? _calculateDistance(_currentLocation!, position)
+              ? _utilsService.calculateDistance(_currentLocation!, position)
               : double.infinity,
           'order': placeData['order'] ?? 0, // Make sure to include the order
         });
@@ -198,7 +201,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         if (!_userHasInteractedWithMap) {
           _mapController?.animateCamera(
             gmaps.CameraUpdate.newLatLngBounds(
-              _calculateBounds(_polylinePoints),
+              _utilsService.calculateBounds(_polylinePoints),
               50,
             ),
           );
@@ -256,40 +259,13 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     if (_routePoints.isNotEmpty) {
       _mapController?.animateCamera(
         gmaps.CameraUpdate.newLatLngBounds(
-          _calculateBounds(_routePoints),
+          _utilsService.calculateBounds(_routePoints),
           50,
         ),
       );
     }
 
     _calculateAndDisplayDistanceDuration(_currentSliderValue.toInt());
-  }
-
-  gmaps.LatLngBounds _calculateBounds(List<gmaps.LatLng> points) {
-    double southWestLat = points.first.latitude;
-    double southWestLng = points.first.longitude;
-    double northEastLat = points.first.latitude;
-    double northEastLng = points.first.longitude;
-
-    for (var point in points) {
-      if (point.latitude < southWestLat) {
-        southWestLat = point.latitude;
-      }
-      if (point.longitude < southWestLng) {
-        southWestLng = point.longitude;
-      }
-      if (point.latitude > northEastLat) {
-        northEastLat = point.latitude;
-      }
-      if (point.longitude > northEastLng) {
-        northEastLng = point.longitude;
-      }
-    }
-
-    return gmaps.LatLngBounds(
-      southwest: gmaps.LatLng(southWestLat, southWestLng),
-      northeast: gmaps.LatLng(northEastLat, northEastLng),
-    );
   }
 
   Future<void> _navigateToSelectedLocation(
@@ -326,7 +302,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         _navigationSteps = steps;
         _mapController?.animateCamera(
           gmaps.CameraUpdate.newLatLngBounds(
-            _calculateBounds(points),
+            _utilsService.calculateBounds(points),
             50,
           ),
         );
@@ -380,7 +356,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
     if (_navigationSteps.isNotEmpty) {
       gmd.DirectionLegStep currentStep = _navigationSteps[_currentStepIndex];
-      double distanceToNextStep = _calculateDistance(
+      double distanceToNextStep = _utilsService.calculateDistance(
         _currentLocation!,
         gmaps.LatLng(
           currentStep.endLocation.lat,
@@ -453,18 +429,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       ),
     );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
-  }
-
-  double _calculateDistance(gmaps.LatLng start, gmaps.LatLng end) {
-    const double p = 0.017453292519943295;
-    final double a = 0.5 -
-        cos((end.latitude - start.latitude) * p) / 2 +
-        cos(start.latitude * p) *
-            cos(end.latitude * p) *
-            (1 - cos((end.longitude - start.longitude) * p)) /
-            2;
-
-    return 12742 * asin(sqrt(a));
   }
 
   Future<void> _getCurrentLocation() async {
@@ -557,7 +521,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     gmaps.LatLng? nearestPoint;
 
     for (gmaps.LatLng point in _polylinePoints) {
-      double distance = _calculateDistance(_currentLocation!, point);
+      double distance =
+          _utilsService.calculateDistance(_currentLocation!, point);
       if (distance < minDistance) {
         minDistance = distance;
         nearestPoint = point;
@@ -630,7 +595,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                               !_userHasInteractedWithMap) {
                             _mapController?.animateCamera(
                               gmaps.CameraUpdate.newLatLngBounds(
-                                _calculateBounds(_polylinePoints),
+                                _utilsService.calculateBounds(_polylinePoints),
                                 50,
                               ),
                             );
