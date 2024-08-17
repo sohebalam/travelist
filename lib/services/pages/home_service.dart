@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:travelist/models/poi_model.dart';
 import 'package:travelist/services/auth/auth_service.dart';
 import 'package:travelist/services/location/recomendations.dart';
 import 'package:travelist/services/location/place_service.dart';
@@ -40,7 +41,7 @@ class HomePageService {
 
   Future<void> savePOIToList({
     required String? selectedListId,
-    required Map<String, dynamic> poi,
+    required POI poi,
     required Function(String) showErrorSnackBar,
     required Function(String) showSuccessSnackBar,
   }) async {
@@ -49,15 +50,43 @@ class HomePageService {
         final listDocRef = _listsCollection.doc(selectedListId);
         final poiCollectionRef = listDocRef.collection('pois');
 
-        await poiCollectionRef.add({
-          'name': poi['name'],
-          'latitude': poi['latitude'],
-          'longitude': poi['longitude'],
-          'description': poi['description'],
-          'address': poi['address'],
-        });
+        // Get existing POIs to determine the correct order
+        QuerySnapshot<Map<String, dynamic>> snapshot =
+            await poiCollectionRef.orderBy('order').get();
 
-        print('POI added to list successfully: $poi'); // Debug print
+        List<POI> existingPOIs =
+            snapshot.docs.map((doc) => POI.fromFirestore(doc)).toList();
+
+        // Determine the order for the new POI
+        int newOrder = existingPOIs.length;
+
+        // Create a new POI with the calculated order
+        POI newPOI = POI(
+          id: '',
+          name: poi.name,
+          latitude: poi.latitude,
+          longitude: poi.longitude,
+          address: poi.address,
+          order: newOrder,
+          description: poi.description,
+        );
+
+        // Add the POI to Firestore and retrieve the document ID
+        DocumentReference docRef = await poiCollectionRef.add(newPOI.toMap());
+
+        // Update the POI instance with the generated ID
+        newPOI = POI(
+          id: docRef.id,
+          name: poi.name,
+          latitude: poi.latitude,
+          longitude: poi.longitude,
+          address: poi.address,
+          order: newOrder,
+          description: poi.description,
+        );
+
+        // Debug print to ensure the POI is added correctly
+        print('POI added to list successfully: ${newPOI.toMap()}');
         showSuccessSnackBar('POI added to list successfully.');
       } catch (e) {
         print('Error saving POI to list: $e'); // Debug print

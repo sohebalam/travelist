@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:travelist/models/poi_model.dart';
 import 'package:travelist/services/auth/auth_service.dart';
 import 'package:travelist/services/location/recomendations.dart';
 import 'package:travelist/services/location/place_service.dart';
@@ -218,9 +219,14 @@ class _HomePageState extends State<HomePage> {
                     ElevatedButton(
                       onPressed: () async {
                         if (_selectedListId != null) {
+                          // Assuming `poi` is a Map<String, dynamic>
+                          POI poiObject =
+                              POI.fromMap(poi); // Convert map to POI
+
                           await _homePageService.savePOIToList(
                             selectedListId: _selectedListId,
-                            poi: poi,
+                            poi:
+                                poiObject, // Pass the POI object instead of the map
                             showErrorSnackBar: _showErrorSnackBar,
                             showSuccessSnackBar: _showSuccessSnackBar,
                           );
@@ -245,9 +251,10 @@ class _HomePageState extends State<HomePage> {
     if (_selectedListId != null && !_isLoading) {
       _isLoading = true; // Set loading to true to prevent multiple triggers
       try {
+        POI poiObject = POI.fromMap(poi); // Convert map to POI
         await _homePageService.savePOIToList(
           selectedListId: _selectedListId,
-          poi: poi,
+          poi: poiObject,
           showErrorSnackBar: _showErrorSnackBar,
           showSuccessSnackBar: _showSuccessSnackBar,
         );
@@ -400,25 +407,30 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _confirmAddPlace(String name, double lat, double lng, String address) {
+  void _confirmAddPlace(String name, double lat, double lng, String address,
+      {String? description}) {
     if (lat.isNaN || lng.isNaN) {
       print('Invalid coordinates for POI: $name');
       return;
     }
 
-    // Debug log to ensure address is correctly passed
+    // Debug log to ensure address and description are correctly passed
     print(
-        'Adding POI with Name: $name, Lat: $lat, Lng: $lng, Address: $address');
+        'Adding POI with Name: $name, Lat: $lat, Lng: $lng, Address: $address, Description: $description');
 
-    final poi = {
-      'name': name,
-      'latitude': lat,
-      'longitude': lng,
-      'address': address,
-      'description': address, // Use the address as the description if needed
-    };
+    // Create a POI instance using the POI model
+    final poi = POI(
+      id: '', // The ID will be generated when the POI is added to Firestore
+      name: name,
+      latitude: lat,
+      longitude: lng,
+      address: address,
+      order: 0, // Initial order value; this may be updated later
+      description: description ??
+          'No description provided', // Use the provided description or a default value
+    );
 
-    _showAddToListDialog(poi);
+    _showAddToListDialog(poi as Map<String, dynamic>);
   }
 
   @override

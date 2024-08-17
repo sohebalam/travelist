@@ -44,4 +44,17 @@ class POI {
       'description': description, // Optional field
     };
   }
+
+  // Static method to create a POI from a Map<String, dynamic>
+  static POI fromMap(Map<String, dynamic> poi) {
+    return POI(
+      id: poi['id'] ?? '', // Ensure a default value
+      name: poi['name'] ?? '',
+      latitude: poi['latitude'] ?? 0.0,
+      longitude: poi['longitude'] ?? 0.0,
+      address: poi['address'] ?? '',
+      order: poi['order'] ?? 0,
+      description: poi['description'], // This can be null
+    );
+  }
 }
