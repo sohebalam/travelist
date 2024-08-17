@@ -30,14 +30,14 @@ Future<Map<String, String>> reverseGeocode(double lat, double lon) async {
 
   try {
     final response = await http.get(url);
-    print('Google Places reverse geocode response: ${response.body}');
+    // print('Google Places reverse geocode response: ${response.body}');
 
     if (response.statusCode == 200) {
       Map<String, dynamic> data = json.decode(response.body);
 
       if (data['results'] != null && data['results'].isNotEmpty) {
         String formattedAddress = data['results'][0]['formatted_address'] ?? '';
-        print('Formatted Address: $formattedAddress');
+        // print('Formatted Address: $formattedAddress');
         return {
           'formattedAddress': formattedAddress,
         };
@@ -130,7 +130,7 @@ Future<bool> validateLocation(String location) async {
   try {
     final response = await http.get(url);
 
-    print('Google Places response: ${response.body}');
+    // print('Google Places response: ${response.body}');
 
     if (response.statusCode == 200) {
       Map<String, dynamic> data = json.decode(response.body);

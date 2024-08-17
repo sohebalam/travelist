@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -27,6 +29,8 @@ class _HomePageState extends State<HomePage> {
   TextEditingController interestsController = TextEditingController();
   TextEditingController newListController = TextEditingController();
   final HomePageService _homePageService = HomePageService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   bool useCurrentLocation = false;
   bool customSearch = false;
   List<Marker> _markers = [];
@@ -73,6 +77,78 @@ class _HomePageState extends State<HomePage> {
         customSearch = true;
       }
     });
+  }
+
+  Future<void> saveUserInterests(List<String> interests) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        // Debugging print to verify user ID and interests
+        print("Saving interests for user ${user.uid}: $interests");
+
+        // Set the user's interests in Firestore, merging with existing data
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'interests': interests,
+        }, SetOptions(merge: true));
+
+        print("Interests successfully saved to Firestore.");
+      } catch (e) {
+        // Log any errors
+        print("Error saving interests: $e");
+      }
+    } else {
+      print("No user is currently signed in.");
+    }
+  }
+
+  void _addInterest(String interest) async {
+    if (interest.trim().isEmpty) return; // Directly return if interest is empty
+
+    try {
+      print("Method _addInterest called with: $interest");
+
+      // Convert interest to lowercase and trim spaces before adding
+      String sanitizedInterest = interest.trim().toLowerCase();
+
+      // Update the local list
+      setState(() {
+        if (!userInterests.contains(sanitizedInterest)) {
+          userInterests.add(sanitizedInterest);
+        }
+      });
+
+      // Save the updated list to Firestore
+      await saveUserInterests(userInterests);
+
+      // Clear the TextField
+      interestsController.clear();
+
+      // Provide feedback to the user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Interest "$sanitizedInterest" added.',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      print('Error adding interest: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to add interest',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _generatePOIs({List<String>? interests}) async {
@@ -247,21 +323,74 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _savePOIToList(Map<String, dynamic> poi) async {
+  void _savePOIToList(
+      Map<String, dynamic> poi, gmaps.LatLng currentLocation) async {
     if (_selectedListId != null && !_isLoading) {
       _isLoading = true; // Set loading to true to prevent multiple triggers
       try {
-        POI poiObject = POI.fromMap(poi); // Convert map to POI
+        // Fetch the existing POIs from the selected list
+        List<POI> existingPOIs =
+            await _homePageService.fetchPOIsForList(_selectedListId);
+
+        // Convert the map to a POI object
+        POI newPOI = POI.fromMap(poi);
+
+        // Add the new POI temporarily to the list for distance calculation
+        existingPOIs.add(newPOI);
+
+        // Sort the POIs by distance from the current location
+        existingPOIs.sort((a, b) {
+          final distanceA = _calculateDistance(
+              currentLocation, gmaps.LatLng(a.latitude, a.longitude));
+          final distanceB = _calculateDistance(
+              currentLocation, gmaps.LatLng(b.latitude, b.longitude));
+          return distanceA.compareTo(distanceB);
+        });
+
+        // Determine the new POI's order based on its position in the sorted list
+        int newOrder = existingPOIs.indexOf(newPOI);
+
+        // Update the POI with the correct order
+        newPOI = newPOI.copyWith(order: newOrder);
+
+        // Update the order in the original list as well (if necessary)
+        for (int i = 0; i < existingPOIs.length; i++) {
+          if (existingPOIs[i].id != newPOI.id) {
+            existingPOIs[i] = existingPOIs[i].copyWith(order: i);
+          }
+        }
+
+        // Save the new POI to the list
         await _homePageService.savePOIToList(
           selectedListId: _selectedListId,
-          poi: poiObject,
+          poi: newPOI,
           showErrorSnackBar: _showErrorSnackBar,
           showSuccessSnackBar: _showSuccessSnackBar,
         );
+
+        // Optionally, update all POIs in the list with their new orders in the database
+        for (var poi in existingPOIs) {
+          if (poi.id != newPOI.id) {
+            await _homePageService.updatePOIOrder(
+                _selectedListId, poi.id, poi.order);
+          }
+        }
       } finally {
         _isLoading = false; // Ensure loading is reset after the operation
       }
     }
+  }
+
+  double _calculateDistance(gmaps.LatLng start, gmaps.LatLng end) {
+    const double p = 0.017453292519943295;
+    final double a = 0.5 -
+        cos((end.latitude - start.latitude) * p) / 2 +
+        cos(start.latitude * p) *
+            cos(end.latitude * p) *
+            (1 - cos((end.longitude - start.longitude) * p)) /
+            2;
+
+    return 12742 * asin(sqrt(a));
   }
 
   void _showSuccessSnackBar(String message) {
@@ -589,23 +718,30 @@ class _HomePageState extends State<HomePage> {
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Semantics(
-                            label: "Enter interests",
-                            child: TextField(
-                              controller: interestsController,
-                              decoration: InputDecoration(
-                                labelText: 'Enter interests',
-                                labelStyle: TextStyle(
-                                  fontSize:
-                                      MediaQuery.maybeTextScalerOf(context)
-                                              ?.scale(16.0) ??
-                                          16.0,
+                              label: "Enter interests",
+                              child: TextField(
+                                controller: interestsController,
+                                decoration: InputDecoration(
+                                  labelText: 'Enter interests',
+                                  labelStyle: TextStyle(
+                                    fontSize:
+                                        MediaQuery.maybeTextScalerOf(context)
+                                                ?.scale(16.0) ??
+                                            16.0,
+                                  ),
+                                  floatingLabelBehavior:
+                                      FloatingLabelBehavior.auto,
+                                  border: OutlineInputBorder(),
                                 ),
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.auto,
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
+                                onSubmitted: (value) {
+                                  print("onSubmitted triggered with: $value");
+                                  _addInterest(value.trim());
+                                },
+                                onEditingComplete: () {
+                                  print("onEditingComplete triggered");
+                                  _addInterest(interestsController.text.trim());
+                                },
+                              )),
                         ),
                       ),
                       Expanded(
@@ -614,8 +750,17 @@ class _HomePageState extends State<HomePage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             ElevatedButton(
-                              onPressed: () => _generatePOIs(
-                                  interests: [interestsController.text.trim()]),
+                              onPressed: () {
+                                // Add the interest first
+                                String interest =
+                                    interestsController.text.trim();
+                                if (interest.isNotEmpty) {
+                                  _addInterest(interest);
+                                }
+
+                                // Then generate POIs using the updated interests
+                                _generatePOIs(interests: [interest]);
+                              },
                               style: ElevatedButton.styleFrom(
                                 minimumSize: Size(48, 48),
                               ),

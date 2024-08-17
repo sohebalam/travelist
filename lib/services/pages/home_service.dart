@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:travelist/models/poi_model.dart';
 import 'package:travelist/services/auth/auth_service.dart';
 import 'package:travelist/services/location/recomendations.dart';
@@ -208,5 +207,40 @@ class HomePageService {
       return await AuthService().getUserInterests(user);
     }
     return [];
+  }
+
+  Future<List<POI>> fetchPOIsForList(String? selectedListId) async {
+    if (selectedListId != null) {
+      QuerySnapshot snapshot = await _listsCollection
+          .doc(selectedListId)
+          .collection('pois')
+          .orderBy('order')
+          .get();
+      return snapshot.docs.map((doc) => POI.fromFirestore(doc)).toList();
+    }
+    return [];
+  }
+
+  Future<void> updatePOIOrder(
+      String? selectedListId, String id, int order) async {
+    if (selectedListId != null) {
+      await _listsCollection
+          .doc(selectedListId)
+          .collection('pois')
+          .doc(id)
+          .update({'order': order});
+    }
+  }
+
+  Future<void> saveUserInterests(List<String> userInterests) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+        'interests': userInterests,
+      });
+    }
   }
 }

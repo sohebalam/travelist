@@ -57,4 +57,17 @@ class POI {
       description: poi['description'], // This can be null
     );
   }
+
+  // Method to create a copy of the POI with an updated order
+  POI copyWith({required int order}) {
+    return POI(
+      id: this.id,
+      name: this.name,
+      latitude: this.latitude,
+      longitude: this.longitude,
+      address: this.address,
+      order: order, // Update the order
+      description: this.description,
+    );
+  }
 }
