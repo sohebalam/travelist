@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travelist/pages/list_detail.dart';
-// Ensure this is the correct path to your BottomNavBar component
+import 'package:travelist/services/pages/list_service.dart';
+import 'package:travelist/services/shared_functions.dart';
+import 'package:travelist/services/styles.dart';
 
 class ListsPage extends StatefulWidget {
   const ListsPage({super.key});
@@ -11,31 +14,93 @@ class ListsPage extends StatefulWidget {
 }
 
 class _ListsPageState extends State<ListsPage> {
-  final CollectionReference _listsCollection =
-      FirebaseFirestore.instance.collection('lists');
-
-  int _selectedIndex = 1; // Set the default selected index to 1 (Lists Page)
+  final ListService _listService = ListService(); // Initialize the service
+  int _selectedIndex = 1;
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
     if (index == 0) {
-      Navigator.pushNamed(context, '/'); // Navigate to HomePage
+      Navigator.pushNamed(context, '/');
     }
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context, String listId) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            'Delete List',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ?? 18.0,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete this list?',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ?? 16.0,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                await _listService.deleteList(listId);
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Lists'),
+        title: Text(
+          'Lists',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize:
+                MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ?? 18.0,
+          ),
+        ),
+        backgroundColor: AppColors.primaryColor,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _listsCollection.snapshots(),
+        stream:
+            _listService.streamUserLists(), // Use the service to stream lists
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
 
           var lists = snapshot.data!.docs;
@@ -45,38 +110,79 @@ class _ListsPageState extends State<ListsPage> {
             itemBuilder: (context, index) {
               var listData = lists[index].data() as Map<String, dynamic>;
               return FutureBuilder<QuerySnapshot>(
-                future: _listsCollection
-                    .doc(lists[index].id)
-                    .collection('pois')
-                    .get(),
+                future: _listService.getPOIsForList(
+                    lists[index].id), // Use the service to fetch POIs
                 builder: (context, poiSnapshot) {
                   if (!poiSnapshot.hasData) {
-                    return ListTile(
-                      title: Text(listData.containsKey('list')
-                          ? listData['list']
-                          : 'Unnamed List'),
-                      subtitle: const Text('Loading...'),
+                    return Semantics(
+                      label:
+                          'List: ${listData.containsKey('list') ? listData['list'] : 'Unnamed List'}, loading places',
+                      child: ListTile(
+                        title: Text(
+                          listData.containsKey('list')
+                              ? listData['list']
+                              : 'Unnamed List',
+                          style: TextStyle(
+                            fontSize: MediaQuery.maybeTextScalerOf(context)
+                                    ?.scale(16.0) ??
+                                16.0,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Loading...',
+                          style: TextStyle(
+                            fontSize: MediaQuery.maybeTextScalerOf(context)
+                                    ?.scale(14.0) ??
+                                14.0,
+                          ),
+                        ),
+                      ),
                     );
                   }
 
                   var pois = poiSnapshot.data!.docs;
 
-                  return ListTile(
-                    title: Text(listData.containsKey('list')
-                        ? listData['list']
-                        : 'Unnamed List'),
-                    subtitle: Text('${pois.length} places'),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ListDetailsPage(
-                            listId: lists[index].id,
-                            listName: listData['list'],
-                          ),
+                  return Semantics(
+                    label:
+                        'List: ${listData.containsKey('list') ? listData['list'] : 'Unnamed List'}, ${pois.length} places',
+                    child: ListTile(
+                      title: Text(
+                        listData.containsKey('list')
+                            ? listData['list']
+                            : 'Unnamed List',
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(16.0) ??
+                              16.0,
                         ),
-                      );
-                    },
+                      ),
+                      subtitle: Text(
+                        '${pois.length} places',
+                        style: TextStyle(
+                          fontSize: MediaQuery.maybeTextScalerOf(context)
+                                  ?.scale(14.0) ??
+                              14.0,
+                        ),
+                      ),
+                      trailing: IconButton(
+                        icon: Icon(Icons.delete, color: AppColors.primaryColor),
+                        onPressed: () {
+                          _showDeleteConfirmationDialog(
+                              context, lists[index].id);
+                        },
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ListDetailsPage(
+                              listId: lists[index].id,
+                              listName: listData['list'],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   );
                 },
               );
@@ -87,15 +193,10 @@ class _ListsPageState extends State<ListsPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddListDialog(context),
         tooltip: 'Add New List',
+        backgroundColor: AppColors.primaryColor,
+        foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
-      // bottomNavigationBar: BottomNavBar(
-      //   selectedIndex: _selectedIndex,
-      //   onItemTapped: _onItemTapped,
-      //   onLogoutTapped: () {
-      //     print('logout');
-      //   },
-      // ),
     );
   }
 
@@ -107,7 +208,13 @@ class _ListsPageState extends State<ListsPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Add New List'),
+          title: Text(
+            'Add New List',
+            style: TextStyle(
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ?? 18.0,
+            ),
+          ),
           content: Form(
             key: formKey,
             child: TextFormField(
@@ -118,7 +225,18 @@ class _ListsPageState extends State<ListsPage> {
                 }
                 return null;
               },
-              decoration: const InputDecoration(hintText: 'List Name'),
+              decoration: InputDecoration(
+                hintText: 'List Name',
+                hintStyle: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
+              style: TextStyle(
+                fontSize:
+                    MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ?? 16.0,
+              ),
             ),
           ),
           actions: [
@@ -126,18 +244,31 @@ class _ListsPageState extends State<ListsPage> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 if (formKey.currentState!.validate()) {
-                  _listsCollection.add({
-                    'list': listNameController.text,
-                  });
+                  await _listService.createList(listNameController
+                      .text); // Use the service to create a list
                   Navigator.of(context).pop();
                 }
               },
-              child: const Text('Add'),
+              child: Text(
+                'Add',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(16.0) ??
+                          16.0,
+                ),
+              ),
             ),
           ],
         );

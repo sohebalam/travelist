@@ -8,19 +8,25 @@ import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:redacted/redacted.dart';
+import 'package:travelist/services/pages/list_detail_service.dart';
+import 'package:travelist/services/secure_storage.dart';
+import 'package:travelist/services/styles.dart';
 import 'package:travelist/services/widgets/bottom_navbar.dart';
 import 'package:travelist/services/location/place_service.dart';
-import 'package:travelist/services/location/poi_service.dart'; // Import the new POIService
+import 'package:travelist/services/location/poi_service.dart';
+import 'package:travelist/services/widgets/place_search.dart';
+import 'package:travelist/services/widgets/reorder_dialog.dart';
+import 'package:travelist/services/widgets/routepoints.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places;
-import 'package:travelist/pages/home_page.dart'; // Ensure you import the HomePage
 
 class ListDetailsPage extends StatefulWidget {
   final String listId;
   final String listName;
 
-  const ListDetailsPage({super.key, required this.listId, required this.listName});
+  const ListDetailsPage(
+      {super.key, required this.listId, required this.listName});
 
   @override
   _ListDetailsPageState createState() => _ListDetailsPageState();
@@ -33,7 +39,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   List<gmaps.LatLng> _polylinePoints = [];
   final List<gmaps.LatLng> _routePoints = [];
   final Set<gmaps.Polyline> _polylines = {};
-  PolylinePoints polylinePoints = PolylinePoints();
   String? _googleMapsApiKey;
   bool _isLoading = false;
   String? _error;
@@ -42,7 +47,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   Location location = Location();
   LocationData? _currentPosition;
   StreamSubscription<LocationData>? locationSubscription;
-
   bool _isNavigationView = false;
   gmaps.LatLng? _navigationDestination;
   bool _userHasInteractedWithMap = false;
@@ -52,27 +56,36 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   String _distanceText = '';
   String _durationText = '';
   String _transportMode = 'driving';
-
   final bool _countriesEnabled = true;
   final bool _locationBiasEnabled = true;
   final bool _locationRestrictionEnabled = false;
-
   late final PlacesService _placesService;
-  late final POIService _poiService; // Add the POIService instance
+  late final POIService _poiService;
   places.LatLngBounds? _locationBias;
+  int _selectedIndex = 1;
 
-  int _selectedIndex =
-      1; // Set the default selected index to 1 for ListDetailsPage
+  DurationService? _durationService;
+
+  final UtilsService _utilsService = UtilsService();
+
+  MapsService? _mapsService;
 
   @override
   void initState() {
     super.initState();
-    _googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'];
-    gmd.GoogleMapsDirections.init(googleAPIKey: _googleMapsApiKey!);
-    _placesService = PlacesService(_googleMapsApiKey!, _locationBias);
-    _poiService = POIService(); // Initialize the POIService
-    _fetchPlaces();
-    _getCurrentLocation();
+    _poiService = POIService();
+    _initializeGoogleMapsApiKey().then((_) {
+      if (_googleMapsApiKey != null) {
+        _mapsService = MapsService(_googleMapsApiKey!, _mapController);
+        _durationService = DurationService(_googleMapsApiKey!, _transportMode);
+        _fetchPlaces();
+        _getCurrentLocation();
+      } else {
+        setState(() {
+          _error = 'Failed to initialize API key.';
+        });
+      }
+    });
   }
 
   @override
@@ -81,31 +94,85 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     super.dispose();
   }
 
+  Future<void> _initializeGoogleMapsApiKey() async {
+    final storage = SecureStorage();
+    _googleMapsApiKey = await storage.getGoogleMapsKey();
+
+    if (_googleMapsApiKey == null) {
+      setState(() {
+        _error = 'Google Maps API key is missing';
+      });
+      return;
+    }
+
+    gmd.GoogleMapsDirections.init(googleAPIKey: _googleMapsApiKey!);
+    _placesService = PlacesService(_googleMapsApiKey!, _locationBias);
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
     if (index == 0) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-        (route) => false,
-      );
-    } else if (index == 1) {
-      // Already on the ListsPage, no need to navigate
+      Navigator.pop(context, 0);
     }
   }
 
-  gmaps.LatLng _calculateCentroid(List<gmaps.LatLng> points) {
-    double latSum = 0;
-    double lngSum = 0;
+  Future<void> _confirmAddPlace(
+      String name, double latitude, double longitude, String address) async {
+    bool shouldAdd = await _showAddPlaceDialog(name, address);
 
-    for (var point in points) {
-      latSum += point.latitude;
-      lngSum += point.longitude;
+    if (shouldAdd) {
+      await _poiService.addNearbyPlace(
+        context,
+        widget.listId,
+        name,
+        latitude,
+        longitude,
+        address,
+        _poiData,
+        _currentLocation,
+        _fetchPlaces,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$name has been added to your list.',
+            style: TextStyle(
+                fontSize:
+                    MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0),
+          ),
+        ),
+      );
     }
+  }
 
-    return gmaps.LatLng(latSum / points.length, lngSum / points.length);
+  Future<bool> _showAddPlaceDialog(String name, String address) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Add POI'),
+              content: Text('Do you want to add "$name" to your list?'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child: Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  child: Text('Add'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false; // Return false if the dialog is dismissed without choosing an option
   }
 
   Future<void> _fetchPlaces() async {
@@ -119,6 +186,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           .collection('lists')
           .doc(widget.listId)
           .collection('pois')
+          .orderBy('order')
           .get();
 
       List<gmaps.Marker> markers = [];
@@ -130,6 +198,25 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         var position =
             gmaps.LatLng(placeData['latitude'], placeData['longitude']);
         points.add(position);
+        markers.add(
+          gmaps.Marker(
+            markerId: gmaps.MarkerId(place.id),
+            position: position,
+            infoWindow: gmaps.InfoWindow(
+              title: placeData['name'],
+              snippet: placeData['address'] ?? 'No address',
+              // Open dialog only when the info window is tapped
+              onTap: () {
+                _confirmAddPlace(
+                  placeData['name'],
+                  placeData['latitude'],
+                  placeData['longitude'],
+                  placeData['address'] ?? 'No address',
+                );
+              },
+            ),
+          ),
+        );
         poiData.add({
           'id': place.id,
           'name': placeData['name'],
@@ -137,31 +224,10 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           'longitude': placeData['longitude'],
           'address': placeData['address'] ?? 'No address',
           'distance': _currentLocation != null
-              ? _calculateDistance(_currentLocation!, position)
+              ? _utilsService.calculateDistance(_currentLocation!, position)
               : double.infinity,
+          'order': placeData['order'] ?? 0,
         });
-      }
-
-      poiData.sort((a, b) => a['distance'].compareTo(b['distance']));
-
-      for (var poi in poiData) {
-        var position = gmaps.LatLng(poi['latitude'], poi['longitude']);
-        markers.add(
-          gmaps.Marker(
-            markerId: gmaps.MarkerId(poi['id']),
-            position: position,
-            infoWindow: gmaps.InfoWindow(
-              title: poi['name'],
-              snippet: poi['address'],
-            ),
-            onTap: () => _confirmAddPlace(
-              poi['name'],
-              poi['latitude'],
-              poi['longitude'],
-              poi['address'],
-            ),
-          ),
-        );
       }
 
       setState(() {
@@ -171,34 +237,13 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         _isLoading = false;
       });
 
-      if (points.isNotEmpty) {
-        final centralLocation = _calculateCentroid(points);
-        _locationBias = places.LatLngBounds(
-          southwest: places.LatLng(
-              lat: centralLocation.latitude - 0.01,
-              lng: centralLocation.longitude - 0.01),
-          northeast: places.LatLng(
-              lat: centralLocation.latitude + 0.01,
-              lng: centralLocation.longitude + 0.01),
-        );
-      } else if (_currentLocation != null) {
-        _locationBias = places.LatLngBounds(
-          southwest: places.LatLng(
-              lat: _currentLocation!.latitude - 0.01,
-              lng: _currentLocation!.longitude - 0.01),
-          northeast: places.LatLng(
-              lat: _currentLocation!.latitude + 0.01,
-              lng: _currentLocation!.longitude + 0.01),
-        );
-      }
-
       if (_polylinePoints.isNotEmpty) {
         _getRoutePolyline();
         _setNearestDestination();
         if (!_userHasInteractedWithMap) {
           _mapController?.animateCamera(
             gmaps.CameraUpdate.newLatLngBounds(
-              _calculateBounds(_polylinePoints),
+              _utilsService.calculateBounds(_polylinePoints),
               50,
             ),
           );
@@ -213,137 +258,89 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   }
 
   Future<void> _getRoutePolyline() async {
-    if (_polylinePoints.length < 2) return;
+    if (_mapsService == null || _polylinePoints.length < 2) return;
 
     _routePoints.clear();
     _polylines.clear();
 
-    for (int i = 0; i < _polylinePoints.length - 1; i++) {
-      gmaps.LatLng start = _polylinePoints[i];
-      gmaps.LatLng end = _polylinePoints[i + 1];
-
-      gmd.Directions directions = await gmd.getDirections(
-        start.latitude,
-        start.longitude,
-        end.latitude,
-        end.longitude,
-        language: "en",
-        googleAPIKey: _googleMapsApiKey!,
-      );
-
-      gmd.DirectionRoute route = directions.shortestRoute;
-      List<gmaps.LatLng> points = PolylinePoints()
-          .decodePolyline(route.overviewPolyline.points)
-          .map((point) => gmaps.LatLng(point.latitude, point.longitude))
-          .toList();
-
-      setState(() {
-        _routePoints.addAll(points);
-      });
-    }
-
-    setState(() {
-      _polylines.add(
-        gmaps.Polyline(
-          polylineId: const gmaps.PolylineId('route'),
-          color: Colors.blue,
-          width: 5,
-          points: _routePoints,
-        ),
-      );
-    });
-
-    if (_routePoints.isNotEmpty) {
-      _mapController?.animateCamera(
-        gmaps.CameraUpdate.newLatLngBounds(
-          _calculateBounds(_routePoints),
-          50,
-        ),
-      );
-    }
+    await _mapsService!.getRoutePolyline(
+      _polylinePoints,
+      _polylines,
+      (List<gmaps.LatLng> points) {
+        setState(() {
+          _routePoints.addAll(points);
+        });
+      },
+      (gmaps.LatLngBounds bounds) {
+        _mapController?.animateCamera(
+          gmaps.CameraUpdate.newLatLngBounds(bounds, 50),
+        );
+      },
+    );
 
     _calculateAndDisplayDistanceDuration(_currentSliderValue.toInt());
   }
 
-  gmaps.LatLngBounds _calculateBounds(List<gmaps.LatLng> points) {
-    double southWestLat = points.first.latitude;
-    double southWestLng = points.first.longitude;
-    double northEastLat = points.first.latitude;
-    double northEastLng = points.first.longitude;
+  Future<void> _navigateToSelectedLocation(
+      gmaps.LatLng selectedLocation) async {
+    if (_mapsService == null || _currentPosition == null) return;
 
-    for (var point in points) {
-      if (point.latitude < southWestLat) {
-        southWestLat = point.latitude;
-      }
-      if (point.longitude < southWestLng) {
-        southWestLng = point.longitude;
-      }
-      if (point.latitude > northEastLat) {
-        northEastLat = point.latitude;
-      }
-      if (point.longitude > northEastLng) {
-        northEastLng = point.longitude;
-      }
-    }
-
-    return gmaps.LatLngBounds(
-      southwest: gmaps.LatLng(southWestLat, southWestLng),
-      northeast: gmaps.LatLng(northEastLat, northEastLng),
+    await _mapsService!.navigateToSelectedLocation(
+      selectedLocation,
+      _currentLocation,
+      (Set<gmaps.Polyline> polylines) {
+        setState(() {
+          _polylines.addAll(polylines);
+        });
+      },
+      (bool isNavigationView) {
+        setState(() {
+          _isNavigationView = isNavigationView;
+        });
+      },
+      (List<gmd.DirectionLegStep> steps) {
+        setState(() {
+          _navigationSteps = steps;
+        });
+      },
+      (gmaps.LatLngBounds bounds) {
+        _mapController?.animateCamera(
+          gmaps.CameraUpdate.newLatLngBounds(bounds, 50),
+        );
+      },
+      location,
     );
   }
 
-  Future<void> _navigateToSelectedLocation(
-      gmaps.LatLng selectedLocation) async {
-    if (_currentPosition == null) return;
-
-    final apiKey = _googleMapsApiKey;
-    final origin =
-        '${_currentPosition!.latitude},${_currentPosition!.longitude}';
-    final destination =
-        '${selectedLocation.latitude},${selectedLocation.longitude}';
-    final directions = await gmd.getDirections(
-      _currentLocation!.latitude,
-      _currentLocation!.longitude,
-      selectedLocation.latitude,
-      selectedLocation.longitude,
-      googleAPIKey: apiKey,
+  void _showReorderDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return ReorderDialog(
+          poiData: _poiData,
+          listId: widget.listId,
+          onSave: (reorderedPOIData) {
+            setState(() {
+              _poiData = reorderedPOIData;
+            });
+          },
+        );
+      },
     );
+  }
 
-    if (directions.routes.isNotEmpty) {
-      final route = directions.shortestRoute;
-      final steps = route.shortestLeg.steps;
-      List<gmaps.LatLng> points = PolylinePoints()
-          .decodePolyline(route.overviewPolyline.points)
-          .map((point) => gmaps.LatLng(point.latitude, point.longitude))
-          .toList();
-
-      setState(() {
-        _polylines.add(
-          gmaps.Polyline(
-            polylineId: const gmaps.PolylineId('navigation_route'),
-            color: Colors.green,
-            width: 5,
-            points: points,
-          ),
-        );
-        _navigationDestination = selectedLocation;
-        _isNavigationView = true;
-        _navigationSteps = steps;
-        _mapController?.animateCamera(
-          gmaps.CameraUpdate.newLatLngBounds(
-            _calculateBounds(points),
-            50,
-          ),
-        );
-      });
-
-      locationSubscription =
-          location.onLocationChanged.listen((LocationData currentLocation) {
-        _updateNavigation(currentLocation);
-      });
-    } else {
-      throw Exception('Failed to fetch directions');
+  void _updatePOIOrderInFirestore() async {
+    final batch = FirebaseFirestore.instance.batch();
+    for (int i = 0; i < _poiData.length; i++) {
+      final poi = _poiData[i];
+      final docRef = FirebaseFirestore.instance
+          .collection('lists')
+          .doc(widget.listId)
+          .collection('pois')
+          .doc(poi['id']);
+      batch.update(docRef, {'order': i});
     }
+    await batch.commit();
   }
 
   void _updateNavigation(LocationData currentLocation) {
@@ -354,7 +351,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
     if (_navigationSteps.isNotEmpty) {
       gmd.DirectionLegStep currentStep = _navigationSteps[_currentStepIndex];
-      double distanceToNextStep = _calculateDistance(
+      double distanceToNextStep = _utilsService.calculateDistance(
         _currentLocation!,
         gmaps.LatLng(
           currentStep.endLocation.lat,
@@ -383,16 +380,50 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 
-  double _calculateDistance(gmaps.LatLng start, gmaps.LatLng end) {
-    const double p = 0.017453292519943295;
-    final double a = 0.5 -
-        cos((end.latitude - start.latitude) * p) / 2 +
-        cos(start.latitude * p) *
-            cos(end.latitude * p) *
-            (1 - cos((end.longitude - start.longitude) * p)) /
-            2;
+  void _deletePOI(String poiId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('lists')
+          .doc(widget.listId)
+          .collection('pois')
+          .doc(poiId)
+          .delete();
 
-    return 12742 * asin(sqrt(a));
+      setState(() {
+        _poiData.removeWhere((poi) => poi['id'] == poiId);
+        _markers.removeWhere((marker) => marker.markerId.value == poiId);
+        _polylinePoints.removeWhere((point) => point == poiId);
+      });
+
+      _getRoutePolyline();
+      _showSuccessSnackBar('POI deleted successfully.');
+    } catch (e) {
+      _showErrorSnackBar('Error deleting POI.');
+    }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    final snackBar = SnackBar(
+      content: Text(
+        message,
+        style: TextStyle(
+            fontSize:
+                MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0),
+      ),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+  void _showErrorSnackBar(String message) {
+    final snackBar = SnackBar(
+      content: Text(
+        message,
+        style: TextStyle(
+            fontSize:
+                MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0),
+      ),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   Future<void> _getCurrentLocation() async {
@@ -445,6 +476,33 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
+  void _confirmDeletePOI(String poiId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete POI'),
+          content: Text('Are you sure you want to delete this POI?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _deletePOI(poiId);
+                Navigator.of(context).pop();
+              },
+              child: Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _toggleNavigationView() {
     setState(() {
       _isNavigationView = !_isNavigationView;
@@ -458,7 +516,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     gmaps.LatLng? nearestPoint;
 
     for (gmaps.LatLng point in _polylinePoints) {
-      double distance = _calculateDistance(_currentLocation!, point);
+      double distance =
+          _utilsService.calculateDistance(_currentLocation!, point);
       if (distance < minDistance) {
         minDistance = distance;
         nearestPoint = point;
@@ -484,7 +543,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       googleAPIKey: _googleMapsApiKey!,
     );
 
-    gmd.DurationValue durationValue = await _getDuration(
+    gmd.DurationValue durationValue = await _durationService!.getDuration(
       start.latitude,
       start.longitude,
       end.latitude,
@@ -497,291 +556,258 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     });
   }
 
-  Future<gmd.DurationValue> _getDuration(
-      double startLat, double startLng, double endLat, double endLng) async {
-    gmd.Directions directions = await gmd.getDirections(
-      startLat,
-      startLng,
-      endLat,
-      endLng,
-      language: "en",
-      googleAPIKey: _googleMapsApiKey!,
-    );
-
-    gmd.DirectionRoute route = directions.shortestRoute;
-    gmd.DurationValue drivingDuration = route.legs.first.duration;
-
-    switch (_transportMode) {
-      case 'walking':
-        return _durationWalking(drivingDuration);
-      case 'bicycling':
-        return _durationBicycling(drivingDuration);
-      case 'driving':
-      default:
-        return drivingDuration;
-    }
-  }
-
-  Future<gmd.DurationValue> _durationWalking(
-      gmd.DurationValue drivingDuration) async {
-    // Simulate walking duration (typically 1/5th the speed of driving)
-    int walkingDurationSeconds = (drivingDuration.seconds * 5).toInt();
-    return gmd.DurationValue(
-      text: _formatDuration(walkingDurationSeconds),
-      seconds: walkingDurationSeconds,
-    );
-  }
-
-  Future<gmd.DurationValue> _durationBicycling(
-      gmd.DurationValue drivingDuration) async {
-    // Simulate bicycling duration (typically 1/2 the speed of driving)
-    int bicyclingDurationSeconds = (drivingDuration.seconds * 2).toInt();
-    return gmd.DurationValue(
-      text: _formatDuration(bicyclingDurationSeconds),
-      seconds: bicyclingDurationSeconds,
-    );
-  }
-
-  String _formatDuration(int totalSeconds) {
-    int hours = totalSeconds ~/ 3600;
-    int minutes = (totalSeconds % 3600) ~/ 60;
-    if (hours > 0) {
-      return '$hours hrs $minutes mins';
-    } else {
-      return '$minutes mins';
-    }
-  }
-
-  Future<void> _confirmAddPlace(
-      String name, double latitude, double longitude, String address) async {
-    await _poiService.addNearbyPlace(
-      context,
-      widget.listId,
-      name,
-      latitude,
-      longitude,
-      address,
-      _poiData,
-      _currentLocation,
-      _fetchPlaces,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.listName),
+        title: Text(
+          widget.listName,
+          style: TextStyle(
+            fontSize:
+                MediaQuery.maybeTextScalerOf(context)?.scale(18.0) ?? 18.0,
+          ),
+        ),
       ),
-      body: _isLoading
-          ? _buildLoadingSkeleton(context)
-          : Stack(
-              children: [
-                gmaps.GoogleMap(
-                  initialCameraPosition: const gmaps.CameraPosition(
-                    target: gmaps.LatLng(51.509865, -0.118092),
-                    zoom: 13,
-                  ),
-                  markers: Set.from(_markers),
-                  polylines: _polylines,
-                  onMapCreated: (controller) {
-                    _mapController = controller;
-                    _controller.complete(controller);
-                    if (_polylinePoints.isNotEmpty &&
-                        !_userHasInteractedWithMap) {
-                      _mapController?.animateCamera(
-                        gmaps.CameraUpdate.newLatLngBounds(
-                          _calculateBounds(_polylinePoints),
-                          50,
+      body: Semantics(
+        label: 'List Details Page',
+        child: _isLoading
+            ? _buildLoadingSkeleton(context)
+            : Stack(
+                children: [
+                  Semantics(
+                    label: 'Map displaying points of interest',
+                    child: gmaps.GoogleMap(
+                        initialCameraPosition: const gmaps.CameraPosition(
+                          target: gmaps.LatLng(51.509865, -0.118092),
+                          zoom: 13,
                         ),
-                      );
-                    }
-                  },
-                  myLocationEnabled: true,
-                  onCameraMove: (gmaps.CameraPosition position) {
-                    _userHasInteractedWithMap = true;
-                  },
-                ),
-                if (_error != null) Center(child: Text('Error: $_error')),
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: FloatingActionButton(
-                    onPressed: () async {
-                      if (_navigationDestination == null) {
-                        _setNearestDestination();
-                      }
-                      final url =
-                          'google.navigation:q=${_navigationDestination!.latitude},${_navigationDestination!.longitude}&key=$_googleMapsApiKey';
-                      final uri = Uri.parse(url);
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri);
-                      } else {
-                        throw 'Could not launch $url';
-                      }
-                    },
-                    tooltip: 'Navigate to the nearest location',
-                    child: const Icon(Icons.navigation_outlined),
-                  ),
-                ),
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: FloatingActionButton(
-                    onPressed: () {
-                      _showSearch(context);
-                    },
-                    tooltip: 'Search for places',
-                    child: const Icon(Icons.add),
-                  ),
-                ),
-                Positioned(
-                  top: 80,
-                  right: 10,
-                  child: Column(
-                    children: [
-                      FloatingActionButton(
-                        onPressed: () {
-                          _mapController
-                              ?.animateCamera(gmaps.CameraUpdate.zoomIn());
+                        markers: Set.from(_markers),
+                        polylines: _polylines,
+                        onMapCreated: (controller) {
+                          _mapController = controller;
+                          _controller.complete(controller);
+                          _mapsService?.mapController = controller;
+                          if (_polylinePoints.isNotEmpty &&
+                              !_userHasInteractedWithMap) {
+                            _mapController?.animateCamera(
+                              gmaps.CameraUpdate.newLatLngBounds(
+                                _utilsService.calculateBounds(_polylinePoints),
+                                50,
+                              ),
+                            );
+                          }
                         },
-                        tooltip: 'Zoom in',
-                        child: const Icon(Icons.zoom_in),
-                      ),
-                      const SizedBox(height: 10),
-                      FloatingActionButton(
-                        onPressed: () {
-                          _mapController
-                              ?.animateCamera(gmaps.CameraUpdate.zoomOut());
+                        onTap: (gmaps.LatLng position) async {
+                          final String name = 'New POI';
+                          final String address = 'No address available';
+
+                          setState(() {
+                            final marker = gmaps.Marker(
+                              markerId: gmaps.MarkerId(
+                                  '${position.latitude},${position.longitude}'),
+                              position: position,
+                              infoWindow: gmaps.InfoWindow(
+                                title: name,
+                                snippet: address,
+                                onTap: () {
+                                  _confirmAddPlace(
+                                    name,
+                                    position.latitude,
+                                    position.longitude,
+                                    address,
+                                  );
+                                },
+                              ),
+                            );
+
+                            _markers.add(marker);
+                          });
+
+                          await _mapController?.showMarkerInfoWindow(
+                            gmaps.MarkerId(
+                                '${position.latitude},${position.longitude}'),
+                          );
                         },
-                        tooltip: 'Zoom out',
-                        child: const Icon(Icons.zoom_out),
-                      ),
-                    ],
+                        myLocationEnabled: true,
+                        onCameraMove: (gmaps.CameraPosition position) {
+                          _userHasInteractedWithMap = true;
+                        },
+                        zoomControlsEnabled: false),
                   ),
-                ),
-                DraggableScrollableSheet(
-                  initialChildSize: 0.3,
-                  minChildSize: 0.1,
-                  maxChildSize: 0.8,
-                  builder: (BuildContext context,
-                      ScrollController scrollController) {
-                    return SingleChildScrollView(
-                      controller: scrollController,
-                      child: Container(
-                        color: Colors.white,
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Route Points:'),
-                            ListView.builder(
-                              controller: scrollController,
-                              shrinkWrap: true,
-                              itemCount: _poiData.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                return ListTile(
-                                  title: Text(
-                                      '${index + 1}. ${_poiData[index]['name']}'),
-                                  subtitle: Text(_poiData[index]['address']),
-                                  onTap: () {
-                                    _calculateAndDisplayDistanceDuration(index);
-                                  },
+                  if (_error != null)
+                    Center(
+                      child: Semantics(
+                        label: 'Error message',
+                        child: Text(
+                          'Error: $_error',
+                          style: TextStyle(
+                            fontSize: MediaQuery.maybeTextScalerOf(context)
+                                    ?.scale(14.0) ??
+                                14.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: PlaceSearchWidget(
+                      placesService: _placesService,
+                      mapController: _mapController,
+                      onPlaceSelected: (gmaps.Marker marker) {
+                        setState(() {
+                          final newMarker = gmaps.Marker(
+                            markerId: marker.markerId,
+                            position: marker.position,
+                            infoWindow: gmaps.InfoWindow(
+                              title: marker.infoWindow.title,
+                              snippet: marker.infoWindow.snippet,
+                              onTap: () {
+                                _confirmAddPlace(
+                                  marker.infoWindow.title ?? 'Unknown',
+                                  marker.position.latitude,
+                                  marker.position.longitude,
+                                  marker.infoWindow.snippet ?? 'No address',
                                 );
                               },
                             ),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Slider(
-                                    value: _currentSliderValue,
-                                    min: 0,
-                                    max:
-                                        (_polylinePoints.length - 1).toDouble(),
-                                    divisions: _polylinePoints.length - 1,
-                                    label: (_currentSliderValue + 1)
-                                        .round()
-                                        .toString(),
-                                    onChanged: (double value) {
-                                      setState(() {
-                                        _currentSliderValue = value;
-                                        _calculateAndDisplayDistanceDuration(
-                                            value.toInt());
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Distance: $_distanceText'),
-                                    Text('Duration: $_durationText'),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.directions_car),
-                                      onPressed: () {
-                                        setState(() {
-                                          _transportMode = 'driving';
-                                          _getRoutePolyline();
-                                        });
-                                      },
-                                      color: _transportMode == 'driving'
-                                          ? Colors.blue
-                                          : Colors.grey,
-                                      iconSize: 20,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.directions_walk),
-                                      onPressed: () {
-                                        setState(() {
-                                          _transportMode = 'walking';
-                                          _getRoutePolyline();
-                                        });
-                                      },
-                                      color: _transportMode == 'walking'
-                                          ? Colors.blue
-                                          : Colors.grey,
-                                      iconSize: 20,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.directions_bike),
-                                      onPressed: () {
-                                        setState(() {
-                                          _transportMode = 'bicycling';
-                                          _getRoutePolyline();
-                                        });
-                                      },
-                                      color: _transportMode == 'bicycling'
-                                          ? Colors.blue
-                                          : Colors.grey,
-                                      iconSize: 20,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                          );
+
+                          _markers.add(newMarker);
+                        });
+
+                        _mapController?.showMarkerInfoWindow(marker.markerId);
+                      },
+                      onError: (String error) {
+                        _showErrorSnackBar('Error: $error');
+                      },
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Semantics(
+                      label: 'Navigate to nearest location button',
+                      child: FloatingActionButton(
+                        backgroundColor: AppColors.primaryColor,
+                        foregroundColor: Colors.white,
+                        onPressed: () async {
+                          if (_navigationDestination == null) {
+                            _setNearestDestination();
+                          }
+                          final url =
+                              'google.navigation:q=${_navigationDestination!.latitude},${_navigationDestination!.longitude}&key=$_googleMapsApiKey';
+                          final uri = Uri.parse(url);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri);
+                          } else {
+                            throw 'Could not launch $url';
+                          }
+                        },
+                        tooltip: 'Navigate to the nearest location',
+                        child: const Icon(Icons.navigation_outlined),
                       ),
-                    );
-                  },
-                ),
-              ],
-            ),
-      bottomNavigationBar: BottomNavBar(
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-        onLogoutTapped: () {
-          print('logout');
-        },
+                    ),
+                  ),
+                  Positioned(
+                    top: 80,
+                    right: 10,
+                    child: Column(
+                      children: [
+                        Semantics(
+                          label: 'Zoom in button',
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.tertiryColor,
+                              borderRadius: BorderRadius.circular(4),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 5,
+                                  spreadRadius: 0,
+                                ),
+                              ],
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.add),
+                              iconSize: MediaQuery.maybeTextScalerOf(context)
+                                      ?.scale(20.0) ??
+                                  20.0,
+                              color: Colors.black87,
+                              onPressed: () {
+                                _mapController?.animateCamera(
+                                    gmaps.CameraUpdate.zoomIn());
+                              },
+                              tooltip: 'Zoom in',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Semantics(
+                          label: 'Zoom out button',
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.tertiryColor,
+                              borderRadius: BorderRadius.circular(4),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 5,
+                                  spreadRadius: 0,
+                                ),
+                              ],
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.remove),
+                              iconSize: MediaQuery.maybeTextScalerOf(context)
+                                      ?.scale(20.0) ??
+                                  20.0,
+                              color: Colors.black87,
+                              onPressed: () {
+                                _mapController?.animateCamera(
+                                    gmaps.CameraUpdate.zoomOut());
+                              },
+                              tooltip: 'Zoom out',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  DraggableRoutePointsSheet(
+                    poiData: _poiData,
+                    polylinePoints: _polylinePoints,
+                    currentSliderValue: _currentSliderValue,
+                    distanceText: _distanceText,
+                    durationText: _durationText,
+                    transportMode: _transportMode,
+                    calculateAndDisplayDistanceDuration:
+                        _calculateAndDisplayDistanceDuration,
+                    confirmDeletePOI: _confirmDeletePOI,
+                    showReorderDialog: _showReorderDialog,
+                    setTransportMode: (String mode) {
+                      setState(() {
+                        _transportMode = mode;
+                        _durationService =
+                            DurationService(_googleMapsApiKey!, _transportMode);
+                        _getRoutePolyline();
+                      });
+                    },
+                  ),
+                ],
+              ),
+      ),
+      bottomNavigationBar: Semantics(
+        label: 'Bottom navigation bar',
+        child: BottomNavBar(
+          selectedIndex: _selectedIndex,
+          onItemTapped: _onItemTapped,
+          onLogoutTapped: () {},
+        ),
       ),
     );
   }
@@ -790,140 +816,18 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     return Column(
       children: [
         Expanded(
-          child: Container().redacted(
-            context: context,
-            redact: true,
-            configuration: RedactedConfiguration(
-              animationDuration: const Duration(milliseconds: 800),
+          child: Semantics(
+            label: 'Loading skeleton',
+            child: Container().redacted(
+              context: context,
+              redact: true,
+              configuration: RedactedConfiguration(
+                animationDuration: const Duration(milliseconds: 800),
+              ),
             ),
           ),
         ),
       ],
-    );
-  }
-
-  void _showSearch(BuildContext context) async {
-    final query = await showSearch<String>(
-      context: context,
-      delegate: PlaceSearchDelegate(_placesService),
-    );
-
-    if (query != null && query.isNotEmpty) {
-      try {
-        final result = await _placesService.findAutocompletePredictions(
-          query,
-          _countriesEnabled ? ['uk'] : null,
-        );
-
-        if (result.predictions.isNotEmpty) {
-          final placeId = result.predictions.first.placeId;
-          final placeDetails = await _placesService.fetchPlace(placeId, [
-            places.PlaceField.Address,
-            places.PlaceField.AddressComponents,
-            places.PlaceField.Location,
-            places.PlaceField.Name,
-            places.PlaceField.OpeningHours,
-            places.PlaceField.PhotoMetadatas,
-            places.PlaceField.PlusCode,
-            places.PlaceField.PriceLevel,
-            places.PlaceField.Rating,
-            places.PlaceField.UserRatingsTotal,
-            places.PlaceField.UTCOffset,
-            places.PlaceField.Viewport,
-            places.PlaceField.WebsiteUri,
-          ]);
-
-          final place = placeDetails.place;
-          if (place != null && place.latLng != null) {
-            final location = place.latLng!;
-            final address = place.address ?? 'No address available';
-            setState(() {
-              _markers.add(
-                gmaps.Marker(
-                  markerId: gmaps.MarkerId(placeId),
-                  position: gmaps.LatLng(location.lat, location.lng),
-                  infoWindow: gmaps.InfoWindow(
-                    title: place.name ?? 'Unknown',
-                    snippet: address,
-                  ),
-                  onTap: () => _confirmAddPlace(
-                    place.name ?? 'Unknown',
-                    location.lat,
-                    location.lng,
-                    address,
-                  ),
-                ),
-              );
-              _mapController?.animateCamera(gmaps.CameraUpdate.newLatLngZoom(
-                gmaps.LatLng(location.lat, location.lng),
-                14.0,
-              ));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                      'Tap on the pin to add ${place.name ?? 'Unknown'} to your list.'),
-                ),
-              );
-            });
-          }
-        } else {
-          print("No predictions found.");
-        }
-      } catch (e) {
-        print("Error in place picker: $e");
-        setState(() {
-          _error = e.toString();
-        });
-      }
-    }
-  }
-}
-
-class PlaceSearchDelegate extends SearchDelegate<String> {
-  final PlacesService _placesService;
-
-  PlaceSearchDelegate(this._placesService);
-
-  @override
-  List<Widget> buildActions(BuildContext context) {
-    return [IconButton(icon: const Icon(Icons.clear), onPressed: () => query = '')];
-  }
-
-  @override
-  Widget buildLeading(BuildContext context) {
-    return IconButton(
-        icon: const Icon(Icons.arrow_back), onPressed: () => close(context, ''));
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    return Container();
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    return FutureBuilder<places.FindAutocompletePredictionsResponse>(
-      future: _placesService.findAutocompletePredictions(query, ['uk']),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done &&
-            snapshot.hasData) {
-          final predictions = snapshot.data!.predictions;
-
-          return ListView.builder(
-            itemCount: predictions.length,
-            itemBuilder: (context, index) {
-              final prediction = predictions[index];
-              return ListTile(
-                title: Text(prediction.primaryText),
-                subtitle: Text(prediction.secondaryText ?? ''),
-                onTap: () => close(context, prediction.fullText),
-              );
-            },
-          );
-        } else {
-          return const Center(child: CircularProgressIndicator());
-        }
-      },
     );
   }
 }

@@ -25,9 +25,15 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        return macos;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for macos - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.windows:
-        return windows;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for windows - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -42,7 +48,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyCwxOTyABS2O4VsKwF3_Lq2PmLsa6SfM2g',
-    appId: '1:634216227694:web:74073069d6ac5a2c12577f',
+    appId: '1:634216227694:web:7c6f90765fc9bfbc12577f',
     messagingSenderId: '634216227694',
     projectId: 'travelist-589cc',
     authDomain: 'travelist-589cc.firebaseapp.com',
@@ -51,7 +57,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBiseHRs6vsuUwvIdqNTgEilE9dW1cppd0',
-    appId: '1:634216227694:android:cd5824c5739a638112577f',
+    appId: '1:634216227694:android:edb239acad847d9912577f',
     messagingSenderId: '634216227694',
     projectId: 'travelist-589cc',
     storageBucket: 'travelist-589cc.appspot.com',
@@ -59,28 +65,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBkp05mTEwgGdTu8JPVybj8Aft2gF2nyak',
-    appId: '1:634216227694:ios:ca070c10c177f59a12577f',
+    appId: '1:634216227694:ios:9b99d7044aee571d12577f',
     messagingSenderId: '634216227694',
     projectId: 'travelist-589cc',
     storageBucket: 'travelist-589cc.appspot.com',
-    iosBundleId: 'com.example.travelist',
-  );
-
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBkp05mTEwgGdTu8JPVybj8Aft2gF2nyak',
-    appId: '1:634216227694:ios:ca070c10c177f59a12577f',
-    messagingSenderId: '634216227694',
-    projectId: 'travelist-589cc',
-    storageBucket: 'travelist-589cc.appspot.com',
-    iosBundleId: 'com.example.travelist',
-  );
-
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCwxOTyABS2O4VsKwF3_Lq2PmLsa6SfM2g',
-    appId: '1:634216227694:web:719435fa8ae917c212577f',
-    messagingSenderId: '634216227694',
-    projectId: 'travelist-589cc',
-    authDomain: 'travelist-589cc.firebaseapp.com',
-    storageBucket: 'travelist-589cc.appspot.com',
+    androidClientId: '634216227694-leabs5thtesgsln6r9e30sd2c78qu61o.apps.googleusercontent.com',
+    iosClientId: '634216227694-cnhcd8u5q2qpr8sqpdnt1vr71n0pp9ci.apps.googleusercontent.com',
+    iosBundleId: 'com.travelist.app',
   );
 }

@@ -104,175 +104,225 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final textScaleFactor = MediaQuery.maybeTextScalerOf(context)?.scale(1);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
-        child: Container(
-          child: Column(
-            children: <Widget>[
-              const SizedBox(
-                height: 120,
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  height: 240,
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage('assets/Logo.png'),
-                      fit: BoxFit.fill,
+        child: Semantics(
+          label: 'Login Page',
+          child: Container(
+            child: Column(
+              children: <Widget>[
+                const SizedBox(
+                  height: 120,
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Semantics(
+                    label: 'Travelist Logo',
+                    child: Container(
+                      height: 240,
+                      decoration: const BoxDecoration(
+                        image: DecorationImage(
+                          image: AssetImage('assets/Logo.png'),
+                          fit: BoxFit.fill,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              Padding(
-                padding: const EdgeInsets.all(30.0),
-                child: Column(
-                  children: <Widget>[
-                    FadeInUp(
-                      duration: const Duration(milliseconds: 1800),
-                      child: Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: const Color.fromRGBO(143, 148, 251, 1),
-                          ),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color.fromRGBO(143, 148, 251, .2),
-                              blurRadius: 20.0,
-                              offset: Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: <Widget>[
-                            Container(
-                              padding: const EdgeInsets.all(8.0),
-                              decoration: const BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: Color.fromRGBO(143, 148, 251, 1),
-                                  ),
-                                ),
+                const SizedBox(
+                  height: 10,
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(30.0),
+                  child: Column(
+                    children: <Widget>[
+                      FadeInUp(
+                        duration: const Duration(milliseconds: 1800),
+                        child: Semantics(
+                          label: 'Login form',
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: AppColors.primaryColor,
                               ),
-                              child: TextField(
-                                controller: _emailController,
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
-                                  hintText: "Email",
-                                  hintStyle: TextStyle(color: Colors.grey[700]),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color.fromRGBO(143, 148, 251, .2),
+                                  blurRadius: 20.0,
+                                  offset: Offset(0, 10),
                                 ),
-                              ),
+                              ],
                             ),
-                            Container(
-                              padding: const EdgeInsets.all(8.0),
-                              child: TextField(
-                                controller: _passwordController,
-                                obscureText: _obscureText,
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
-                                  hintText: "Password",
-                                  hintStyle: TextStyle(color: Colors.grey[700]),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _obscureText
-                                          ? Icons.visibility_off
-                                          : Icons.visibility,
-                                      color: _obscureText
-                                          ? AppColors.tertiryColor
-                                          : AppColors.primaryColor,
+                            child: Column(
+                              children: <Widget>[
+                                Semantics(
+                                  label: 'Email input field',
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8.0),
+                                    decoration: const BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(
+                                          color: AppColors.primaryColor,
+                                        ),
+                                      ),
                                     ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _obscureText = !_obscureText;
-                                      });
-                                    },
+                                    child: TextField(
+                                      controller: _emailController,
+                                      decoration: InputDecoration(
+                                        border: InputBorder.none,
+                                        hintText: "Email",
+                                        hintStyle: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize:
+                                              14 * (textScaleFactor ?? 1.0),
+                                        ),
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 14 * (textScaleFactor ?? 1.0),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 30,
-                    ),
-                    FadeInUp(
-                      duration: const Duration(milliseconds: 1900),
-                      child: GestureDetector(
-                        onTap: () => _login(context),
-                        child: Container(
-                          height: 50,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color.fromRGBO(143, 148, 251, 1),
-                                Color.fromRGBO(143, 148, 251, .6),
+                                Semantics(
+                                  label: 'Password input field',
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: TextField(
+                                      controller: _passwordController,
+                                      obscureText: _obscureText,
+                                      decoration: InputDecoration(
+                                        border: InputBorder.none,
+                                        hintText: "Password",
+                                        hintStyle: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize:
+                                              14 * (textScaleFactor ?? 1.0),
+                                        ),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscureText
+                                                ? Icons.visibility_off
+                                                : Icons.visibility,
+                                            color: _obscureText
+                                                ? AppColors.tertiryColor
+                                                : AppColors.primaryColor,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscureText = !_obscureText;
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 14 * (textScaleFactor ?? 1.0),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                          child: const Center(
-                            child: Text(
-                              "Login",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 30,
+                      ),
+                      FadeInUp(
+                        duration: const Duration(milliseconds: 1900),
+                        child: Semantics(
+                          label: 'Login button',
+                          button: true,
+                          child: GestureDetector(
+                            onTap: () => _login(context),
+                            child: Container(
+                              height: 50,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    AppColors.primaryColor,
+                                    AppColors.secondaryColor,
+                                  ],
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  "Login",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16 * (textScaleFactor ?? 1.0),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(
-                      height: 30,
-                    ),
-                    CustomGoogleButton(
-                      onPressed: () {
-                        _loginWithGoogle(context);
-                      },
-                    ),
-                    const SizedBox(
-                      height: 20,
-                    ),
-                    FadeInUp(
-                      duration: const Duration(milliseconds: 2000),
-                      child: TextButton(
-                        onPressed: () => _resetPassword(context),
-                        child: const Text(
-                          "Forgot Password?",
-                          style: TextStyle(
-                            color: Color.fromRGBO(143, 148, 251, 1),
+                      const SizedBox(
+                        height: 30,
+                      ),
+                      Semantics(
+                        label: 'Login with Google button',
+                        button: true,
+                        child: CustomGoogleButton(
+                          onPressed: () {
+                            _loginWithGoogle(context);
+                          },
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 20,
+                      ),
+                      FadeInUp(
+                        duration: const Duration(milliseconds: 2000),
+                        child: Semantics(
+                          label: 'Forgot Password button',
+                          button: true,
+                          child: TextButton(
+                            onPressed: () => _resetPassword(context),
+                            child: Text(
+                              "Forgot Password?",
+                              style: TextStyle(
+                                color: AppColors.secondaryColor,
+                                fontSize: 16 * (textScaleFactor ?? 1.0),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(
-                      height: 0,
-                    ),
-                    FadeInUp(
-                      duration: const Duration(milliseconds: 2000),
-                      child: TextButton(
-                        onPressed: () => _register(context),
-                        child: const Text(
-                          "Register",
-                          style: TextStyle(
-                            color: Color.fromRGBO(143, 148, 251, 1),
+                      const SizedBox(
+                        height: 0,
+                      ),
+                      FadeInUp(
+                        duration: const Duration(milliseconds: 2000),
+                        child: Semantics(
+                          label: 'Register button',
+                          button: true,
+                          child: TextButton(
+                            onPressed: () => _register(context),
+                            child: Text(
+                              "Register",
+                              style: TextStyle(
+                                color: AppColors.secondaryColor,
+                                fontSize: 16 * (textScaleFactor ?? 1.0),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

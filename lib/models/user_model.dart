@@ -4,6 +4,7 @@ class UserModel {
   String? name;
   String image;
   List<String> interests;
+  bool isAdmin;
 
   UserModel({
     required this.uid,
@@ -11,6 +12,7 @@ class UserModel {
     this.name,
     this.image = '',
     this.interests = const [],
+    this.isAdmin = false, // Default value set to false
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -18,8 +20,10 @@ class UserModel {
       uid: json['uid'],
       email: json['email'],
       name: json['name'],
-      image: json.containsKey('image') ? json['image'] : '',
+      image: json['image'] as String? ?? '',
       interests: List<String>.from(json['interests'] ?? []),
+      isAdmin: json['isAdmin'] ??
+          false, // Default value set to false if not present in JSON
     );
   }
 
@@ -30,6 +34,7 @@ class UserModel {
       'name': name,
       'image': image,
       'interests': interests,
+      'isAdmin': isAdmin, // Include isAdmin in JSON representation
     };
   }
 

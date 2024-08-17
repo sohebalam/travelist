@@ -39,6 +39,13 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    if (_image == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please upload an image to register.')),
+      );
+      return;
+    }
+
     try {
       UserCredential result = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
@@ -125,6 +132,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final textScaleFactor = MediaQuery.maybeTextScalerOf(context)?.scale(1);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -158,13 +167,13 @@ class _RegisterPageState extends State<RegisterPage> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: const Color.fromRGBO(143, 148, 251, 1),
+                            color: AppColors.primaryColor,
                           ),
-                          boxShadow: const [
+                          boxShadow: [
                             BoxShadow(
-                              color: Color.fromRGBO(143, 148, 251, .2),
+                              color: AppColors.primaryColor.withOpacity(0.2),
                               blurRadius: 20.0,
-                              offset: Offset(0, 10),
+                              offset: const Offset(0, 10),
                             ),
                           ],
                         ),
@@ -175,7 +184,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               decoration: const BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
-                                    color: Color.fromRGBO(143, 148, 251, 1),
+                                    color: AppColors.primaryColor,
                                   ),
                                 ),
                               ),
@@ -184,7 +193,13 @@ class _RegisterPageState extends State<RegisterPage> {
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
                                   hintText: "Name",
-                                  hintStyle: TextStyle(color: Colors.grey[700]),
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 14 * (textScaleFactor ?? 1.0),
+                                  ),
+                                ),
+                                style: TextStyle(
+                                  fontSize: 14 * (textScaleFactor ?? 1.0),
                                 ),
                               ),
                             ),
@@ -193,7 +208,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               decoration: const BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
-                                    color: Color.fromRGBO(143, 148, 251, 1),
+                                    color: AppColors.primaryColor,
                                   ),
                                 ),
                               ),
@@ -202,7 +217,13 @@ class _RegisterPageState extends State<RegisterPage> {
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
                                   hintText: "Email",
-                                  hintStyle: TextStyle(color: Colors.grey[700]),
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 14 * (textScaleFactor ?? 1.0),
+                                  ),
+                                ),
+                                style: TextStyle(
+                                  fontSize: 14 * (textScaleFactor ?? 1.0),
                                 ),
                               ),
                             ),
@@ -214,7 +235,10 @@ class _RegisterPageState extends State<RegisterPage> {
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
                                   hintText: "Password",
-                                  hintStyle: TextStyle(color: Colors.grey[700]),
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 14 * (textScaleFactor ?? 1.0),
+                                  ),
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscureText
@@ -230,6 +254,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                       });
                                     },
                                   ),
+                                ),
+                                style: TextStyle(
+                                  fontSize: 14 * (textScaleFactor ?? 1.0),
                                 ),
                               ),
                             ),
@@ -260,17 +287,18 @@ class _RegisterPageState extends State<RegisterPage> {
                             borderRadius: BorderRadius.circular(10),
                             gradient: const LinearGradient(
                               colors: [
-                                Color.fromRGBO(143, 148, 251, 1),
-                                Color.fromRGBO(143, 148, 251, .6),
+                                AppColors.primaryColor,
+                                AppColors.secondaryColor,
                               ],
                             ),
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Text(
                               "Register",
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
+                                fontSize: 16 * (textScaleFactor ?? 1.0),
                               ),
                             ),
                           ),
@@ -290,17 +318,18 @@ class _RegisterPageState extends State<RegisterPage> {
                             borderRadius: BorderRadius.circular(10),
                             gradient: const LinearGradient(
                               colors: [
-                                Color.fromRGBO(143, 148, 251, 1),
-                                Color.fromRGBO(143, 148, 251, .6),
+                                AppColors.primaryColor,
+                                AppColors.secondaryColor,
                               ],
                             ),
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Text(
                               "Upload Image",
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
+                                fontSize: 16 * (textScaleFactor ?? 1.0),
                               ),
                             ),
                           ),
@@ -314,10 +343,11 @@ class _RegisterPageState extends State<RegisterPage> {
                       duration: const Duration(milliseconds: 2000),
                       child: TextButton(
                         onPressed: () => _login(context),
-                        child: const Text(
+                        child: Text(
                           "Login",
                           style: TextStyle(
-                            color: Color.fromRGBO(143, 148, 251, 1),
+                            color: AppColors.secondaryColor,
+                            fontSize: 16 * (textScaleFactor ?? 1.0),
                           ),
                         ),
                       ),

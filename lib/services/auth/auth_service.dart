@@ -73,14 +73,28 @@ class AuthService {
       User user, String? name, String? image) async {
     try {
       final userRef = _firestore.collection('users').doc(user.uid);
+      final DocumentSnapshot doc = await userRef.get();
+      bool isAdmin = false;
+      String? existingImage;
+
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        // Preserve existing isAdmin value and image if the document exists
+        isAdmin = data.containsKey('isAdmin') ? data['isAdmin'] as bool : false;
+        existingImage =
+            data.containsKey('image') ? data['image'] as String? : null;
+      }
+
       await userRef.set({
         'email': user.email ?? '',
         'name': name,
-        'image': image, // Save the user's image
+        'image': image ??
+            existingImage, // Preserve the existing image if a new one is not provided
         'uid': user.uid,
         'date': DateTime.now(),
         'interests': FieldValue.arrayUnion(
             []), // Initialize interests as empty array if not present
+        'isAdmin': isAdmin, // Preserve or set default isAdmin flag
       }, SetOptions(merge: true));
     } catch (e) {
       print('Error saving user to Firestore: $e');

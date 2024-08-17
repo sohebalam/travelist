@@ -16,7 +16,7 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      items: const <BottomNavigationBarItem>[
+      items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
           label: 'Home',
@@ -30,7 +30,7 @@ class BottomNavBar extends StatelessWidget {
           label: 'Chat',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.account_circle),
+          icon: Icon(Icons.person),
           label: 'Profile',
         ),
         BottomNavigationBarItem(

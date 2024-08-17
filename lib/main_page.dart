@@ -30,10 +30,18 @@ class _MainPageState extends State<MainPage> {
     BlocProvider.of<AuthenticationBloc>(context).add(LoggedOut());
   }
 
+  void navigateToPage(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    _pageController.jumpToPage(index);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: PageView(
+        key: PageStorageKey<String>('MainPageView'),
         controller: _pageController,
         onPageChanged: (index) {
           setState(() {
@@ -41,10 +49,10 @@ class _MainPageState extends State<MainPage> {
           });
         },
         children: [
-          HomePage(),
-          ListsPage(),
-          ChatList(),
-          UserProfilePage(), // Add the UserProfilePage here
+          HomePage(key: PageStorageKey<String>('HomePage')),
+          ListsPage(key: PageStorageKey<String>('ListsPage')),
+          ChatList(key: PageStorageKey<String>('ChatList')),
+          UserProfilePage(key: PageStorageKey<String>('UserProfilePage')),
         ],
       ),
       bottomNavigationBar: BottomNavBar(
