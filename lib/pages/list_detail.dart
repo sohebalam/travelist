@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:location/location.dart';
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:redacted/redacted.dart';
+import 'package:travelist/models/poi_model.dart';
 import 'package:travelist/services/pages/list_detail_service.dart';
 import 'package:travelist/services/secure_storage.dart';
 import 'package:travelist/services/styles.dart';
@@ -119,6 +120,19 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     bool shouldAdd = await _showAddPlaceDialog(name, address);
 
     if (shouldAdd) {
+      // Convert _poiData from List<Map<String, dynamic>> to List<POI> if necessary
+      List<POI> convertedPoiData = _poiData.map((data) {
+        return POI(
+          id: data['id'] ?? '',
+          name: data['name'] ?? '',
+          latitude: data['latitude'] ?? 0.0,
+          longitude: data['longitude'] ?? 0.0,
+          address: data['address'] ?? '',
+          order: data['order'] ?? 0,
+          description: data['description'],
+        );
+      }).toList();
+
       await _poiService.addNearbyPlace(
         context,
         widget.listId,
@@ -126,7 +140,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         latitude,
         longitude,
         address,
-        _poiData,
+        convertedPoiData,
         _currentLocation,
         _fetchPlaces,
       );

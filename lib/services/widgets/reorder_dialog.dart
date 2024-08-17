@@ -1,6 +1,7 @@
 // reorder_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:travelist/models/poi_model.dart';
 
 class ReorderDialog extends StatefulWidget {
   final List<Map<String, dynamic>> poiData;
@@ -181,6 +182,7 @@ class _ReorderDialogState extends State<ReorderDialog> {
   }
 
   Future<void> _updatePOIOrderInFirestore() async {
+    // Ensure reorderedPOIData is already populated with POI objects
     final batch = FirebaseFirestore.instance.batch();
     for (int i = 0; i < reorderedPOIData.length; i++) {
       final poi = reorderedPOIData[i];
@@ -189,6 +191,8 @@ class _ReorderDialogState extends State<ReorderDialog> {
           .doc(widget.listId)
           .collection('pois')
           .doc(poi['id']);
+
+      // Update the order in the POI model and save it to Firestore
       batch.update(docRef, {'order': i});
     }
     await batch.commit();
