@@ -65,11 +65,10 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   int _selectedIndex = 1;
 
   DurationService? _durationService;
-
-  final UtilsService _utilsService = UtilsService();
   gmaps.Marker? _tappedMarker; // Variable to track the selected marker
 
   MapsService? _mapsService;
+  final UtilsService _utilsService = UtilsService();
 
   @override
   void initState() {
