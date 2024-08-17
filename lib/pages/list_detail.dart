@@ -14,8 +14,9 @@ import 'package:travelist/services/styles.dart';
 import 'package:travelist/services/widgets/bottom_navbar.dart';
 import 'package:travelist/services/location/place_service.dart';
 import 'package:travelist/services/location/poi_service.dart';
-import 'package:travelist/services/widgets/place_search_delegate.dart';
+import 'package:travelist/services/widgets/place_search.dart';
 import 'package:travelist/services/widgets/reorder_dialog.dart';
+import 'package:travelist/services/widgets/routepoints.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places;
@@ -38,7 +39,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   List<gmaps.LatLng> _polylinePoints = [];
   final List<gmaps.LatLng> _routePoints = [];
   final Set<gmaps.Polyline> _polylines = {};
-  PolylinePoints polylinePoints = PolylinePoints();
   String? _googleMapsApiKey;
   bool _isLoading = false;
   String? _error;
@@ -66,14 +66,17 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
 
   DurationService? _durationService;
 
-  final UtilsService _utilsService =
-      UtilsService(); // Create an instance of UtilsService
+  final UtilsService _utilsService = UtilsService();
+
+  MapsService? _mapsService;
 
   @override
   void initState() {
     super.initState();
+    _poiService = POIService();
     _initializeGoogleMapsApiKey().then((_) {
       if (_googleMapsApiKey != null) {
+        _mapsService = MapsService(_googleMapsApiKey!, _mapController);
         _durationService = DurationService(_googleMapsApiKey!, _transportMode);
         _fetchPlaces();
         _getCurrentLocation();
@@ -134,9 +137,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         content: Text(
           '$name has been added to your list.',
           style: TextStyle(
-            fontSize:
-                MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
-          ),
+              fontSize:
+                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0),
         ),
       ),
     );
@@ -153,7 +155,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           .collection('lists')
           .doc(widget.listId)
           .collection('pois')
-          .orderBy('order') // Ensure POIs are fetched in the correct order
+          .orderBy('order')
           .get();
 
       List<gmaps.Marker> markers = [];
@@ -184,7 +186,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           'distance': _currentLocation != null
               ? _utilsService.calculateDistance(_currentLocation!, position)
               : double.infinity,
-          'order': placeData['order'] ?? 0, // Make sure to include the order
+          'order': placeData['order'] ?? 0,
         });
       }
 
@@ -216,105 +218,58 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   }
 
   Future<void> _getRoutePolyline() async {
-    if (_polylinePoints.length < 2) return;
+    if (_mapsService == null || _polylinePoints.length < 2) return;
 
     _routePoints.clear();
     _polylines.clear();
 
-    for (int i = 0; i < _polylinePoints.length - 1; i++) {
-      gmaps.LatLng start = _polylinePoints[i];
-      gmaps.LatLng end = _polylinePoints[i + 1];
-
-      gmd.Directions directions = await gmd.getDirections(
-        start.latitude,
-        start.longitude,
-        end.latitude,
-        end.longitude,
-        language: "en",
-        googleAPIKey: _googleMapsApiKey!,
-      );
-
-      gmd.DirectionRoute route = directions.shortestRoute;
-      List<gmaps.LatLng> points = PolylinePoints()
-          .decodePolyline(route.overviewPolyline.points)
-          .map((point) => gmaps.LatLng(point.latitude, point.longitude))
-          .toList();
-
-      setState(() {
-        _routePoints.addAll(points);
-      });
-    }
-
-    setState(() {
-      _polylines.add(
-        gmaps.Polyline(
-          polylineId: const gmaps.PolylineId('route'),
-          color: Colors.blue,
-          width: 5,
-          points: _routePoints,
-        ),
-      );
-    });
-
-    if (_routePoints.isNotEmpty) {
-      _mapController?.animateCamera(
-        gmaps.CameraUpdate.newLatLngBounds(
-          _utilsService.calculateBounds(_routePoints),
-          50,
-        ),
-      );
-    }
+    await _mapsService!.getRoutePolyline(
+      _polylinePoints,
+      _polylines,
+      (List<gmaps.LatLng> points) {
+        setState(() {
+          _routePoints.addAll(points);
+        });
+      },
+      (gmaps.LatLngBounds bounds) {
+        _mapController?.animateCamera(
+          gmaps.CameraUpdate.newLatLngBounds(bounds, 50),
+        );
+      },
+    );
 
     _calculateAndDisplayDistanceDuration(_currentSliderValue.toInt());
   }
 
   Future<void> _navigateToSelectedLocation(
       gmaps.LatLng selectedLocation) async {
-    if (_currentPosition == null) return;
+    if (_mapsService == null || _currentPosition == null) return;
 
-    final directions = await gmd.getDirections(
-      _currentLocation!.latitude,
-      _currentLocation!.longitude,
-      selectedLocation.latitude,
-      selectedLocation.longitude,
-      googleAPIKey: _googleMapsApiKey!,
-    );
-
-    if (directions.routes.isNotEmpty) {
-      final route = directions.shortestRoute;
-      final steps = route.shortestLeg.steps;
-      List<gmaps.LatLng> points = PolylinePoints()
-          .decodePolyline(route.overviewPolyline.points)
-          .map((point) => gmaps.LatLng(point.latitude, point.longitude))
-          .toList();
-
-      setState(() {
-        _polylines.add(
-          gmaps.Polyline(
-            polylineId: const gmaps.PolylineId('navigation_route'),
-            color: Colors.green,
-            width: 5,
-            points: points,
-          ),
-        );
-        _navigationDestination = selectedLocation;
-        _isNavigationView = true;
-        _navigationSteps = steps;
+    await _mapsService!.navigateToSelectedLocation(
+      selectedLocation,
+      _currentLocation,
+      (Set<gmaps.Polyline> polylines) {
+        setState(() {
+          _polylines.addAll(polylines);
+        });
+      },
+      (bool isNavigationView) {
+        setState(() {
+          _isNavigationView = isNavigationView;
+        });
+      },
+      (List<gmd.DirectionLegStep> steps) {
+        setState(() {
+          _navigationSteps = steps;
+        });
+      },
+      (gmaps.LatLngBounds bounds) {
         _mapController?.animateCamera(
-          gmaps.CameraUpdate.newLatLngBounds(
-            _utilsService.calculateBounds(points),
-            50,
-          ),
+          gmaps.CameraUpdate.newLatLngBounds(bounds, 50),
         );
-      });
-
-      locationSubscription =
-          location.onLocationChanged.listen((LocationData currentLocation) {
-        _updateNavigation(currentLocation);
-      });
-    } else {
-      throw Exception('Failed to fetch directions');
-    }
+      },
+      location,
+    );
   }
 
   void _showReorderDialog() {
@@ -343,7 +298,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
           .doc(widget.listId)
           .collection('pois')
           .doc(poi['id']);
-      batch.update(docRef, {'order': i}); // Update the order field
+      batch.update(docRef, {'order': i});
     }
     await batch.commit();
   }
@@ -412,8 +367,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       content: Text(
         message,
         style: TextStyle(
-          fontSize: MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
-        ),
+            fontSize:
+                MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0),
       ),
     );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
@@ -424,8 +379,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       content: Text(
         message,
         style: TextStyle(
-          fontSize: MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
-        ),
+            fontSize:
+                MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0),
       ),
     );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
@@ -591,6 +546,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                         onMapCreated: (controller) {
                           _mapController = controller;
                           _controller.complete(controller);
+                          _mapsService?.mapController = controller;
                           if (_polylinePoints.isNotEmpty &&
                               !_userHasInteractedWithMap) {
                             _mapController?.animateCamera(
@@ -623,6 +579,33 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                     ),
                   Positioned(
                     top: 10,
+                    left: 10,
+                    child: PlaceSearchWidget(
+                      placesService: _placesService,
+                      mapController: _mapController,
+                      onPlaceSelected: (gmaps.Marker marker) {
+                        setState(() {
+                          _markers.add(marker);
+                          _poiService.addNearbyPlace(
+                            context,
+                            widget.listId,
+                            marker.infoWindow.title ?? 'Unknown',
+                            marker.position.latitude,
+                            marker.position.longitude,
+                            marker.infoWindow.snippet ?? 'No address',
+                            _poiData,
+                            _currentLocation,
+                            _fetchPlaces,
+                          );
+                        });
+                      },
+                      onError: (String error) {
+                        _showErrorSnackBar('Error: $error');
+                      },
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
                     right: 10,
                     child: Semantics(
                       label: 'Navigate to nearest location button',
@@ -644,22 +627,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                         },
                         tooltip: 'Navigate to the nearest location',
                         child: const Icon(Icons.navigation_outlined),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Semantics(
-                      label: 'Search for places button',
-                      child: FloatingActionButton(
-                        backgroundColor: AppColors.primaryColor,
-                        foregroundColor: Colors.white,
-                        onPressed: () {
-                          _showSearch(context);
-                        },
-                        tooltip: 'Search for places',
-                        child: const Icon(Icons.add),
                       ),
                     ),
                   ),
@@ -732,248 +699,24 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                       ],
                     ),
                   ),
-                  DraggableScrollableSheet(
-                    initialChildSize: 0.3,
-                    minChildSize: 0.1,
-                    maxChildSize: 0.8,
-                    builder: (BuildContext context,
-                        ScrollController scrollController) {
-                      return SingleChildScrollView(
-                        controller: scrollController,
-                        child: Container(
-                          color: Colors.white,
-                          padding: const EdgeInsets.all(4.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Semantics(
-                                label: 'List of route points',
-                                child: Text(
-                                  'Route Points:',
-                                  style: TextStyle(
-                                    fontSize:
-                                        MediaQuery.maybeTextScalerOf(context)
-                                                ?.scale(16.0) ??
-                                            16.0,
-                                  ),
-                                ),
-                              ),
-                              ListView.builder(
-                                shrinkWrap: true,
-                                controller: scrollController,
-                                itemCount: _poiData.length,
-                                itemBuilder: (BuildContext context, int index) {
-                                  double textSize = _poiData.length > 7
-                                      ? MediaQuery.maybeTextScalerOf(context)
-                                              ?.scale(14.0) ??
-                                          14.0
-                                      : MediaQuery.maybeTextScalerOf(context)
-                                              ?.scale(16.0) ??
-                                          16.0;
-
-                                  String shortAddress = _poiData[index]
-                                          ['address']
-                                      .split(',')
-                                      .reversed
-                                      .take(2)
-                                      .join(', ');
-
-                                  return Container(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 0),
-                                    child: ListTile(
-                                      dense: true,
-                                      contentPadding: EdgeInsets.symmetric(
-                                          vertical: 0, horizontal: 4.0),
-                                      visualDensity: VisualDensity.compact,
-                                      minVerticalPadding: 0,
-                                      title: Semantics(
-                                        label: 'Route point name',
-                                        child: Text(
-                                          '${index + 1}. ${_poiData[index]['name']}',
-                                          style: TextStyle(
-                                            fontSize: textSize,
-                                          ),
-                                        ),
-                                      ),
-                                      subtitle: Semantics(
-                                        label: 'Route point address',
-                                        child: Text(
-                                          shortAddress,
-                                          style:
-                                              TextStyle(fontSize: textSize - 2),
-                                        ),
-                                      ),
-                                      trailing: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.delete),
-                                            color: AppColors.primaryColor,
-                                            onPressed: () {
-                                              _confirmDeletePOI(
-                                                  _poiData[index]['id']);
-                                            },
-                                          ),
-                                          const Icon(Icons.drag_handle),
-                                        ],
-                                      ),
-                                      onTap: () {
-                                        _showReorderDialog();
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                              if (_polylinePoints.length > 1)
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Semantics(
-                                        label:
-                                            'Slider to adjust route point display',
-                                        child: Slider(
-                                          value: _currentSliderValue,
-                                          min: 0,
-                                          max: (_polylinePoints.length - 1)
-                                              .toDouble(),
-                                          divisions: _polylinePoints.length - 1,
-                                          label: (_currentSliderValue + 1)
-                                              .round()
-                                              .toString(),
-                                          onChanged: (double value) {
-                                            setState(() {
-                                              _currentSliderValue = value;
-                                              _calculateAndDisplayDistanceDuration(
-                                                  value.toInt());
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Semantics(
-                                        label: 'Distance to next point',
-                                        child: Text(
-                                          'Distance: $_distanceText',
-                                          style: TextStyle(
-                                            fontSize:
-                                                MediaQuery.maybeTextScalerOf(
-                                                            context)
-                                                        ?.scale(14.0) ??
-                                                    14.0,
-                                          ),
-                                        ),
-                                      ),
-                                      Semantics(
-                                        label: 'Duration to next point',
-                                        child: Text(
-                                          'Duration: $_durationText',
-                                          style: TextStyle(
-                                            fontSize:
-                                                MediaQuery.maybeTextScalerOf(
-                                                            context)
-                                                        ?.scale(14.0) ??
-                                                    14.0,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      Semantics(
-                                        label: 'Driving mode button',
-                                        child: IconButton(
-                                          icon:
-                                              const Icon(Icons.directions_car),
-                                          onPressed: () {
-                                            setState(() {
-                                              _transportMode = 'driving';
-                                              _durationService =
-                                                  DurationService(
-                                                      _googleMapsApiKey!,
-                                                      _transportMode);
-                                              _getRoutePolyline();
-                                            });
-                                          },
-                                          color: _transportMode == 'driving'
-                                              ? Colors.blue
-                                              : Colors.grey,
-                                          iconSize:
-                                              MediaQuery.maybeTextScalerOf(
-                                                          context)
-                                                      ?.scale(20.0) ??
-                                                  20.0,
-                                        ),
-                                      ),
-                                      Semantics(
-                                        label: 'Walking mode button',
-                                        child: IconButton(
-                                          icon:
-                                              const Icon(Icons.directions_walk),
-                                          onPressed: () {
-                                            setState(() {
-                                              _transportMode = 'walking';
-                                              _durationService =
-                                                  DurationService(
-                                                      _googleMapsApiKey!,
-                                                      _transportMode);
-                                              _getRoutePolyline();
-                                            });
-                                          },
-                                          color: _transportMode == 'walking'
-                                              ? Colors.blue
-                                              : Colors.grey,
-                                          iconSize:
-                                              MediaQuery.maybeTextScalerOf(
-                                                          context)
-                                                      ?.scale(20.0) ??
-                                                  20.0,
-                                        ),
-                                      ),
-                                      Semantics(
-                                        label: 'Bicycling mode button',
-                                        child: IconButton(
-                                          icon:
-                                              const Icon(Icons.directions_bike),
-                                          onPressed: () {
-                                            setState(() {
-                                              _transportMode = 'bicycling';
-                                              _durationService =
-                                                  DurationService(
-                                                      _googleMapsApiKey!,
-                                                      _transportMode);
-                                              _getRoutePolyline();
-                                            });
-                                          },
-                                          color: _transportMode == 'bicycling'
-                                              ? Colors.blue
-                                              : Colors.grey,
-                                          iconSize:
-                                              MediaQuery.maybeTextScalerOf(
-                                                          context)
-                                                      ?.scale(20.0) ??
-                                                  20.0,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
+                  DraggableRoutePointsSheet(
+                    poiData: _poiData,
+                    polylinePoints: _polylinePoints,
+                    currentSliderValue: _currentSliderValue,
+                    distanceText: _distanceText,
+                    durationText: _durationText,
+                    transportMode: _transportMode,
+                    calculateAndDisplayDistanceDuration:
+                        _calculateAndDisplayDistanceDuration,
+                    confirmDeletePOI: _confirmDeletePOI,
+                    showReorderDialog: _showReorderDialog,
+                    setTransportMode: (String mode) {
+                      setState(() {
+                        _transportMode = mode;
+                        _durationService =
+                            DurationService(_googleMapsApiKey!, _transportMode);
+                        _getRoutePolyline();
+                      });
                     },
                   ),
                 ],
@@ -1007,87 +750,5 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         ),
       ],
     );
-  }
-
-  void _showSearch(BuildContext context) async {
-    final query = await showSearch<String>(
-      context: context,
-      delegate: PlaceSearchDelegate(_placesService),
-    );
-
-    if (query != null && query.isNotEmpty) {
-      try {
-        final result = await _placesService.findAutocompletePredictions(
-          query,
-          _countriesEnabled ? ['uk'] : null,
-        );
-
-        if (result.predictions.isNotEmpty) {
-          final placeId = result.predictions.first.placeId;
-          final placeDetails = await _placesService.fetchPlace(placeId, [
-            places.PlaceField.Address,
-            places.PlaceField.AddressComponents,
-            places.PlaceField.Location,
-            places.PlaceField.Name,
-            places.PlaceField.OpeningHours,
-            places.PlaceField.PhotoMetadatas,
-            places.PlaceField.PlusCode,
-            places.PlaceField.PriceLevel,
-            places.PlaceField.Rating,
-            places.PlaceField.UserRatingsTotal,
-            places.PlaceField.UTCOffset,
-            places.PlaceField.Viewport,
-            places.PlaceField.WebsiteUri,
-          ]);
-
-          final place = placeDetails.place;
-          if (place != null && place.latLng != null) {
-            final location = place.latLng!;
-            final address = place.address ?? 'No address available';
-            setState(() {
-              _markers.add(
-                gmaps.Marker(
-                  markerId: gmaps.MarkerId(placeId),
-                  position: gmaps.LatLng(location.lat, location.lng),
-                  infoWindow: gmaps.InfoWindow(
-                    title: place.name ?? 'Unknown',
-                    snippet: address,
-                  ),
-                  onTap: () => _confirmAddPlace(
-                    place.name ?? 'Unknown',
-                    location.lat,
-                    location.lng,
-                    address,
-                  ),
-                ),
-              );
-              _mapController?.animateCamera(gmaps.CameraUpdate.newLatLngZoom(
-                gmaps.LatLng(location.lat, location.lng),
-                14.0,
-              ));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Semantics(
-                    label: 'Snackbar message',
-                    child: Text(
-                      'Tap on the pin to add ${place.name ?? 'Unknown'} to your list.',
-                      style: TextStyle(
-                        fontSize: MediaQuery.maybeTextScalerOf(context)
-                                ?.scale(14.0) ??
-                            14.0,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            });
-          }
-        }
-      } catch (e) {
-        setState(() {
-          _error = e.toString();
-        });
-      }
-    }
   }
 }
