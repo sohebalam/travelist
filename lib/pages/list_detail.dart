@@ -112,10 +112,8 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
-  // Method to confirm adding a place to the list
   Future<void> _confirmAddPlace(
       String name, double latitude, double longitude, String address) async {
-    // Assuming _poiService is already initialized in your class
     await _poiService.addNearbyPlace(
       context,
       widget.listId,
@@ -128,7 +126,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
       _fetchPlaces,
     );
 
-    // Optional: You might want to show a success message after adding the place
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -140,18 +137,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         ),
       ),
     );
-  }
-
-  gmaps.LatLng _calculateCentroid(List<gmaps.LatLng> points) {
-    double latSum = 0;
-    double lngSum = 0;
-
-    for (var point in points) {
-      latSum += point.latitude;
-      lngSum += point.longitude;
-    }
-
-    return gmaps.LatLng(latSum / points.length, lngSum / points.length);
   }
 
   Future<void> _fetchPlaces() async {
@@ -177,6 +162,16 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
         var position =
             gmaps.LatLng(placeData['latitude'], placeData['longitude']);
         points.add(position);
+        markers.add(
+          gmaps.Marker(
+            markerId: gmaps.MarkerId(place.id),
+            position: position,
+            infoWindow: gmaps.InfoWindow(
+              title: placeData['name'],
+              snippet: placeData['address'] ?? 'No address',
+            ),
+          ),
+        );
         poiData.add({
           'id': place.id,
           'name': placeData['name'],

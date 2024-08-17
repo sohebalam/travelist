@@ -1,6 +1,8 @@
 // duration_service.dart
 
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'dart:math' show cos, sqrt, asin;
 
 class DurationService {
   final String googleMapsApiKey;
@@ -63,5 +65,58 @@ class DurationService {
     } else {
       return '$minutes mins';
     }
+  }
+}
+
+class UtilsService {
+  gmaps.LatLng calculateCentroid(List<gmaps.LatLng> points) {
+    double latSum = 0;
+    double lngSum = 0;
+
+    for (var point in points) {
+      latSum += point.latitude;
+      lngSum += point.longitude;
+    }
+
+    return gmaps.LatLng(latSum / points.length, lngSum / points.length);
+  }
+
+  gmaps.LatLngBounds calculateBounds(List<gmaps.LatLng> points) {
+    double southWestLat = points.first.latitude;
+    double southWestLng = points.first.longitude;
+    double northEastLat = points.first.latitude;
+    double northEastLng = points.first.longitude;
+
+    for (var point in points) {
+      if (point.latitude < southWestLat) {
+        southWestLat = point.latitude;
+      }
+      if (point.longitude < southWestLng) {
+        southWestLng = point.longitude;
+      }
+      if (point.latitude > northEastLat) {
+        northEastLat = point.latitude;
+      }
+      if (point.longitude > northEastLng) {
+        northEastLng = point.longitude;
+      }
+    }
+
+    return gmaps.LatLngBounds(
+      southwest: gmaps.LatLng(southWestLat, southWestLng),
+      northeast: gmaps.LatLng(northEastLat, northEastLng),
+    );
+  }
+
+  double calculateDistance(gmaps.LatLng start, gmaps.LatLng end) {
+    const double p = 0.017453292519943295;
+    final double a = 0.5 -
+        cos((end.latitude - start.latitude) * p) / 2 +
+        cos(start.latitude * p) *
+            cos(end.latitude * p) *
+            (1 - cos((end.longitude - start.longitude) * p)) /
+            2;
+
+    return 12742 * asin(sqrt(a));
   }
 }
