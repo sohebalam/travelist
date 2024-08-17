@@ -67,6 +67,7 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   DurationService? _durationService;
 
   final UtilsService _utilsService = UtilsService();
+  gmaps.Marker? _tappedMarker; // Variable to track the selected marker
 
   MapsService? _mapsService;
 
@@ -205,7 +206,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
             infoWindow: gmaps.InfoWindow(
               title: placeData['name'],
               snippet: placeData['address'] ?? 'No address',
-              // Open dialog only when the info window is tapped
               onTap: () {
                 _confirmAddPlace(
                   placeData['name'],
@@ -215,6 +215,24 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                 );
               },
             ),
+            onTap: () {
+              setState(() {
+                _tappedMarker = gmaps.Marker(
+                  markerId: gmaps.MarkerId(place.id),
+                  position: position,
+                  infoWindow: gmaps.InfoWindow(
+                    title: placeData['name'],
+                    snippet: placeData['address'] ?? 'No address',
+                  ),
+                );
+              });
+              _confirmAddPlace(
+                placeData['name'],
+                placeData['latitude'],
+                placeData['longitude'],
+                placeData['address'] ?? 'No address',
+              );
+            },
           ),
         );
         poiData.add({
@@ -671,6 +689,14 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                                 );
                               },
                             ),
+                            onTap: () {
+                              _confirmAddPlace(
+                                marker.infoWindow.title ?? 'Unknown',
+                                marker.position.latitude,
+                                marker.position.longitude,
+                                marker.infoWindow.snippet ?? 'No address',
+                              );
+                            },
                           );
 
                           _markers.add(newMarker);
