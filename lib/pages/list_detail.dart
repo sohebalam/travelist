@@ -12,8 +12,6 @@ import 'package:travelist/services/secure_storage.dart';
 import 'package:travelist/services/styles.dart';
 import 'package:travelist/services/widgets/bottom_navbar.dart';
 import 'package:travelist/services/location/place_service.dart';
-import 'package:travelist/services/location/poi_service.dart';
-import 'package:travelist/services/widgets/place_search_delegate.dart';
 import 'package:travelist/services/widgets/reorder_dialog.dart';
 import 'package:travelist/services/widgets/routepoints.dart';
 import 'package:url_launcher/url_launcher.dart';

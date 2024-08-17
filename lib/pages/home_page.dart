@@ -12,8 +12,7 @@ import 'package:travelist/services/shared_functions.dart';
 import 'package:travelist/services/styles.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places_sdk;
-import 'package:travelist/services/location/poi_service.dart';
-import 'package:travelist/services/widgets/place_search_delegate.dart';
+import 'package:travelist/services/location/place_search_delegate.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 
 class HomePage extends StatefulWidget {
@@ -43,7 +42,6 @@ class _HomePageState extends State<HomePage> {
   final CollectionReference _listsCollection =
       FirebaseFirestore.instance.collection('lists');
   PlacesService? _placesService;
-  final POIService _poiService = POIService();
   final _secureStorage = const FlutterSecureStorage();
 
   @override
