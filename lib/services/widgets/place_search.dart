@@ -4,7 +4,6 @@ import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places;
 import 'package:travelist/services/location/place_service.dart';
 import 'package:travelist/services/styles.dart';
-import 'package:travelist/services/widgets/place_search_delegate.dart';
 
 class PlaceSearchWidget extends StatefulWidget {
   final PlacesService placesService;
@@ -43,86 +42,112 @@ class _PlaceSearchWidgetState extends State<PlaceSearchWidget> {
   Future<void> _showSearch(BuildContext context) async {
     final query = await showSearch<String>(
       context: context,
-      delegate: PlaceSearchDelegate(widget.placesService),
+      delegate: _PlaceSearchDelegate(
+          widget.placesService,
+          widget.onPlaceSelected,
+          widget.mapController,
+          widget.onError,
+          widget.countriesEnabled),
     );
 
-    if (query != null && query.isNotEmpty) {
-      try {
-        final result = await widget.placesService.findAutocompletePredictions(
-          query,
-          widget.countriesEnabled ? ['uk'] : null,
-        );
+    // Additional logic can be added here if needed after search
+  }
+}
 
-        if (result.predictions.isNotEmpty) {
-          final placeId = result.predictions.first.placeId;
-          final placeDetails = await widget.placesService.fetchPlace(placeId, [
-            places.PlaceField.Address,
-            places.PlaceField.AddressComponents,
-            places.PlaceField.Location,
-            places.PlaceField.Name,
-            places.PlaceField.OpeningHours,
-            places.PlaceField.PhotoMetadatas,
-            places.PlaceField.PlusCode,
-            places.PlaceField.PriceLevel,
-            places.PlaceField.Rating,
-            places.PlaceField.UserRatingsTotal,
-            places.PlaceField.UTCOffset,
-            places.PlaceField.Viewport,
-            places.PlaceField.WebsiteUri,
-          ]);
+class _PlaceSearchDelegate extends SearchDelegate<String> {
+  final PlacesService placesService;
+  final Function(gmaps.Marker) onPlaceSelected;
+  final gmaps.GoogleMapController? mapController;
+  final Function(String) onError;
+  final bool countriesEnabled;
 
-          final place = placeDetails.place;
-          if (place != null && place.latLng != null) {
-            final location = place.latLng!;
-            final address = place.address ?? 'No address available';
+  _PlaceSearchDelegate(this.placesService, this.onPlaceSelected,
+      this.mapController, this.onError, this.countriesEnabled);
 
-            final marker = gmaps.Marker(
-              markerId: gmaps.MarkerId(placeId),
-              position: gmaps.LatLng(location.lat, location.lng),
-              infoWindow: gmaps.InfoWindow(
-                title: place.name ?? 'Unknown',
-                snippet: address,
-              ),
-              onTap: () => widget.onPlaceSelected(
-                gmaps.Marker(
-                  markerId: gmaps.MarkerId(placeId),
-                  position: gmaps.LatLng(location.lat, location.lng),
-                  infoWindow: gmaps.InfoWindow(
-                    title: place.name ?? 'Unknown',
-                    snippet: address,
-                  ),
-                ),
-              ),
-            );
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(icon: const Icon(Icons.clear), onPressed: () => query = '')
+    ];
+  }
 
-            widget.onPlaceSelected(marker);
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => close(context, ''));
+  }
 
-            widget.mapController
-                ?.animateCamera(gmaps.CameraUpdate.newLatLngZoom(
-              gmaps.LatLng(location.lat, location.lng),
-              14.0,
-            ));
+  @override
+  Widget buildResults(BuildContext context) {
+    return Container(); // No results view needed, as we handle selection in suggestions.
+  }
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Semantics(
-                  label: 'Snackbar message',
-                  child: Text(
-                    'Tap on the pin to add ${place.name ?? 'Unknown'} to your list.',
-                    style: TextStyle(
-                      fontSize:
-                          MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ??
-                              14.0,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return FutureBuilder<places.FindAutocompletePredictionsResponse>(
+      future: placesService.findAutocompletePredictions(
+        query,
+        countriesEnabled ? ['uk'] : null,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done &&
+            snapshot.hasData) {
+          final predictions = snapshot.data!.predictions;
+
+          return ListView.builder(
+            itemCount: predictions.length,
+            itemBuilder: (context, index) {
+              final prediction = predictions[index];
+              return ListTile(
+                title: Text(prediction.primaryText),
+                subtitle: Text(prediction.secondaryText ?? ''),
+                onTap: () async {
+                  try {
+                    final placeDetails = await placesService.fetchPlace(
+                      prediction.placeId,
+                      [
+                        places.PlaceField.Location,
+                        places.PlaceField.Name,
+                        places.PlaceField.Address,
+                      ],
+                    );
+
+                    final place = placeDetails.place;
+                    if (place != null && place.latLng != null) {
+                      final location = place.latLng!;
+                      final address = place.address ?? 'No address available';
+
+                      final marker = gmaps.Marker(
+                        markerId: gmaps.MarkerId(prediction.placeId),
+                        position: gmaps.LatLng(location.lat, location.lng),
+                        infoWindow: gmaps.InfoWindow(
+                          title: place.name ?? 'Unknown',
+                          snippet: address,
+                        ),
+                      );
+
+                      onPlaceSelected(marker);
+
+                      mapController
+                          ?.animateCamera(gmaps.CameraUpdate.newLatLngZoom(
+                        gmaps.LatLng(location.lat, location.lng),
+                        14.0,
+                      ));
+
+                      close(context, query);
+                    }
+                  } catch (e) {
+                    onError(e.toString());
+                  }
+                },
+              );
+            },
+          );
+        } else {
+          return const Center(child: CircularProgressIndicator());
         }
-      } catch (e) {
-        widget.onError(e.toString());
-      }
-    }
+      },
+    );
   }
 }

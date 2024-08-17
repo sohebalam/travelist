@@ -14,6 +14,7 @@ import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places_sdk;
 import 'package:travelist/services/location/poi_service.dart';
 import 'package:travelist/services/widgets/place_search_delegate.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -342,20 +343,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showSearch(BuildContext context) async {
-    final query = await showSearch<String>(
+    final result = await showSearch<Map<String, String>>(
       context: context,
       delegate: PlaceSearchDelegate(_placesService!),
     );
 
-    if (query != null && query.isNotEmpty) {
-      try {
-        final result = await _placesService!.findAutocompletePredictions(
-          query,
-          null,
-        );
+    if (result != null && result.isNotEmpty) {
+      final placeId = result['placeId'];
+      final primaryText = result['primaryText'];
+      final secondaryText = result['secondaryText'];
 
-        if (result.predictions.isNotEmpty) {
-          final placeId = result.predictions.first.placeId;
+      if (placeId != null) {
+        try {
+          // Fetch the place details using the placeId
           final placeDetails = await _placesService!.fetchPlace(placeId, [
             places_sdk.PlaceField.Location,
             places_sdk.PlaceField.Name,
@@ -365,39 +365,40 @@ class _HomePageState extends State<HomePage> {
           final place = placeDetails.place;
           if (place != null && place.latLng != null) {
             final location = place.latLng!;
-            final address = place.address ?? 'No address available';
+            final address =
+                place.address ?? secondaryText ?? 'No address available';
 
             setState(() {
               _markers.add(
-                Marker(
-                  markerId: MarkerId(placeId),
-                  position: LatLng(location.lat, location.lng),
-                  infoWindow: InfoWindow(
-                    title: place.name ?? 'Unknown',
+                gmaps.Marker(
+                  markerId: gmaps.MarkerId(placeId),
+                  position: gmaps.LatLng(location.lat, location.lng),
+                  infoWindow: gmaps.InfoWindow(
+                    title: primaryText ?? 'Unknown',
                     snippet: address,
                   ),
                   onTap: () => _confirmAddPlace(
-                    place.name ?? 'Unknown',
+                    primaryText ?? 'Unknown',
                     location.lat,
                     location.lng,
                     address,
                   ),
                 ),
               );
-              _mapController?.animateCamera(CameraUpdate.newLatLngZoom(
-                LatLng(location.lat, location.lng),
+              _mapController?.animateCamera(gmaps.CameraUpdate.newLatLngZoom(
+                gmaps.LatLng(location.lat, location.lng),
                 14.0,
               ));
             });
           }
-        } else {
-          print("No predictions found.");
+        } catch (e) {
+          print("Error in place picker: $e");
+          setState(() {
+            _error = e.toString();
+          });
         }
-      } catch (e) {
-        print("Error in place picker: $e");
-        setState(() {
-          _error = e.toString();
-        });
+      } else {
+        print("No place ID found.");
       }
     }
   }

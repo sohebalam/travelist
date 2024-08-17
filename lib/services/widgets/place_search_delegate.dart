@@ -3,7 +3,7 @@ import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places_sdk;
 import 'package:travelist/services/location/place_service.dart';
 
-class PlaceSearchDelegate extends SearchDelegate<String> {
+class PlaceSearchDelegate extends SearchDelegate<Map<String, String>> {
   final PlacesService _placesService;
 
   PlaceSearchDelegate(this._placesService);
@@ -19,7 +19,7 @@ class PlaceSearchDelegate extends SearchDelegate<String> {
   Widget buildLeading(BuildContext context) {
     return IconButton(
         icon: const Icon(Icons.arrow_back),
-        onPressed: () => close(context, ''));
+        onPressed: () => close(context, {}));
   }
 
   @override
@@ -46,7 +46,12 @@ class PlaceSearchDelegate extends SearchDelegate<String> {
               return ListTile(
                 title: Text(prediction.primaryText),
                 subtitle: Text(prediction.secondaryText ?? ''),
-                onTap: () => close(context, prediction.fullText),
+                onTap: () => close(context, {
+                  'placeId': prediction.placeId,
+                  'primaryText': prediction.primaryText,
+                  'secondaryText': prediction.secondaryText ?? '',
+                  'fullText': prediction.fullText,
+                }),
               );
             },
           );

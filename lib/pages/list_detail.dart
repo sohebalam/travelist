@@ -5,7 +5,6 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:async';
 import 'package:location/location.dart';
-import 'dart:math' show cos, sqrt, asin;
 import 'package:google_maps_directions/google_maps_directions.dart' as gmd;
 import 'package:redacted/redacted.dart';
 import 'package:travelist/services/pages/list_detail_service.dart';
@@ -14,12 +13,12 @@ import 'package:travelist/services/styles.dart';
 import 'package:travelist/services/widgets/bottom_navbar.dart';
 import 'package:travelist/services/location/place_service.dart';
 import 'package:travelist/services/location/poi_service.dart';
-import 'package:travelist/services/widgets/place_search.dart';
+import 'package:travelist/services/widgets/place_search_delegate.dart';
 import 'package:travelist/services/widgets/reorder_dialog.dart';
 import 'package:travelist/services/widgets/routepoints.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
-    as places;
+    as places_sdk;
 
 class ListDetailsPage extends StatefulWidget {
   final String listId;
@@ -61,12 +60,11 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
   final bool _locationRestrictionEnabled = false;
   late final PlacesService _placesService;
   late final POIService _poiService;
-  places.LatLngBounds? _locationBias;
+  places_sdk.LatLngBounds? _locationBias;
   int _selectedIndex = 1;
 
   DurationService? _durationService;
   gmaps.Marker? _tappedMarker; // Variable to track the selected marker
-
   MapsService? _mapsService;
   final UtilsService _utilsService = UtilsService();
 
@@ -573,6 +571,73 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     });
   }
 
+  Future<void> _showPlaceSearch(BuildContext context) async {
+    final result = await showSearch<Map<String, String>>(
+      context: context,
+      delegate: PlaceSearchDelegate(_placesService),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      final placeId = result['placeId'];
+      final primaryText = result['primaryText'];
+      final secondaryText = result['secondaryText'];
+
+      try {
+        // Fetch the place details using the placeId
+        final placeDetails = await _placesService.fetchPlace(placeId!, [
+          places_sdk.PlaceField.Location,
+          places_sdk.PlaceField.Name,
+          places_sdk.PlaceField.Address,
+        ]);
+
+        final place = placeDetails.place;
+        if (place != null && place.latLng != null) {
+          final location = place.latLng!;
+          final address =
+              place.address ?? secondaryText ?? 'No address available';
+
+          final marker = gmaps.Marker(
+            markerId: gmaps.MarkerId(placeId),
+            position: gmaps.LatLng(location.lat, location.lng),
+            infoWindow: gmaps.InfoWindow(
+              title: primaryText ?? 'Unknown',
+              snippet: address,
+              onTap: () {
+                _confirmAddPlace(
+                  primaryText ?? 'Unknown',
+                  location.lat,
+                  location.lng,
+                  address,
+                );
+              },
+            ),
+            onTap: () {
+              _confirmAddPlace(
+                primaryText ?? 'Unknown',
+                location.lat,
+                location.lng,
+                address,
+              );
+            },
+          );
+
+          setState(() {
+            _markers.add(marker);
+          });
+
+          _mapController?.animateCamera(
+            gmaps.CameraUpdate.newLatLngZoom(
+              gmaps.LatLng(location.lat, location.lng),
+              14.0,
+            ),
+          );
+        }
+      } catch (e) {
+        _showErrorSnackBar('Error fetching place details: ${e.toString()}');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -594,62 +659,63 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                   Semantics(
                     label: 'Map displaying points of interest',
                     child: gmaps.GoogleMap(
-                        initialCameraPosition: const gmaps.CameraPosition(
-                          target: gmaps.LatLng(51.509865, -0.118092),
-                          zoom: 13,
-                        ),
-                        markers: Set.from(_markers),
-                        polylines: _polylines,
-                        onMapCreated: (controller) {
-                          _mapController = controller;
-                          _controller.complete(controller);
-                          _mapsService?.mapController = controller;
-                          if (_polylinePoints.isNotEmpty &&
-                              !_userHasInteractedWithMap) {
-                            _mapController?.animateCamera(
-                              gmaps.CameraUpdate.newLatLngBounds(
-                                _utilsService.calculateBounds(_polylinePoints),
-                                50,
-                              ),
-                            );
-                          }
-                        },
-                        onTap: (gmaps.LatLng position) async {
-                          final String name = 'New POI';
-                          final String address = 'No address available';
-
-                          setState(() {
-                            final marker = gmaps.Marker(
-                              markerId: gmaps.MarkerId(
-                                  '${position.latitude},${position.longitude}'),
-                              position: position,
-                              infoWindow: gmaps.InfoWindow(
-                                title: name,
-                                snippet: address,
-                                onTap: () {
-                                  _confirmAddPlace(
-                                    name,
-                                    position.latitude,
-                                    position.longitude,
-                                    address,
-                                  );
-                                },
-                              ),
-                            );
-
-                            _markers.add(marker);
-                          });
-
-                          await _mapController?.showMarkerInfoWindow(
-                            gmaps.MarkerId(
-                                '${position.latitude},${position.longitude}'),
+                      initialCameraPosition: const gmaps.CameraPosition(
+                        target: gmaps.LatLng(51.509865, -0.118092),
+                        zoom: 13,
+                      ),
+                      markers: Set.from(_markers),
+                      polylines: _polylines,
+                      onMapCreated: (controller) {
+                        _mapController = controller;
+                        _controller.complete(controller);
+                        _mapsService?.mapController = controller;
+                        if (_polylinePoints.isNotEmpty &&
+                            !_userHasInteractedWithMap) {
+                          _mapController?.animateCamera(
+                            gmaps.CameraUpdate.newLatLngBounds(
+                              _utilsService.calculateBounds(_polylinePoints),
+                              50,
+                            ),
                           );
-                        },
-                        myLocationEnabled: true,
-                        onCameraMove: (gmaps.CameraPosition position) {
-                          _userHasInteractedWithMap = true;
-                        },
-                        zoomControlsEnabled: false),
+                        }
+                      },
+                      onTap: (gmaps.LatLng position) async {
+                        final String name = 'New POI';
+                        final String address = 'No address available';
+
+                        setState(() {
+                          final marker = gmaps.Marker(
+                            markerId: gmaps.MarkerId(
+                                '${position.latitude},${position.longitude}'),
+                            position: position,
+                            infoWindow: gmaps.InfoWindow(
+                              title: name,
+                              snippet: address,
+                              onTap: () {
+                                _confirmAddPlace(
+                                  name,
+                                  position.latitude,
+                                  position.longitude,
+                                  address,
+                                );
+                              },
+                            ),
+                          );
+
+                          _markers.add(marker);
+                        });
+
+                        await _mapController?.showMarkerInfoWindow(
+                          gmaps.MarkerId(
+                              '${position.latitude},${position.longitude}'),
+                        );
+                      },
+                      myLocationEnabled: true,
+                      onCameraMove: (gmaps.CameraPosition position) {
+                        _userHasInteractedWithMap = true;
+                      },
+                      zoomControlsEnabled: false,
+                    ),
                   ),
                   if (_error != null)
                     Center(
@@ -665,49 +731,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                         ),
                       ),
                     ),
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: PlaceSearchWidget(
-                      placesService: _placesService,
-                      mapController: _mapController,
-                      onPlaceSelected: (gmaps.Marker marker) {
-                        setState(() {
-                          final newMarker = gmaps.Marker(
-                            markerId: marker.markerId,
-                            position: marker.position,
-                            infoWindow: gmaps.InfoWindow(
-                              title: marker.infoWindow.title,
-                              snippet: marker.infoWindow.snippet,
-                              onTap: () {
-                                _confirmAddPlace(
-                                  marker.infoWindow.title ?? 'Unknown',
-                                  marker.position.latitude,
-                                  marker.position.longitude,
-                                  marker.infoWindow.snippet ?? 'No address',
-                                );
-                              },
-                            ),
-                            onTap: () {
-                              _confirmAddPlace(
-                                marker.infoWindow.title ?? 'Unknown',
-                                marker.position.latitude,
-                                marker.position.longitude,
-                                marker.infoWindow.snippet ?? 'No address',
-                              );
-                            },
-                          );
-
-                          _markers.add(newMarker);
-                        });
-
-                        _mapController?.showMarkerInfoWindow(marker.markerId);
-                      },
-                      onError: (String error) {
-                        _showErrorSnackBar('Error: $error');
-                      },
-                    ),
-                  ),
                   Positioned(
                     top: 10,
                     right: 10,
@@ -803,6 +826,19 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                       ],
                     ),
                   ),
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: FloatingActionButton(
+                      backgroundColor: AppColors.primaryColor,
+                      foregroundColor: Colors.white,
+                      onPressed: () async {
+                        await _showPlaceSearch(context);
+                      },
+                      tooltip: 'Search for places',
+                      child: const Icon(Icons.add_location_alt),
+                    ),
+                  ),
                   DraggableRoutePointsSheet(
                     poiData: _poiData,
                     polylinePoints: _polylinePoints,
@@ -856,3 +892,62 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     );
   }
 }
+
+// class PlaceSearchDelegate extends SearchDelegate<Map<String, String>> {
+//   final PlacesService _placesService;
+
+//   PlaceSearchDelegate(this._placesService);
+
+//   @override
+//   List<Widget> buildActions(BuildContext context) {
+//     return [
+//       IconButton(icon: const Icon(Icons.clear), onPressed: () => query = '')
+//     ];
+//   }
+
+//   @override
+//   Widget buildLeading(BuildContext context) {
+//     return IconButton(
+//         icon: const Icon(Icons.arrow_back),
+//         onPressed: () => close(context, {}));
+//   }
+
+//   @override
+//   Widget buildResults(BuildContext context) {
+//     return Container();
+//   }
+
+//   @override
+//   Widget buildSuggestions(BuildContext context) {
+//     return FutureBuilder<places_sdk.FindAutocompletePredictionsResponse>(
+//       future: _placesService.findAutocompletePredictions(
+//         query,
+//         ['uk'],
+//       ),
+//       builder: (context, snapshot) {
+//         if (snapshot.connectionState == ConnectionState.done &&
+//             snapshot.hasData) {
+//           final predictions = snapshot.data!.predictions;
+
+//           return ListView.builder(
+//             itemCount: predictions.length,
+//             itemBuilder: (context, index) {
+//               final prediction = predictions[index];
+//               return ListTile(
+//                 title: Text(prediction.primaryText),
+//                 subtitle: Text(prediction.secondaryText ?? ''),
+//                 onTap: () => close(context, {
+//                   'placeId': prediction.placeId,
+//                   'primaryText': prediction.primaryText,
+//                   'secondaryText': prediction.secondaryText ?? ''
+//                 }),
+//               );
+//             },
+//           );
+//         } else {
+//           return const Center(child: CircularProgressIndicator());
+//         }
+//       },
+//     );
+//   }
+// }
