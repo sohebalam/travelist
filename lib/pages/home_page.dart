@@ -105,8 +105,6 @@ class _HomePageState extends State<HomePage> {
     if (interest.trim().isEmpty) return; // Directly return if interest is empty
 
     try {
-      print("Method _addInterest called with: $interest");
-
       // Convert interest to lowercase and trim spaces before adding
       String sanitizedInterest = interest.trim().toLowerCase();
 
@@ -122,19 +120,6 @@ class _HomePageState extends State<HomePage> {
 
       // Clear the TextField
       interestsController.clear();
-
-      // Provide feedback to the user
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Interest "$sanitizedInterest" added.',
-            style: TextStyle(
-              fontSize:
-                  MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ?? 14.0,
-            ),
-          ),
-        ),
-      );
     } catch (e) {
       print('Error adding interest: $e');
       ScaffoldMessenger.of(context).showSnackBar(
