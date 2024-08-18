@@ -108,15 +108,19 @@ class _HomePageState extends State<HomePage> {
       // Convert interest to lowercase and trim spaces before adding
       String sanitizedInterest = interest.trim().toLowerCase();
 
-      // Update the local list
+      // Update the local list and Firestore
+      await updateUserInterests([sanitizedInterest]);
+
+      // Update the local state (optional, if you need to update the UI immediately)
       setState(() {
         if (!userInterests.contains(sanitizedInterest)) {
           userInterests.add(sanitizedInterest);
+          // Ensure the local list does not exceed 10 items
+          if (userInterests.length > 10) {
+            userInterests = userInterests.sublist(0, 10);
+          }
         }
       });
-
-      // Save the updated list to Firestore
-      await saveUserInterests(userInterests);
 
       // Clear the TextField
       interestsController.clear();

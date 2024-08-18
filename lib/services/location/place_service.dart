@@ -4,6 +4,8 @@ import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places_sdk;
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:flutter/material.dart';
 import 'package:travelist/models/poi_model.dart';
@@ -57,10 +59,7 @@ class PlaceSearchDelegate extends SearchDelegate<Map<String, String>> {
   @override
   Widget buildSuggestions(BuildContext context) {
     return FutureBuilder<places_sdk.FindAutocompletePredictionsResponse>(
-      future: _placesService.findAutocompletePredictions(
-        query,
-        ['uk'],
-      ),
+      future: fetchPredictionsBasedOnLocation(query),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done &&
             snapshot.hasData) {
@@ -87,6 +86,35 @@ class PlaceSearchDelegate extends SearchDelegate<Map<String, String>> {
         }
       },
     );
+  }
+
+// Function to fetch predictions based on the user's current location
+  Future<places_sdk.FindAutocompletePredictionsResponse>
+      fetchPredictionsBasedOnLocation(String query) async {
+    try {
+      // Step 1: Get the current location
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low);
+
+      // Step 2: Reverse geocode to get the country code
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(position.latitude, position.longitude);
+      String? countryCode = placemarks.first.isoCountryCode;
+
+      // Step 3: Use the country code in the autocomplete prediction
+      return await _placesService.findAutocompletePredictions(
+        query,
+        countryCode != null ? [countryCode.toLowerCase()] : null,
+      );
+    } catch (e) {
+      // Handle any errors that might occur during location fetching or geocoding
+      print("Error fetching location or country code: $e");
+      // Optionally return a default or empty response
+      return _placesService.findAutocompletePredictions(
+        query,
+        ['uk'], // Fallback to 'uk' if there is an error
+      );
+    }
   }
 }
 
