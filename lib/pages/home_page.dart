@@ -499,12 +499,14 @@ class _HomePageState extends State<HomePage> {
                     title: primaryText ?? 'Unknown',
                     snippet: address,
                   ),
-                  onTap: () => _confirmAddPlace(
-                    primaryText ?? 'Unknown',
-                    location.lat,
-                    location.lng,
-                    address,
-                  ),
+                  onTap: () {
+                    _confirmAddPlace(
+                      primaryText ?? 'Unknown',
+                      location.lat,
+                      location.lng,
+                      address,
+                    );
+                  },
                 ),
               );
               _mapController?.animateCamera(gmaps.CameraUpdate.newLatLngZoom(
@@ -512,6 +514,21 @@ class _HomePageState extends State<HomePage> {
                 14.0,
               ));
             });
+
+            // Show a Snackbar with a message to tap the pin
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Tap the pin on the map to add it to your list.',
+                  style: TextStyle(
+                    fontSize:
+                        MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ??
+                            14.0,
+                  ),
+                ),
+                duration: Duration(seconds: 4),
+              ),
+            );
           }
         } catch (e) {
           print("Error in place picker: $e");
@@ -532,10 +549,6 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    // Debug log to ensure address and description are correctly passed
-    print(
-        'Adding POI with Name: $name, Lat: $lat, Lng: $lng, Address: $address, Description: $description');
-
     // Create a POI instance using the POI model
     final poi = POI(
       id: '', // The ID will be generated when the POI is added to Firestore
@@ -544,11 +557,11 @@ class _HomePageState extends State<HomePage> {
       longitude: lng,
       address: address,
       order: 0, // Initial order value; this may be updated later
-      description: description ??
-          'No description provided', // Use the provided description or a default value
+      description: description ?? 'No description provided',
     );
 
-    _showAddToListDialog(poi as Map<String, dynamic>);
+    // Convert POI object to a Map<String, dynamic> before passing it to the dialog
+    _showAddToListDialog(poi.toMap());
   }
 
   @override

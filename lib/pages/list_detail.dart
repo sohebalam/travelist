@@ -552,9 +552,31 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
 
     if (nearestPoint != null) {
-      _navigateToSelectedLocation(nearestPoint);
+      setState(() {
+        _navigationDestination = nearestPoint;
+      });
     }
   }
+
+  // void _setNearestDestination() {
+  //   if (_currentLocation == null || _polylinePoints.isEmpty) return;
+
+  //   double minDistance = double.infinity;
+  //   gmaps.LatLng? nearestPoint;
+
+  //   for (gmaps.LatLng point in _polylinePoints) {
+  //     double distance =
+  //         _utilsService.calculateDistance(_currentLocation!, point);
+  //     if (distance < minDistance) {
+  //       minDistance = distance;
+  //       nearestPoint = point;
+  //     }
+  //   }
+
+  //   if (nearestPoint != null) {
+  //     _navigateToSelectedLocation(nearestPoint);
+  //   }
+  // }
 
   Future<void> _calculateAndDisplayDistanceDuration(int index) async {
     if (index >= _polylinePoints.length - 1) return;
@@ -752,16 +774,25 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
                         backgroundColor: AppColors.primaryColor,
                         foregroundColor: Colors.white,
                         onPressed: () async {
+                          // Ensure we have the nearest destination set
                           if (_navigationDestination == null) {
                             _setNearestDestination();
                           }
-                          final url =
-                              'google.navigation:q=${_navigationDestination!.latitude},${_navigationDestination!.longitude}&key=$_googleMapsApiKey';
-                          final uri = Uri.parse(url);
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri);
+
+                          if (_navigationDestination != null) {
+                            final url =
+                                'google.navigation:q=${_navigationDestination!.latitude},${_navigationDestination!.longitude}&key=$_googleMapsApiKey';
+                            final uri = Uri.parse(url);
+
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri);
+                            } else {
+                              _showErrorSnackBar(
+                                  'Could not launch Google Maps for navigation.');
+                            }
                           } else {
-                            throw 'Could not launch $url';
+                            _showErrorSnackBar(
+                                'No destination found for navigation.');
                           }
                         },
                         tooltip: 'Navigate to the nearest location',
