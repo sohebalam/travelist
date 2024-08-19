@@ -558,26 +558,6 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
     }
   }
 
-  // void _setNearestDestination() {
-  //   if (_currentLocation == null || _polylinePoints.isEmpty) return;
-
-  //   double minDistance = double.infinity;
-  //   gmaps.LatLng? nearestPoint;
-
-  //   for (gmaps.LatLng point in _polylinePoints) {
-  //     double distance =
-  //         _utilsService.calculateDistance(_currentLocation!, point);
-  //     if (distance < minDistance) {
-  //       minDistance = distance;
-  //       nearestPoint = point;
-  //     }
-  //   }
-
-  //   if (nearestPoint != null) {
-  //     _navigateToSelectedLocation(nearestPoint);
-  //   }
-  // }
-
   Future<void> _calculateAndDisplayDistanceDuration(int index) async {
     if (index >= _polylinePoints.length - 1) return;
 
@@ -663,6 +643,21 @@ class _ListDetailsPageState extends State<ListDetailsPage> {
             gmaps.CameraUpdate.newLatLngZoom(
               gmaps.LatLng(location.lat, location.lng),
               14.0,
+            ),
+          );
+
+          // Show a Snackbar after adding the marker
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Tap the pin on the map to add it to your list.',
+                style: TextStyle(
+                  fontSize:
+                      MediaQuery.maybeTextScalerOf(context)?.scale(14.0) ??
+                          14.0,
+                ),
+              ),
+              duration: Duration(seconds: 4),
             ),
           );
         }
